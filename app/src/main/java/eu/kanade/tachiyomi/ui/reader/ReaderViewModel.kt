@@ -80,6 +80,7 @@ import tachiyomi.core.common.storage.UniFileTempFileManager
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
@@ -366,6 +367,18 @@ class ReaderViewModel @JvmOverloads constructor(
                 chapterId = currentChapter.chapter.id!!
             }
             .launchIn(viewModelScope)
+
+        // KMK -->
+        // Record the history entry as soon as a chapter is actually loaded, not only on pause.
+        // updateHistory() resolves the chapter through state.viewerChapters, which ChapterLoader
+        // populates only after the page list has been fetched -- so closing an entry during that
+        // round-trip leaves onPause() with no current chapter and nothing gets written at all.
+        state.map { it.viewerChapters?.currChapter }
+            .distinctUntilChanged()
+            .filterNotNull()
+            .onEach { recordChapterOpened(it) }
+            .launchIn(viewModelScope)
+        // KMK <--
 
         // SY -->
         state.mapLatest { it.ehAutoscrollFreq }
@@ -899,6 +912,23 @@ class ReaderViewModel @JvmOverloads constructor(
     fun restartReadTimer() {
         chapterReadStartTime = Instant.now().toEpochMilli()
     }
+
+    // KMK -->
+    /**
+     * Records that [readerChapter] was opened, leaving the read timer alone.
+     *
+     * [updateHistory] only runs on pause and on chapter change, and both need a loaded chapter, so
+     * this is what makes an entry survive being closed shortly after opening. The session duration
+     * is left at zero here; the later [updateHistory] call still contributes the whole session.
+     */
+    private suspend fun recordChapterOpened(readerChapter: ReaderChapter) {
+        if (incognitoMode) return
+        val chapterId = readerChapter.chapter.id ?: return
+        withNonCancellableContext {
+            upsertHistory.await(HistoryUpdate(chapterId, Date(), sessionReadDuration = 0L))
+        }
+    }
+    // KMK <--
 
     /**
      * Saves the chapter last read history if incognito mode isn't on.
