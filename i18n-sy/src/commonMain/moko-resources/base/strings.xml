@@ -309,6 +309,9 @@
     <string name="reader_preload_amount_summary">The amount of pages to preload when reading. Higher values will result in a smoother reading experience, at the cost of higher cache usage, it is recommended to increase the amount of cache you allocate when using larger values</string>
     <string name="reader_cache_size">Reader cache size</string>
     <string name="reader_cache_size_summary">The amount of images to save on device while reading. Higher values will result in a smoother reading experience, at the cost of higher disk space usage</string>
+    <string name="reader_cache_size_unlimited">Unlimited (clear manually)</string>
+    <string name="parallel_image_download">Split large image downloads</string>
+    <string name="parallel_image_download_summary">Fetch large pages over several connections at once. Helps when a host limits the speed of a single connection; has no effect on hosts that don\'t support it</string>
     <string name="preserve_reading_position">Preserve reading position on read entries</string>
     <string name="auto_webtoon_mode">Auto Webtoon Mode</string>
     <string name="auto_webtoon_mode_summary">Use auto webtoon mode for entries that are detected to likely use the long strip format</string>

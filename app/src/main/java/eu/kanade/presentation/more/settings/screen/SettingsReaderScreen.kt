@@ -577,7 +577,8 @@ object SettingsReaderScreen : SearchableSettings {
                     preference = readerPreferences.readerThreads(),
                     title = stringResource(SYMR.strings.download_threads),
                     subtitle = stringResource(SYMR.strings.download_threads_summary),
-                    entries = List(5) { it }.associateWith { it.toString() }.toImmutableMap(),
+                    // Starts at 1: zero leaves the page queue with no consumers at all.
+                    entries = (1..5).associateWith { it.toString() }.toImmutableMap(),
                 ),
                 Preference.PreferenceItem.ListPreference(
                     preference = readerPreferences.cacheSize(),
@@ -600,12 +601,18 @@ object SettingsReaderScreen : SearchableSettings {
                         "4000" to "4 GB",
                         "4500" to "4.5 GB",
                         "5000" to "5 GB",
+                        "0" to stringResource(SYMR.strings.reader_cache_size_unlimited),
                     ),
                 ),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = readerPreferences.aggressivePageLoading(),
                     title = stringResource(SYMR.strings.aggressively_load_pages),
                     subtitle = stringResource(SYMR.strings.aggressively_load_pages_summary),
+                ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = readerPreferences.parallelImageDownload(),
+                    title = stringResource(SYMR.strings.parallel_image_download),
+                    subtitle = stringResource(SYMR.strings.parallel_image_download_summary),
                 ),
             ),
         )

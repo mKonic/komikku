@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.reader.loader
 
+import android.app.Application
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.database.models.toDomainChapter
@@ -25,6 +26,7 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withIOContext
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import java.io.File
 import java.util.concurrent.PriorityBlockingQueue
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -58,9 +60,20 @@ internal class HttpPageLoader(
     private val dataSaver = DataSaver(source, sourcePreferences)
     // SY <--
 
+    // KMK -->
+    private val parallelDownloader = if (readerPreferences.parallelImageDownload().get()) {
+        ParallelImageDownloader(
+            client = source.client,
+            tmpDir = File(Injekt.get<Application>().cacheDir, "parallel_image_download"),
+        )
+    } else {
+        null
+    }
+    // KMK <--
+
     init {
         // EXH -->
-        repeat(readerPreferences.readerThreads().get()) {
+        repeat(readerPreferences.readerThreads().get().coerceAtLeast(1)) {
             // EXH <--
             scope.launchIO {
                 flow {
@@ -219,8 +232,7 @@ internal class HttpPageLoader(
 
             if (!chapterCache.isImageInCache(imageUrl)) {
                 page.status = Page.State.DownloadImage
-                val imageResponse = source.getImage(page, dataSaver)
-                chapterCache.putImageToCache(imageUrl, imageResponse)
+                downloadImage(page, imageUrl)
             }
 
             page.stream = { chapterCache.getImageFile(imageUrl).inputStream() }
@@ -232,6 +244,28 @@ internal class HttpPageLoader(
             }
         }
     }
+
+    // KMK -->
+    /**
+     * Downloads the image for [page] into the chapter cache, splitting the body across concurrent
+     * byte ranges when the host allows it.
+     */
+    private suspend fun downloadImage(page: ReaderPage, imageUrl: String) {
+        val response = source.getImage(page, dataSaver)
+        when (val result = parallelDownloader?.fetch(response, page) ?: ParallelImageDownloader.Result.Declined) {
+            is ParallelImageDownloader.Result.Success ->
+                try {
+                    chapterCache.putImageToCache(imageUrl, result.file)
+                } finally {
+                    result.file.delete()
+                }
+            ParallelImageDownloader.Result.Declined ->
+                chapterCache.putImageToCache(imageUrl, response)
+            ParallelImageDownloader.Result.Failed ->
+                chapterCache.putImageToCache(imageUrl, source.getImage(page, dataSaver))
+        }
+    }
+    // KMK <--
 
     // EXH -->
     fun boostPage(page: ReaderPage) {

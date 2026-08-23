@@ -178,6 +178,8 @@ class ReaderPreferences(
 
     fun aggressivePageLoading() = preferenceStore.getBoolean("eh_aggressive_page_loading", false)
 
+    fun parallelImageDownload() = preferenceStore.getBoolean("parallel_image_download", true)
+
     fun cacheSize() = preferenceStore.getString("eh_cache_size", "75")
 
     fun autoscrollInterval() = preferenceStore.getFloat("eh_util_autoscroll_interval", 3f)
