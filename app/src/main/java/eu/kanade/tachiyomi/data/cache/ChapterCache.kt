@@ -18,6 +18,7 @@ import logcat.LogPriority
 import okhttp3.Response
 import okio.buffer
 import okio.sink
+import okio.source
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.Chapter
 import java.io.File
@@ -43,16 +44,16 @@ class ChapterCache(
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
 
     /** Cache class used for cache management.  */
-    private var diskCache = setupDiskCache(readerPreferences.cacheSize().get().toLong())
+    private val diskCache = setupDiskCache(readerPreferences.cacheSize().get())
 
     init {
         readerPreferences.cacheSize().changes()
             .drop(1)
             .onEach {
-                // Save old cache for destruction later
-                val oldCache = diskCache
-                diskCache = setupDiskCache(it.toLong())
-                oldCache.close()
+                // Resize in place. Opening a second DiskLruCache over the same directory while
+                // the old one still holds its journal writer interleaves both writers' lines and
+                // corrupts the journal, which wipes the whole cache on the next launch.
+                diskCache.maxSize = toMaxSizeBytes(it)
             }
             .launchIn(scope)
     }
@@ -77,13 +78,25 @@ class ChapterCache(
 
     // --> EH
     // Cache size is in MB
-    private fun setupDiskCache(cacheSize: Long): DiskLruCache {
+    private fun setupDiskCache(cacheSize: String): DiskLruCache {
         return DiskLruCache.open(
             File(context.cacheDir, "chapter_disk_cache"),
             PARAMETER_APP_VERSION,
             PARAMETER_VALUE_COUNT,
-            cacheSize * 1024 * 1024,
+            toMaxSizeBytes(cacheSize),
         )
+    }
+
+    /**
+     * Translates the stored cache size preference (in MB) into a byte budget for [DiskLruCache].
+     *
+     * A value of zero or less means unlimited: nothing is ever evicted, so a page that has been
+     * downloaded once stays readable until the cache is cleared explicitly. Pair it with the
+     * "Clear chapter cache on app launch" setting to keep it from growing without bound.
+     */
+    private fun toMaxSizeBytes(cacheSize: String): Long {
+        val megabytes = cacheSize.toLongOrNull() ?: DEFAULT_CACHE_SIZE_MB
+        return if (megabytes <= 0) Long.MAX_VALUE else megabytes * 1024 * 1024
     }
     // <-- EH
 
@@ -127,7 +140,6 @@ class ChapterCache(
                 it.flush()
             }
 
-            diskCache.flush()
             editor.commit()
             editor.abortUnlessCommitted()
         } catch (e: Exception) {
@@ -184,10 +196,36 @@ class ChapterCache(
             // Get OutputStream and write image with Okio.
             response.body.source().saveTo(editor.newOutputStream(0))
 
-            diskCache.flush()
+            // commit() flushes the journal itself. An extra flush() here would also run
+            // trimToSize() on this thread, holding the cache lock while it deletes evicted files.
             editor.commit()
         } finally {
             response.body.close()
+            editor?.abortUnlessCommitted()
+        }
+    }
+
+    /**
+     * Add an already downloaded image to cache.
+     *
+     * @param imageUrl url of image.
+     * @param file the file holding the complete image.
+     * @throws IOException image error.
+     */
+    @Throws(IOException::class)
+    fun putImageToCache(imageUrl: String, file: File) {
+        // Initialize editor (edits the values for an entry).
+        var editor: DiskLruCache.Editor? = null
+
+        try {
+            // Get editor from md5 key.
+            val key = DiskUtil.hashKeyForDisk(imageUrl)
+            editor = diskCache.edit(key) ?: return
+
+            file.source().buffer().saveTo(editor.newOutputStream(0))
+
+            editor.commit()
+        } finally {
             editor?.abortUnlessCommitted()
         }
     }
@@ -238,3 +276,6 @@ private const val PARAMETER_VALUE_COUNT = 1
 
 /** The maximum number of bytes this cache should use to store.  */
 private const val PARAMETER_CACHE_SIZE = 100L * 1024 * 1024
+
+/** Fallback in MB used when the stored cache size preference isn't a number.  */
+private const val DEFAULT_CACHE_SIZE_MB = 75L
