@@ -128,6 +128,20 @@ Additional features for some extensions, features include custom description, op
 
 </details>
 
+<details>
+  <summary>Features from this fork</summary>
+
+#### Reader cache, history and download fixes on top of Komikku:
+
+* `Unlimited` option for reader cache size, so nothing is evicted until you clear the cache yourself
+* Changing the cache size resizes it in place instead of wiping everything already cached
+* History is written as soon as a chapter opens, so closing an entry right after opening no longer loses it entirely
+* `Split large image downloads`, fetching pages over 2 MB across up to 4 parallel byte ranges on hosts that support it
+* Reader threads setting starts at 1, the old `0` option left the page queue with no consumers at all
+* Smart background colour is picked from a downsampled decode instead of the full-resolution page
+
+</details>
+
 ## Issues, Feature Requests and Contributing
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
