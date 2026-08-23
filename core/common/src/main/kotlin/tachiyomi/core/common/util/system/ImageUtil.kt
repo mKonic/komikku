@@ -379,11 +379,27 @@ object ImageUtil {
     }
 
     /**
+     * Largest power-of-two reduction that still leaves both dimensions far above the 50px floor
+     * [chooseBackground] rejects images at, so the pixels it samples stay in the same part of the
+     * page as they would at full size.
+     */
+    private fun backgroundSampleSize(width: Int, height: Int): Int {
+        var sampleSize = 1
+        while (minOf(width, height) / (sampleSize * 2) >= BACKGROUND_SAMPLE_MIN_DIMENSION) {
+            sampleSize *= 2
+        }
+        return sampleSize
+    }
+
+    /**
      * Algorithm for determining what background to accompany a comic/manga page
      */
     fun chooseBackground(context: Context, imageSource: BufferedSource): Drawable {
         val decoder = ImageDecoder.newInstance(imageSource.inputStream())
-        val image = decoder?.decode()
+        // Only a handful of edge and centre pixels are read below, so decode a reduced copy: at
+        // full resolution a long strip can allocate hundreds of megabytes and take seconds, all
+        // to pick one colour.
+        val image = decoder?.let { it.decode(sampleSize = backgroundSampleSize(it.width, it.height)) }
         decoder?.recycle()
 
         val whiteColor = Color.WHITE
@@ -808,3 +824,9 @@ object ImageUtil {
 
 val getDisplayMaxHeightInPx: Int
     get() = Resources.getSystem().displayMetrics.let { max(it.heightPixels, it.widthPixels) }
+
+/**
+ * Floor for the reduced decode in [ImageUtil.chooseBackground]. Well clear of the 50px minimum it
+ * bails out at, so a sampled page never gets rejected for being too small.
+ */
+private const val BACKGROUND_SAMPLE_MIN_DIMENSION = 256
