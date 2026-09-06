@@ -14,11 +14,13 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [v1.2.0] - 2026-09-07
 ### Improved
-- Library, Updates, History, Extensions and Feed stop recomputing while their screen is off screen.
-  These tab screen models outlive the tab being selected, so every database write - every row a
-  library update touches - re-ran the whole library filter, sort and search pipeline for screens
-  nobody was looking at. Verified on device: zero emissions off screen, where there had been one
-  per write.
+- Library, Updates, History, Extensions and Feed stop recomputing while their screen is off screen,
+  and while the app is in the background. These tab screen models outlive the tab being selected, so
+  every database write - every row a library update touches, every page of reading progress - re-ran
+  the whole library filter, sort and search pipeline for screens nobody was looking at. The reader is
+  its own activity, so this covers reading too. Verified on device both ways: zero emissions off
+  screen where there had been one per write, and the gate closing on background and reopening on
+  return.
 - Backup restore commits a chunk of 100 entries per transaction instead of one transaction per
   entry, falling back to entry-by-entry if a chunk fails so one bad entry cannot drop the other 99.
 - Update checks no longer re-run on every rotation or theme change (mihonapp/mihon#3708).

@@ -1,9 +1,13 @@
 name: Release
 
+# Manual only. Building a release here costs ~15 minutes of Actions time - a 2-core runner
+# compiling a 200k-line Compose app and running R8 - against roughly 2.5 minutes locally, so
+# releases are built and signed on a workstation and uploaded with `gh release create`.
+#
+# Re-enable by restoring the `push: tags: - v*` trigger below. If you do, merge the three Gradle
+# invocations into one: they each re-configure the whole build, which is several minutes of the
+# total on its own.
 on:
-  push:
-    tags:
-      - v*
   workflow_dispatch:
 
 concurrency:
