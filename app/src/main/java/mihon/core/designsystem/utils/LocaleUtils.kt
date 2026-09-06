@@ -16,5 +16,8 @@ import java.util.Locale
  */
 @Composable
 @ReadOnlyComposable
+// The fallback is what lint wants callers to stop using, but it only runs when the configuration
+// carries no locale at all - there is nothing observable left to read at that point.
+@Suppress("NonObservableLocale")
 fun currentLocale(): Locale =
     ConfigurationCompat.getLocales(LocalConfiguration.current).get(0) ?: Locale.getDefault()

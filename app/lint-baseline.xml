@@ -1,0 +1,902 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.3.2" type="baseline" client="gradle" dependencies="false" name="AGP (9.3.2)" variant="all" version="9.3.2">
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="        return String.format(&quot;%02d:%02d - %02d:%02d&quot;, startHour, startMinute, endHour, endMinute)"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/eu/kanade/tachiyomi/ui/category/biometric/TimeRange.kt"
+            line="17"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="TrimLambda"
+        message="The lambda argument (`{&#xA;                            it &lt;= &apos; &apos;&#xA;                        }`) is unnecessary"
+        errorLine1="                        newFileName.trim {"
+        errorLine2="                                         ^">
+        <location
+            file="src/main/java/exh/log/EnhancedFilePrinter.kt"
+            line="66"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `enableOnBackInvokedCallback` is only used in API level 33 and higher (current min is 26)"
+        errorLine1="        android:enableOnBackInvokedCallback=&quot;true&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="52"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `localeConfig` is only used in API level 33 and higher (current min is 26)"
+        errorLine1="        android:localeConfig=&quot;@xml/locales_config&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="57"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `preserveLegacyExternalStorage` is only used in API level 30 and higher (current min is 26)"
+        errorLine1="        android:preserveLegacyExternalStorage=&quot;true&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="59"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="AppLinkWarning"
+        message="This intent filter has the format of an Android App Link but is missing the `autoVerify` attribute; add `android:autoVerify=&quot;true&quot;` to ensure your domain will be validated and enable App Link-related Lint warnings. If you do not want clicked URLs to bring the user to your app, remove the `android.intent.category.BROWSABLE` category, or set `android:autoVerify=&quot;false&quot;` to make it clear this is not intended to be an Android App Link."
+        errorLine1="            &lt;intent-filter>"
+        errorLine2="             ~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="302"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="AppLinkWarning"
+        message="This intent filter has the format of an Android App Link but is missing the `autoVerify` attribute; add `android:autoVerify=&quot;true&quot;` to ensure your domain will be validated and enable App Link-related Lint warnings. If you do not want clicked URLs to bring the user to your app, remove the `android.intent.category.BROWSABLE` category, or set `android:autoVerify=&quot;false&quot;` to make it clear this is not intended to be an Android App Link."
+        errorLine1="            &lt;intent-filter>"
+        errorLine2="             ~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="318"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="AppLinkWarning"
+        message="This intent filter has the format of an Android App Link but is missing the `autoVerify` attribute; add `android:autoVerify=&quot;true&quot;` to ensure your domain will be validated and enable App Link-related Lint warnings. If you do not want clicked URLs to bring the user to your app, remove the `android.intent.category.BROWSABLE` category, or set `android:autoVerify=&quot;false&quot;` to make it clear this is not intended to be an Android App Link."
+        errorLine1="            &lt;intent-filter>"
+        errorLine2="             ~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="333"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="AppLinkWarning"
+        message="This intent filter has the format of an Android App Link but is missing the `autoVerify` attribute; add `android:autoVerify=&quot;true&quot;` to ensure your domain will be validated and enable App Link-related Lint warnings. If you do not want clicked URLs to bring the user to your app, remove the `android.intent.category.BROWSABLE` category, or set `android:autoVerify=&quot;false&quot;` to make it clear this is not intended to be an Android App Link."
+        errorLine1="            &lt;intent-filter>"
+        errorLine2="             ~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="348"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="SelectedPhotoAccess"
+        message="Your app is currently not handling Selected Photos Access introduced in Android 14+"
+        errorLine1="        android:name=&quot;android.permission.READ_MEDIA_IMAGES&quot;"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="24"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="VectorRaster"
+        message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
+        errorLine1="    android:width=&quot;600dp&quot;"
+        errorLine2="                   ~~~~~">
+        <location
+            file="src/main/res/drawable/ic_flag_esperanto.xml"
+            line="2"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of com.android.tools.build:gradle than 9.3.2 is available: 9.4.0"
+        errorLine1="agp_version = &quot;9.3.2&quot;"
+        errorLine2="              ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/androidx.versions.toml"
+            line="2"
+            column="15"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.lifecycle:lifecycle-common than 2.10.0 is available: 2.11.0"
+        errorLine1="lifecycle_version = &quot;2.10.0&quot;"
+        errorLine2="                    ~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/androidx.versions.toml"
+            line="3"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.lifecycle:lifecycle-process than 2.10.0 is available: 2.11.0"
+        errorLine1="lifecycle_version = &quot;2.10.0&quot;"
+        errorLine2="                    ~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/androidx.versions.toml"
+            line="3"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.lifecycle:lifecycle-runtime-ktx than 2.10.0 is available: 2.11.0"
+        errorLine1="lifecycle_version = &quot;2.10.0&quot;"
+        errorLine2="                    ~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/androidx.versions.toml"
+            line="3"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.paging:paging-compose than 3.4.1 is available: 3.5.1"
+        errorLine1="paging_version = &quot;3.4.1&quot;"
+        errorLine2="                 ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/androidx.versions.toml"
+            line="4"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.paging:paging-runtime than 3.4.1 is available: 3.5.1"
+        errorLine1="paging_version = &quot;3.4.1&quot;"
+        errorLine2="                 ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/androidx.versions.toml"
+            line="4"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.appcompat:appcompat than 1.7.1 is available: 1.8.0"
+        errorLine1="appcompat = &quot;androidx.appcompat:appcompat:1.7.1&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/androidx.versions.toml"
+            line="11"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.constraintlayout:constraintlayout than 2.2.1 is available: 2.2.2"
+        errorLine1="constraintlayout = &quot;androidx.constraintlayout:constraintlayout:2.2.1&quot;"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/androidx.versions.toml"
+            line="13"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.core:core-ktx than 1.17.0 is available: 1.19.0"
+        errorLine1="corektx = &quot;androidx.core:core-ktx:1.17.0&quot;"
+        errorLine2="          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/androidx.versions.toml"
+            line="14"
+            column="11"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose:compose-bom than 2026.06.01 is available: 2026.08.00"
+        errorLine1="compose-bom = &quot;2026.06.01&quot;"
+        errorLine2="              ~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/compose.versions.toml"
+            line="2"
+            column="15"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose.material3:material3 than 1.5.0-alpha14 is available: 1.5.0-alpha27"
+        errorLine1="material3-core = { module = &quot;androidx.compose.material3:material3&quot;, version = &quot;1.5.0-alpha14&quot; }"
+        errorLine2="                                                                              ~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/compose.versions.toml"
+            line="19"
+            column="79"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.glance:glance-appwidget than 1.1.1 is available: 1.2.0"
+        errorLine1="glance = &quot;androidx.glance:glance-appwidget:1.1.1&quot;"
+        errorLine2="         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/compose.versions.toml"
+            line="21"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.sqlite:sqlite-framework than 2.6.2 is available: 2.7.0"
+        errorLine1="sqlite = &quot;2.6.2&quot;"
+        errorLine2="         ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="8"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.sqlite:sqlite-ktx than 2.6.2 is available: 2.7.0"
+        errorLine1="sqlite = &quot;2.6.2&quot;"
+        errorLine2="         ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="8"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of com.google.firebase:firebase-bom than 34.15.0 is available: 34.18.0"
+        errorLine1="firebase-bom = &quot;34.15.0&quot;"
+        errorLine2="               ~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="12"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of com.google.android.material:material than 1.13.0 is available: 1.14.0"
+        errorLine1="material = &quot;com.google.android.material:material:1.13.0&quot;"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="64"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of com.google.firebase.crashlytics than 3.0.7 is available: 3.0.8"
+        errorLine1="firebase-crashlytics = { id = &quot;com.google.firebase.crashlytics&quot;, version = &quot;3.0.7&quot; }"
+        errorLine2="                                                                           ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="124"
+            column="76"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.android than 2.4.0 is available: 2.4.10"
+        errorLine1="kotlin_version = &quot;2.4.0&quot;"
+        errorLine2="                 ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/kotlinx.versions.toml"
+            line="2"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.plugin.compose than 2.4.0 is available: 2.4.10"
+        errorLine1="kotlin_version = &quot;2.4.0&quot;"
+        errorLine2="                 ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/kotlinx.versions.toml"
+            line="2"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.plugin.serialization than 2.4.0 is available: 2.4.10"
+        errorLine1="kotlin_version = &quot;2.4.0&quot;"
+        errorLine2="                 ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/kotlinx.versions.toml"
+            line="2"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.github.pdvrieze.xmlutil:core-android than 1.0.2 is available: 1.0.2.1"
+        errorLine1="xml_serialization_version = &quot;1.0.2&quot;"
+        errorLine2="                            ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/kotlinx.versions.toml"
+            line="4"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.github.pdvrieze.xmlutil:serialization than 1.0.2 is available: 1.0.2.1"
+        errorLine1="xml_serialization_version = &quot;1.0.2&quot;"
+        errorLine2="                            ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/kotlinx.versions.toml"
+            line="4"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-collections-immutable than 0.4.0 is available: 0.5.2"
+        errorLine1="immutables = { module = &quot;org.jetbrains.kotlinx:kotlinx-collections-immutable&quot;, version = &quot;0.4.0&quot; }"
+        errorLine2="                                                                                         ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/kotlinx.versions.toml"
+            line="12"
+            column="90"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of cafe.adriel.voyager:voyager-navigator than 1.1.0-beta03 is available: 2.2.21-1.10.3"
+        errorLine1="voyager = &quot;1.1.0-beta03&quot;"
+        errorLine2="          ~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="9"
+            column="11"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of cafe.adriel.voyager:voyager-screenmodel than 1.1.0-beta03 is available: 2.2.21-1.10.3"
+        errorLine1="voyager = &quot;1.1.0-beta03&quot;"
+        errorLine2="          ~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="9"
+            column="11"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of cafe.adriel.voyager:voyager-tab-navigator than 1.1.0-beta03 is available: 2.2.21-1.10.3"
+        errorLine1="voyager = &quot;1.1.0-beta03&quot;"
+        errorLine2="          ~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="9"
+            column="11"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of cafe.adriel.voyager:voyager-transitions than 1.1.0-beta03 is available: 2.2.21-1.10.3"
+        errorLine1="voyager = &quot;1.1.0-beta03&quot;"
+        errorLine2="          ~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="9"
+            column="11"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.diffplug.spotless:spotless-plugin-gradle than 8.8.0 is available: 8.10.2"
+        errorLine1="spotless = &quot;8.8.0&quot;"
+        errorLine2="           ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="10"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.mikepenz:multiplatform-markdown-renderer than 0.39.2 is available: 0.45.0"
+        errorLine1="markdown = &quot;0.39.2&quot;"
+        errorLine2="           ~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="13"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.mikepenz:multiplatform-markdown-renderer-coil3 than 0.39.2 is available: 0.45.0"
+        errorLine1="markdown = &quot;0.39.2&quot;"
+        errorLine2="           ~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="13"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.junit.jupiter:junit-jupiter than 6.0.3 is available: 6.1.3"
+        errorLine1="junit = &quot;6.0.3&quot;"
+        errorLine2="        ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="14"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.materialkolor:material-kolor than 5.0.0-alpha07 is available: 5.0.1"
+        errorLine1="materialKolor = &quot;5.0.0-alpha07&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="15"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.squareup.okio:okio than 3.17.0 is available: 3.18.2"
+        errorLine1="okio = &quot;com.squareup.okio:okio:3.17.0&quot;"
+        errorLine2="       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="27"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.conscrypt:conscrypt-android than 2.5.3 is available: 2.7.0"
+        errorLine1="conscrypt-android = &quot;org.conscrypt:conscrypt-android:2.5.3&quot;"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="29"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.coil-kt.coil3:coil-bom than 3.5.0 is available: 3.6.2"
+        errorLine1="coil-bom = { module = &quot;io.coil-kt.coil3:coil-bom&quot;, version = &quot;3.5.0&quot; }"
+        errorLine2="                                                             ~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="48"
+            column="62"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of de.stefan-oltmann:kim than 0.34.0 is available: 0.38.2"
+        errorLine1="kim = &quot;de.stefan-oltmann:kim:0.34.0&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="58"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.mohamedrejeb.richeditor:richeditor-compose than 1.0.0-rc13 is available: 1.2.0"
+        errorLine1="richeditor-compose = &quot;com.mohamedrejeb.richeditor:richeditor-compose:1.0.0-rc13&quot;"
+        errorLine2="                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="62"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of dev.chrisbanes.haze:haze than 1.7.2 is available: 1.7.3"
+        errorLine1="haze = &quot;dev.chrisbanes.haze:haze:1.7.2&quot;"
+        errorLine2="       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="73"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.kotest:kotest-assertions-core than 6.2.1 is available: 6.2.4"
+        errorLine1="kotest-assertions = &quot;io.kotest:kotest-assertions-core:6.2.1&quot;"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/libs.versions.toml"
+            line="101"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of net.zetetic:sqlcipher-android than 4.13.0 is available: 4.18.0"
+        errorLine1="sqlcipher = &quot;net.zetetic:sqlcipher-android:4.13.0&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/dev/android/komikku/gradle/sy.versions.toml"
+            line="11"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ConfigurationScreenWidthHeight"
+        message="Using Configuration.screenWidthDp instead of LocalWindowInfo.current.containerSize"
+        errorLine1="    return configuration.screenWidthDp > MediumWidthWindowSize.value"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/mihon/core/designsystem/utils/WindowSize.kt"
+            line="12"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="ConfigurationScreenWidthHeight"
+        message="Using Configuration.screenWidthDp instead of LocalWindowInfo.current.containerSize"
+        errorLine1="    return configuration.screenWidthDp > ExpandedWidthWindowSize.value"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/mihon/core/designsystem/utils/WindowSize.kt"
+            line="19"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="LocalContextResourcesRead"
+        message="Reading Resources using LocalContext.current.resources is not configuration-aware and may return stale values if the Configuration changes"
+        errorLine1="        state.dpi = context.resources.displayMetrics.densityDpi / 100f"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/eu/kanade/presentation/manga/components/MangaCoverDialog.kt"
+            line="296"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="LogNotTimber"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
+        errorLine1="                Log.w(&quot;ShellInterface&quot;, &quot;Unable to set installFlags via reflection; continuing without REPLACE_EXISTING_INSTALL_FLAG&quot;, e)"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/mihon/app/shizuku/ShellInterface.kt"
+            line="86"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="ChromeOsAbiSupport"
+        message="Missing x86_64 ABI support for ChromeOS"
+        errorLine1="            include(&quot;arm64-v8a&quot;)"
+        errorLine2="                    ~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="115"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="TrustAllX509TrustManager"
+        message="`checkClientTrusted` is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers">
+        <location
+            file="$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.google.http-client/google-http-client/1.45.2/b9002e4d0e0d55a9af5e391bcc2458b5562397/google-http-client-1.45.2.jar"/>
+    </issue>
+
+    <issue
+        id="TrustAllX509TrustManager"
+        message="`checkServerTrusted` is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers">
+        <location
+            file="$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.google.http-client/google-http-client/1.45.2/b9002e4d0e0d55a9af5e391bcc2458b5562397/google-http-client-1.45.2.jar"/>
+    </issue>
+
+    <issue
+        id="UnsafeIntentLaunch"
+        message="This intent could be coming from an untrusted source. It is later launched by an unprotected component eu.kanade.tachiyomi.ui.deeplink.DeepLinkActivity. You could either make the component eu.kanade.tachiyomi.ui.deeplink.DeepLinkActivity protected; or sanitize this intent using androidx.core.content.IntentSanitizer."
+        errorLine1="        startActivity(intent)"
+        errorLine2="                      ~~~~~~">
+        <location
+            file="src/main/java/eu/kanade/tachiyomi/ui/deeplink/DeepLinkActivity.kt"
+            line="17"
+            column="23"/>
+        <location
+            file="src/main/java/eu/kanade/tachiyomi/ui/deeplink/DeepLinkActivity.kt"
+            line="17"
+            column="9"
+            message="The unsafe intent is launched here."/>
+    </issue>
+
+    <issue
+        id="DataExtractionRules"
+        message="The attribute `android:allowBackup` is deprecated from Android 12 and higher and may be removed in future versions. Consider adding the attribute `android:dataExtractionRules` specifying an `@xml` resource which configures cloud backups and device transfers on Android 12 and higher."
+        errorLine1="        android:allowBackup=&quot;false&quot;"
+        errorLine2="                             ~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="51"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="VectorPath"
+        message="Very long vector path (4609 characters), which is bad for performance. Considering reducing precision, removing minor details or rasterizing vector."
+        errorLine1="      android:pathData=&quot;m46,155.8 l-1.2,-0.5 -1,-0.5q0,-0.3 1,-1.3 3,-2.7 4.4,-4.7l1.7,-2.3c3,-3.2 6.8,-9.1 10,-15.2 2.1,-4 2.3,-4.3 2.5,-7.3a88,88 0,0 0,-1 -18.3c0,-0.2 -0.4,0 -3.8,1.4q-3.2,1.5 -3.7,2l-2,1.3c-1.6,0.8 -2,0.9 -4.7,0.3 -2.4,-0.5 -3.5,-1.1 -6,-3.3l-1,-1.1c0,-0.2 -1.1,-1.8 -2.6,-3.8l-0.7,-1 0.2,-1a9,9 0,0 0,0.2 -3.1l0.1,-2.3q0.2,-0.4 0.1,-1.1v-0.8l0.9,-0.4q0.8,-0.5 1.5,-0.4t1,-0.4q1.5,-1.5 2.7,-0.8c0.4,0.2 0.4,0.2 0.4,1.7 -0.1,1.7 0,1.7 1.2,2 1.3,0.2 3,0 7.4,-0.7 4,-0.8 9.6,-1.7 10.2,-1.7q0.4,0 1,-0.8l1.5,-1.5 0.8,-0.7h1.4c2.4,0.2 5.3,0.6 6.2,1 0.9,0.2 1,0.2 2.6,0l3.3,-0.5c4,-0.5 4.6,-0.6 4.8,-0.8q0,-0.1 0.4,0l0.7,-0.1c1.4,-0.8 1.6,-0.9 4,-1 1.2,0 2.6,0 3.3,-0.2 3,-0.6 12,-1.7 16.3,-2l1.6,-0.1 -0.2,-0.5q-0.4,-0.7 0,-0.7h2.3l0.8,-1.1 1,-1.4q0.1,-0.6 1.1,0.5l1.3,1.7 0.4,0.7h2.2l13,-0.3 5.2,0.5c0.8,0 0.8,0 -0.7,-2 -1,-1.3 -2.4,-2.6 -3.4,-3l-1,-0.6a11,11 0,0 0,-2.8 -1.1,14 14,0 0,1 -3.4,-1.6l-1.7,-0.3q-1.5,-0.4 -1.4,-0.6 0,-0.8 4.5,0.8 1.9,0.6 1.8,0.4 0,-0.3 -2.2,-1l-2.2,-1 0.2,-0.1q0.5,0 -0.4,-0.3 -0.5,0 -0.5,-0.4l-0.1,-0.2q-0.2,0 -0.1,-0.3v-0.2q-0.4,0 -1.3,1.6l-0.8,1L122,76.3l-1.4,-0.1q-0.3,0 -0.3,-0.3c0,-0.3 -0.2,-0.3 -2,-0.5L116,75.4q-0.4,0.3 -0.4,0t-0.8,-0.4l-7.1,-0.3q0,0.2 -0.2,0.3 -0.3,0.2 -0.4,-0.3c0,-0.5 0,-0.5 -1.3,-0.5l-1.2,0.1q0,0.2 0.2,0.2l0.8,0.3q0.5,0.4 1.1,0.4h0.7l0.2,0.2q0,0.2 -0.5,0.2h-2.5l0.7,0.1 1,0.6 0.3,0.5 -1,0.1 -1,0.3q-0.3,0.2 -0.1,-0.8v-0.9l-0.5,0.1 -1,0.4q-0.2,0.3 -1.4,0.2h-1l-0.2,-0.5q-0.2,-1.2 -0.8,-0.2 -0.4,0.5 -0.6,0.5t-0.2,0.3v0.3l-11.4,0.3 -1.3,0.2 0.6,0.1 1.2,0.1q1,0.4 -2.2,0.4c-2.6,0 -3,0.1 -2.5,0.5q0.4,0.2 -0.7,0.3l-1.7,0.1q-0.7,0 -0.4,0.2h1.1q1.4,0 0.6,0.4l-2,0.2c-1.6,0.1 -3.4,0.5 -3.7,0.9l-1,0.2 -1.5,0.1 -2.3,0.3q-1.8,0.2 -2.5,0.5c-0.5,0.2 -0.9,0.3 -5.1,0.2a36,36 0,0 1,-9.5 -1c-2.3,-0.5 -6.5,-2.8 -8.1,-4.4s-1.8,-2 -2.6,-6.4c-0.3,-2 -0.3,-2.6 -0.3,-5 0,-3.2 0.3,-4.1 1.4,-6.5 2.3,-4.9 5.7,-7.1 9.3,-6 1.6,0.4 3.3,0.7 4,0.7 1.1,0 3.3,0.4 3.5,0.6 0.3,0.4 -0.3,0.5 -3.1,0.5 -3.1,0.1 -3.8,0.3 -5.4,1a4,4 0,0 0,-2.3 2.5l-0.3,0.6 0.7,0.6q2.1,1.9 6.1,3l4.7,0.9 4.5,0.8 1.9,0.3c1.5,0.2 2.1,0.5 0.7,0.4h-0.5q0.3,0.3 1.4,0 1.7,-0.1 1.8,0.2l-0.2,0.1 -0.2,0.1 1.5,0.2 14.3,1.6q0.3,0 0,0.3 -0.6,0.2 0.5,0.4h1c0,-0.3 0.5,-0.3 2.3,-0.3 2.2,0 2.3,0 2.4,0.3q0.4,0.3 -0.6,0.5l-1,0.2 5.7,0.6c0.7,0 2.2,0 3.3,0.3 1.8,0.3 2.7,0.3 6,0.3a78,78 0,0 1,8.8 0.2q1,-0.2 1,0l1.8,0.4 2.7,0.6c1,0.3 4,0.8 6.4,1l3,0.6 2.8,0.7a20,20 0,0 1,7 3q4.4,2.3 5,8.6v1.5c-0.2,0.3 -0.2,0.3 1,0.6s2.5,1 2.4,1.2l-0.2,0.4c-0.1,0.4 0.9,1.4 1.5,1.7q0.7,0.1 1.1,0.5 0.6,0.3 0.5,1t0.6,1.6l1.2,1.5q0.9,0.7 0.3,1.8l-0.6,2.6c-0.5,2.5 -0.6,2.7 -2,3.4 -0.8,0.4 -1,0.5 -1.8,1.8q-1,1.3 0.7,2.3c0.8,0.6 -0.1,0.5 -1.5,-0.1q-1,-0.6 -2,0.3c-0.7,0.5 -1,0.5 -2.4,0.7h-1l-2,-1.3 -2.3,-1.3 -2.5,-1.1 -2.6,-1.5c-0.4,-0.2 -8.3,-2.4 -8.7,-2.4a42,42 0,0 1,3.4 11.7c0.6,4.3 1.5,9.9 1.8,10.7 0.8,2.4 2.2,4.6 6.1,9.7 3.7,4.8 8.1,10.7 8.4,11.4a25,25 0,0 1,1.6 5.8q0,0.3 -0.6,0.6 -1,0.1 -0.8,1.6 0,1 -2.1,3c-1,1 -1.3,1.2 -2,1.3 -1.1,0.2 -3.3,0.2 -4,0 -1.7,-0.5 -1.8,-0.6 -2,-1.2l-1,-1.3 -1.2,-1.7q-1.5,-2 -3.1,-2.8t-4.4,-2.8a11,11 0,0 1,-3 -3.6c-0.4,-0.7 -1,-1.8 -1.5,-2.4a13,13 0,0 1,-2.2 -4.6c-0.3,-1.4 -0.4,-1.7 -0.4,-5l-0.2,-11c-0.1,-8.1 -0.2,-8.3 -1,-11.5 -0.4,-1.6 -2.7,-9.3 -2.9,-9.4l-2,-0.2c-1.6,-0.2 -2.2,-0.2 -3.7,0q-1.8,0.4 -3.4,0.2l-1.6,0.1a234,234 0,0 1,4.9 22.7,44 44,0 0,1 0.1,9.9c-0.3,2.6 -0.6,4 -1.4,6a5,5 0,0 1,-1.6 2.5q-1.4,1.3 -1.3,2.2c0,0.6 -1.2,2.2 -1.8,2.6l-1,1 -0.8,1 -1,0.8q-1,1 -3,1.2c-2.3,0.1 -2.5,0 -5.2,-2.7l-3.7,-3.2q-1.4,-0.9 -1.5,-1.5c-0.3,-0.6 -2,-2.2 -3.3,-2.8q-0.9,-0.5 -1,-0.8 -0.2,-0.4 -1.1,-1l-1.2,-1.3 -0.6,-0.8q-0.4,-0.3 -0.7,-0.9l-0.8,-0.8q-0.4,-0.2 -0.3,-0.8v-0.8q-0.5,-0.4 0,-0.3l0.3,-0.1 -1.3,-1.7 -1.3,-1.7 2.1,1a91,91 0,0 0,9.8 4.2c2,0.9 2.7,1 3.4,0.5 1,-0.7 1,-1 1,-6.7 0.2,-5.7 0.4,-7.4 1,-12.6 0.3,-3 0.4,-4.2 0.4,-8.3l-0.1,-4.9a28,28 0,0 0,-7.2 1.2l-3.3,0.8 -2.9,0.6 -4,0.6 -3,0.3 -0.6,0.6 -1.6,1.1c-1,0.6 -1.2,0.8 -1.4,2q-0.7,4 0.8,9.4c0.6,2 0.9,2.5 1.9,4a14,14 0,0 1,2.4 8c0.1,2 0.1,2.3 0.5,3q0.5,0.8 0.5,1.1a8,8 0,0 1,-0.8 3.4l-0.5,1.1c-0.1,0.7 -1.4,1.8 -3,2.7a75,75 0,0 0,-7.4 7,51 51,0 0,1 -7.3,7q-1.3,1 -2.6,1.1l-1.4,0.3q-1.4,0.5 -2.3,0l-0.5,-0.4 -1,0.6c-1.2,0.7 -1.5,0.8 -1.8,0.5m94.4,-71 l-0.6,-0.3c-0.3,0.1 0.2,0.5 0.6,0.5q0.5,0 0,-0.2m-11,-9.7q0.2,-0.2 -0.1,-0.2l-0.5,-0.2q-0.2,-0.4 -0.2,0t0.4,0.5zM103.5,74.3q0.3,-0.1 0.2,-0.2c-0.2,-0.2 -0.8,0 -0.7,0.2q0.2,0.3 0.5,0m19.2,-1q1,0 1,-0.5c0,-0.4 0,-0.4 0.8,-0.4l1.9,0.1q1.4,0.1 -0.4,-0.2 -0.4,0 -0.4,-0.3h1l1,-0.1 -0.5,-0.1 -1,-0.2c-0.9,-0.2 -1,-0.2 -1.6,0.1 -0.5,0.3 -0.8,0.4 -1.7,0.3h-1.3q-0.2,0.3 -0.6,0c-0.4,-0.4 -0.7,-0.4 -2,-0.4h-1.5l2.6,0.5 2.6,0.6c0.2,0.2 -0.6,0.1 -3.3,-0.3l-2.3,-0.1q3,0.4 4,1c0.8,0.3 0.7,0.3 1.7,0&quot;"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/brand_shikimori.xml"
+            line="12"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="VectorPath"
+        message="Very long vector path (20758 characters), which is bad for performance. Considering reducing precision, removing minor details or rasterizing vector."
+        errorLine1="  &lt;path android:fillColor=&quot;#ffffff&quot; android:pathData=&quot;m350.5,274.2c0.4,-0.8 1.2,-4 2.2,-3 1,1 1.6,0 1.6,0 0,0 0.5,0.5 0.2,1.5 -0.2,1 -0.5,2 -1.1,2.2 -0.6,0.1 -1.1,0.5 -1.9,0.6 -0.6,0.1 -1,-1.3 -1,-1.3zM358.7,272.9c0.2,-0.2 0.5,0.8 1,0.6 0.5,-0.1 0.7,0.9 0.2,0.9 -0.5,0 -0.5,0.6 -0.5,0.9 0,0.3 0,0.9 -0.4,1.3 -0.4,0.4 -0.7,0.1 -1.2,-0.1 -0.5,-0.3 -0.7,-0.3 -1.4,-0.3 -0.6,0 -0.1,1 -0.1,1 0,0 -2.6,-0.1 -2.1,-0.5 0.5,-0.4 1,-0.5 0.6,-0.8 -0.4,-0.3 0,-0.5 0,-1 0,-0.5 1.2,-0.3 0.9,-0.6 -0.4,-0.4 0,-1.8 0.6,-1l0.4,-0.9c-0.4,-0.4 -0.1,-0.5 -0.9,-0.8 -0.7,-0.3 -0.1,-1.8 -0.1,-1.8l0.1,-1c0.2,-1.3 2.7,-1.4 2.9,-0.3 0.1,1.1 0,1.9 0,1.9l0.7,0.3c0,0 -0.1,0.8 -0.7,0.8 -0.6,0 0,0.4 -0.4,0.8zM450.8,212.1c-0.7,0.7 -2.2,1 -2.2,1l-0.5,1.9 -0.8,0.7c0,0 0.2,0.5 0,1.7 -0.2,1.2 -1.7,1.9 -1.7,1.9l-0.7,0.8c0,0 -4,0.2 -4.5,0 -1.5,-0.7 -0.5,-2.7 0.5,-2.5 1,0.2 -0.2,-2.9 -0.2,-2.9l1.3,-0.2c0,0 0.2,-3 0.7,-3 0.5,0 -0.2,-1 -0.8,-1.5 -0.7,-0.5 -1.5,-2.2 -2.2,-2 -0.7,0.2 -3.3,0 -3.3,0l-0.5,1 -1.8,0.3c0,0 0.2,1.3 -0.2,1.7 -1,1.2 -4.8,3.7 -3.2,-0.5l0.5,-1L431.2,208L428.2,207.8c0,0 -1.5,-0.5 -1.5,-1.2 0,-0.7 -0.2,-1.5 -0.2,-1.5l-3.5,-3.9 -4.2,-0.5 -0.3,-0.8 -2.5,-0.3c-3,-1.5 -5.7,-0.2 -5.2,2.4 0.5,2.5 1.3,3.5 -0.3,3.5 -1.7,0 -2,-1.3 -2,-1.3 0,0 -1.3,-0.5 -1.3,0.2 0,0.7 -0.5,2 0,2.7 0.5,0.7 -0.7,1.7 -1.2,1.2 -0.5,-0.5 -1.8,-2 -1.5,-2.5 0.3,-0.5 -2.3,-3.7 0.3,-4.2 2.7,-0.5 -0.2,-2 0.8,-2.4l1.3,-0.7l1.3,0l0.8,-0.7 -2.2,-0.3 -1.3,-0.2 -2.5,-0.2c-2.5,1.7 -3,3.7 -3,3.7 -1.3,2.5 -4.5,-1 -3.3,-2.4 1.2,-1.4 -3.7,-0.2 -4.5,0.5 -0.8,0.7 -3.3,0.3 -3.3,0.3 -0.5,1.5 -2.8,-0.2 -2.2,-1.2 0.7,-1 0.7,-1.7 0.7,-1.7l-0.8,-0.2 -1,1.9c-2.3,0 -3,1.3 -2.5,2.2 0.5,0.8 -0.7,-0.2 -1,1 -0.3,1.2 0.2,1.2 1.2,1.7 1,0.5 -0.5,0.5 0.2,1.3 0.7,0.8 2.7,0 1.5,1.2 -1.2,1.2 -3.5,0.7 -3.5,0.7 -0.2,1.5 -3.3,1.2 -3.7,0.7 -0.3,-0.5 -2.8,-3.5 -2.8,-3.5l-3.2,-0.2c-0.3,-2.4 1.5,-1.2 2.2,-3 0.7,-1.9 1,-4.9 1,-4.9 0,0 -2.7,-0.2 -2.8,0.7 -0.2,0.8 -1.8,1.4 -1.8,1.4 0,0 -1.3,0.5 -0.8,1.2 0.5,0.7 -1,1 -1,1 0,0 0.3,1.1 -0.2,1.5 -1.3,1.4 -4.7,0.2 -5.2,-0.3l-2,-0.8 -2,-1.3 -2.3,1 -0.7,0.7l-2.5,0l-0.2,2 4.5,0.5 0.3,4.2 -1.8,-0.6l-1.2,0l-0.5,-1 -1,-0.2l0,3.7l1,0.8 0.8,0.8 1.7,0.2 0.3,2 4.2,0.2 0.5,0.8 2.5,0.2 4.8,4.9 -0.3,1.5 -0.8,0.5c0.3,1.2 -2.2,0.5 -2.2,0.5l0,1l1.2,0.2 1.2,0.7 1.7,-2.9c1.8,-1.2 2.7,0.5 2.8,1.5 0.2,1 -0.8,0.8 -0.8,0.8l0,2.4l1,0.3c1.7,2 -0.7,3.2 -0.7,3.2l-0.5,1.7c-0.5,1.5 -2.3,1.2 -2.3,1.2l-0.7,1 -2,0.5 3.9,0.5c0.4,-1.4 1.4,-1.7 1.9,-1 0.5,0.7 0.5,1.9 0.5,1.9l1,0.2 -0.2,1.9 1,0.3l0,5.4l1.2,1.3c2,-0.8 2,0.5 1,1.2 -1,0.7 -0.3,3.7 -0.3,3.7l-0.8,0.8l0,1.4l-1,0.7l0,1.9c-1.7,-0.8 -3.7,-0.5 -4.2,0 -1.5,-1 -4.7,-0.7 -4.7,0.2 1,1.3 -1.2,1.7 -1.2,1.7l-1.2,1.3c0.8,1.7 -0.8,1.9 -0.8,1.9l0,3.2l-2,1.9 0.2,4.4c0,1.2 2.5,1.3 3,0.7 0.5,-0.7 2.5,1.4 2.5,1.4l1.5,0l0.3,-3 -1,-0.5l0,-4.9l1.7,-1.9c2,-0.7 1.3,4.4 1.3,4.9 0.2,1.9 1,1.7 1.8,1.3 1.7,-0.7 0.3,1.9 -1,1.7 -1.3,-0.2 -0.5,1.7 -0.5,1.7l0.8,0.3 -1.5,1.2 -1.3,1.5 -1.7,-0.5 -2,-0.2 -0.7,-1.2 -1.2,-0.2 -0.2,2.4 -0.8,1 -2,2c2.7,0 -0.3,1.9 -1,1.9 1.5,0.5 -0.2,2 -4,0.8l0,1.2l-1.3,0.2 1.2,1.3 1.3,0.2 -0.5,2.9c0,2.2 -5.5,0.7 -6,0.2l-0.2,3 -1,0.2 0.2,2 -0.2,2.9 1.8,-0.3l0,1.2l4.5,0.2 6.5,-6.9 3.8,-0.8c0.3,-1.7 2,0.3 2,0.3 1.7,-0.2 2,1 2,1l2.2,0.3c1.8,0.5 0.7,0.7 0.8,1.4 0.2,1 1,0.7 1,0.7l0.3,-2.2 1,0.2 -1,-1.2 -1.8,-0.8 -2,-0.8c-1.3,-1.9 0.3,-1.5 1.7,-1.3l2.2,0c0,0 2.5,3.4 2.5,4.2 0,0.8 1.2,1 1.2,1l1.5,-0.2 0.5,1.2l1.5,0l0.5,1l3,0l0.2,-1.5 -2.8,-0.5 -0.2,-1.7 -2,-0.5c-0.7,-2.9 0.5,-3.7 1.3,-2.4l1,0.2 -0.3,-2.5 1.2,-0.3 -0.3,-3.5 -1,-0.3l0,-1.2l4.2,0.2c-0.3,-2.2 0.2,-3.2 0.2,-3.2l1.2,0l0.2,0.8 5.1,0.5 3.6,-4.1c-0.2,-0.3 0.4,-0.5 0,-0.9 -0.5,-0.5 -1.2,0 -2,-0.5 -0.8,-0.5 0,-3.4 -0.2,-4 -0.2,-0.7 2.8,-1.7 2.3,-0.2 -0.5,1.5 0,2.2 0,2.2 2.2,-2 4,0.2 3.8,0.7 -0.2,0.5 1.2,1 2,0.5 0.8,-0.5 1.8,1.5 1.5,2.5 -0.3,1 -3.3,0.8 -3.5,-0.2 -0.2,-1 -0.7,-0.7 -1,-0.2 -0.3,0.5 -1.8,0.8 -2.7,0.3 -0.2,-0.1 -0.2,-0.2 -0.3,-0.3l-3.6,4.1l0.2,0c2,1.2 1,2.7 0.3,3 -0.7,0.3 -1.8,0.3 -1.8,0.3l-0.3,0.7 -4.3,0.3 -0.3,1.7c-2.2,-0.3 -3,2 -2.5,3.2 0.5,1.2 0,2.2 0,2.2l1.8,0.8 2.3,-0.7c0.3,-1.7 1.8,-2 3.2,-3 1.3,-1 3.5,1.9 2.8,3.2 -0.7,1.3 -0.7,1.9 -0.7,1.9l0.2,1.5 -1.7,0.7 -1.3,0.7 -0.2,0.8l-4.5,0l-0.8,0.8 -2.2,0.2 -0.7,1 -1.5,0.2c0,0 -2.5,1.2 -1.5,2.5 1,1.4 -4.2,1.2 -5.3,-0.7 -0.3,1.7 -2.2,0.2 -2.2,0.2l-1.8,-0.5 -0.2,-2.5c-0.3,-1.7 -3.5,-1.7 -3.3,-0.5 0.2,1.2 -6,0.5 -6,0.5l-2,1 -1.8,1.1 -0.2,0.8 -3,0.3 -1.3,0.7 -0.5,-1l-1.3,0l-1.3,1.9c-3.5,0.2 -6.8,2.2 -6.5,3 0.3,0.8 -1.3,1.7 -1.3,1.7l-1.5,0.5 -1,1.5 -2,0.7 -0.3,3.5 -1,0.7l0,1.5l-1.2,0.3l0,0.8l-1.7,0.2 1,2.5 1.3,0.7c2.3,0.3 1.3,3.2 1.3,3.2l1.3,0.2 0.7,1.9 1.3,2.7c0.5,2 2,1.5 2.7,1.4 0.7,-0.2 1.3,2 1.3,2l6.6,0.2c0,0 -0.3,0.7 0.8,1 1.2,0.3 8.8,0.7 9.1,0.2 -0.3,-1.5 4.2,-1.9 6,-0.5 1.8,1.3 4.3,0.5 4.3,0.5l2.5,3 1.7,3.7 2.8,0.8 2,0.5 0.7,2.9 1.5,0.2 0.5,1.9c1.8,1.3 -0.5,4.2 -0.5,4.2l0,3.7l1.3,0.7 -0.2,1.4 2.2,2.2 2.5,0.2 6.3,6.7 5,1.5 0.8,2.7 1.3,-0.2 1,-0.8 4,-0.2 2,-1.9 2.2,-0.3 18.5,-15.7 -1.7,-1l0,-3.7c3,-2.2 3.2,-6.1 0.3,-6.4 -2.1,-0.3 -1.2,-2.5 0.8,-2.9l1.2,-0.5l0,-1.5l3.8,-3.5l0,-2.7l-8.3,-6.9c-3.7,-1.3 0,-9.4 2.5,-9.3 2.5,0.2 -0.2,-12.5 -0.2,-12.5l-1.3,-0.7 0.3,-4.1l-1.8,0l-3,3.9 -0.8,2.7c-0.3,3.5 -10.6,2.9 -11.1,2.4 -0.5,-0.5 -4,-2 -4,-2 0,0 -2.7,-2.2 -3.2,-1.5 -0.5,0.7 -2.8,-0.8 -2.8,-0.3 0,0.5 -2.2,-1.2 -2.2,-1.2l-3.3,-1.2 2.5,-0.5 -0.5,-2 4.3,2.2c0.5,0.7 2.7,0.5 2.7,0.5l0.7,0.8c0,0 1.3,-0.2 2.2,0.8 0.8,1 5.2,0.2 5.2,0.2l1.2,1 1.8,0.7 5.2,0.2 0.2,-3.2 1,-1 -0.2,-2 1.2,-1l0,-1.7l1,-0.3 0.2,-3.7 0.8,-0.2l0,-8.1l-2.5,-2.4c-0.2,0.8 -2.8,0.8 -2.8,0.8 0,0 -0.7,1.2 -1.2,1.2 -0.5,0 0.7,1.5 0.3,2.5 -0.3,1 -1.7,1 -1.7,1l-2.5,0.7 -0.7,0.8l-2.7,0l-0.3,-2.2 3,-0.8 1.7,-0.8 0.8,-1.7c0.2,-1.7 2.2,-1.5 2.2,-1.5 0,0 3.8,-3.2 4,-4.7 0.2,-1.5 1.5,-5.7 3.8,-5.7l4.3,0c1.7,-0.7 1.2,-2.9 1.2,-2.9l2.2,-0.3 0.3,1.2c0,0 3,0.3 3.3,-0.2 0.3,-0.5 1,-1.7 1.8,-1.2 0.8,0.5 3.5,-1.2 3.5,-1.2 0.2,-1.2 4.3,-0.7 4.3,-0.7l0.5,-1.5c0,0 -2.8,-3.9 -3.3,-3.9 -0.5,0 -3.2,-2.4 -3.5,-1.5 -2.7,-0.7 -2.5,-4.4 -2.5,-4.4l-1,-2.4c0,-1.4 -2.5,-4.2 -3,-3.9 -2.5,-1.9 -0.7,-4 0,-4.2 0.7,-0.2 2.3,-2.5 2.3,-2.5l0.8,-2.4 2.8,-0.8 0.3,-2.2 -1.5,-0.2c0,0 1.7,-3 2.5,-3 0.8,0 6.3,0 6.8,-0.3 0.5,-0.3 1.5,-3 1.5,-3.5 0,-0.5 1.3,-0.7 1.8,-0.8 0.5,-0.2 1.7,-1.5 2,-2.2 0.9,-1.7 -0.2,-5.9 -0.9,-5.2zM496.9,266c-0.1,-0.3 -0.2,-0.6 -0.5,-0.7 -0.7,-0.3 -2,0.2 -2.6,0.6l0.6,0.8c0.6,-0.4 1.5,-0.6 1.6,-0.5l0,-0.1zM501.2,286.1 L500.2,286c-0.1,0.8 0.1,1.8 0.9,1.9l0.2,-1c0,0 -0.1,-0.4 -0.1,-0.8zM504.9,282.1c0.3,1 0.6,2 0.6,2.1l0.9,-0.4c0,0 -0.4,-1 -0.6,-2zM507.1,281.3l0,-0.2c0,-0.3 -0.1,-0.7 -0.3,-1.1l-0.9,0.5c0.1,0.2 0.1,0.5 0.2,0.7 0,0.3 0.1,0.6 0.3,0.8 0.2,0.1 0.4,0.2 0.7,0.1l-0.2,-1c0,0.1 0.1,0.1 0.2,0.2zM498.6,288.5c0.7,-0.4 1.6,-1.3 1.5,0.6 -0.1,1.9 -0.9,1.3 -1.5,1.9 -0.6,0.6 -1,-1.9 0,-2.5zM458.5,301.5 L458.6,300 460.2,300.2 460.1,301.6zM458.6,304.8c-0.2,-0.9 -1.2,-1.2 -1.3,-1.2l-0.3,1c0.1,0 0.2,0.1 0.3,0.2l0.2,0.9c-0.1,0.1 -0.2,0.2 -0.2,0.3l0.7,0.7c0.5,-0.8 0.7,-1.3 0.6,-1.9zM334.3,336 L333.3,336.9 332.8,337.3 333.3,337.7 334.5,338.5 335.1,337.7 334.4,337.2 334.9,336.8zM346.1,348.1 L345.7,349 346.7,349.5 346.4,349.9 347.1,350.6 348.4,349.3 347.8,348.9zM300.2,131.1 L301.2,132.1 300.5,132.8 299.5,131.8zM330.4,162.6 L331.4,163.4 330.8,164.2 329.8,163.4zM326.6,163.3 L326.8,165.2l2.5,0c1,0 -0.8,-1.2 -0.8,-1.2 0,0 -2,0.2 -1.9,-0.7zM381.4,116.3 L379.7,116.1 379.6,117.1 381,117.2 382.1,118.9 382.9,118.3 381.8,116.5 381.6,116.3zM385.9,80.9 L385.4,81.8 386.7,82.6 387,82.8 387.2,82.6 389.1,81.4 388.5,80.6 387,81.6zM394.8,85.7 L394,84.8 393.3,85.6 394.8,87.1 395.1,86.8 396.8,85.4 396.1,84.6zM339.6,120.8c-0.1,-0.6 3.3,-0.7 3.8,-0.2 0.5,0.5 0.2,1.4 1.7,1.4 1.5,0 0.8,1 0.7,1.5 -0.2,0.5 -1.8,0.3 -2,-0.2 -0.2,-0.5 -2.7,-0.7 -2.7,-0.7 0,0 -1.3,-1 -1.5,-1.8zM358.7,118.9c2.6,0.8 3.5,0.2 3.7,-0.5 0.2,-0.7 0.3,-0.8 1.3,-1 1,-0.2 -0.2,-2.2 -1.2,-2 -1,0.2 -2,-0.3 -2.2,-1.2 -0.2,-0.8 -1.8,-3 -2,-1.3 -0.2,1.7 -1.2,1.7 -1,2.9 0.3,1.1 0.8,2.9 1.4,3.1zM375.2,90.4c-0.4,-1.5 -2.5,1.9 -0.3,2.5 2.2,0.7 4.3,0 4.3,0l0.5,-1 8.3,0.2c0.7,-0.7 1,-1.7 1,-1.7 0,0 2,-0.7 2.8,-0.3 0.8,0.3 0.2,-2.4 -0.7,-2 -0.8,0.3 -2.5,0.2 -2.5,0.2l-3,0c-0.2,-1.2 -2.8,-0.7 -3,0 -0.1,0.6 -1.1,0.8 -1.1,0.8l-3.8,0.3c-0.4,1 -2.3,1.7 -2.5,1zM375.5,98.7 L373.3,96.5l0,-1.9l-0.7,-0.7 -0.7,-2.4 -2.2,-0.7 -2.2,0.8 -2.3,1.5 -2.5,0.3 -1.3,1.5 5.3,0.5 1,1.7 3.8,0.3 2.5,2.5c2.3,1 2.8,0 1.5,-1.2zM383.2,114.9 L383.9,113.3 384.8,113.8 384.1,115.3zM432.9,113.2c-0.3,-1.3 3.3,-2.5 4.2,-1.5 0.8,1 3.2,1.2 3.5,6.2 0.1,1.8 -3,-1.9 -3,-1.9l-2.5,-0.8c-1.4,-0.3 -2.1,-1.1 -2.2,-2zM415.4,117.6c-0.5,1.5 -0.7,3.5 -1.5,3.5 -0.8,0 -0.5,2.2 -0.5,2.2 0,0 2.2,0 2.8,0.2 0.7,0.2 0.7,1.9 0.7,1.9 2.5,-0.2 3.5,3.2 3.2,4.1 -0.3,0.8 1,0.8 1,0.8 0,0 0,2.7 -0.3,3.4 -0.3,0.7 2.2,1.2 2.8,2.2 0.7,1 -0.3,4.4 -0.8,4.6 -0.5,0.2 1.3,0.7 1.2,1.5 -0.2,0.8 0.5,0 0.7,1.4 0.2,1.3 0.5,4.2 0.5,4.2l2.3,0.2c0.3,-2.2 4.6,-2.3 5.3,-2 2.8,1 5,5.4 5,6.4 0,1 -1.8,1.2 -1.8,1.2l0.3,4.9c2.8,0.8 5.2,4.9 4.8,5.6 -0.3,0.7 2,0.5 2,0.5 0.3,-3 3.2,-2 3.3,-1 0.2,1 0.7,3.2 0.7,3.2l0.8,1.5 1.2,1.2 1.8,-0.2 0.5,1 2.2,0.3c0,0 1.8,2 2,2.5 0.2,0.5 2.7,0.3 3.3,0.5 0.7,0.2 1.7,0.7 1.8,1.5 0.2,0.8 1.2,2.2 1.2,2.2 0,0 2,0.5 2.2,1.2 0.2,0.7 1,2.2 1,2.2l1.7,1.4 0.2,1.5 1.8,0.2 0.5,2 3,-0.2 1.7,-1.2c2.2,-1.2 3.7,-2.7 3.8,-3.4 0.2,-0.7 0.5,-3.2 2.2,-2.7 1.7,0.5 0.5,-3.7 0.5,-3.7 0,0 -2.3,-1.7 -2.2,-2.5 0.2,-0.8 -2.3,-2.5 -2.2,-3.2 0.2,-0.7 -2.2,-2 -2,-2.7 0.2,-0.7 -1.2,-2.5 -1.2,-2.5l-2.5,-2.4 -0.3,-1.5 -2,-0.2 -4,-4.9 0.2,-1.4 -1.2,-0.2l0,-1.9l-1.2,-0.7 -1.8,-0.2 -3.7,-4 -0.3,-1.9l-1.8,0l0.3,-3.5c1.2,-1.5 0.5,-4.4 0.5,-4.4 0,0 -2.3,1.2 -3.5,0.7 -1.2,-0.5 0.5,-1.7 0.5,-1.7l0,-1.3l-1,-1c0,0 -2.8,0.3 -3,-0.2 -0.2,-0.5 -0.7,-2.7 -0.7,-2.7l-0.2,-2.9 -1.2,-0.5 -0.2,-1 -1.8,0.2l0,-2l-1,-0.3 -1,-0.5 -0.2,-2 -3.7,-0.2 -1.2,-1.7 -1.3,-2 -4.2,-0.3 -1,-1 -1.7,-0.3 -1.2,-0.5 -0.5,0.8 -3.2,0.2 -0.2,1c-1.4,0.7 -8,0 -8.2,0.5zM384.8,116.6c0.3,0.5 2.3,1 2.3,1 1.3,0 2.2,1 2.2,1.5 0,0.5 1.8,0.3 1.8,0.3l0.2,-1.2 -1.3,-1.7 -1.2,-0.8c0,0 -1.8,-0.2 -1.8,-0.7 0,-0.4 -1.9,1.1 -2.2,1.6zM384.8,122.3 L383.5,122l0,1.5l1.8,0.2zM403.3,140.9l0,-1.3c0,0 -0.2,-1.3 -1,-1.3 -0.8,0 -2.3,-1 -2,-1.7 0.3,-0.7 -2.8,-1.4 -2.8,-1.4 0,0 -2.8,-2.7 -1.8,-2.4 1,0.3 0.5,-1.2 0.5,-1.2 0,0 -2,0.3 -2.5,0.2 -0.5,-0.2 -0.3,-1.7 -0.3,-1.7 0,0 -2,-0.5 -2,0 0,0.5 0.7,0.5 1,1.5 0.3,1 0.2,2.7 1.7,3 1.5,0.3 1.8,0.7 2,1.4 0.2,0.7 2,0.8 2,0.8l1.3,0.7zM404.6,145.4c-0.2,-0.7 -0.5,-3 0.5,-2.9 1,0.2 0.3,0 1.5,0.5 1.2,0.5 1.3,-0.8 1.3,-0.8l1.8,0l2.3,1.9 -0.3,1.5 -1.7,0.2c-0.8,-1.3 -2.5,-0.8 -2.2,0.3 0.3,1.2 -0.8,3.4 -1.5,3.5 -0.7,0.2 -2.8,0.2 -2.7,-0.8 0.3,-1 1,-3.4 1,-3.4zM432,168.4 L433.2,164.7c-1.7,-0.3 -1.3,-2.2 -1.3,-2.2 -0.2,-1.5 -2.5,-3.2 -3.3,-2.7 -0.8,0.5 -0.5,-3.5 -0.5,-3.5 0,0 1.5,-1 2.2,-0.5 0.7,0.5 -5.7,-8.4 -7,-7.6 -1.3,0.8 -4.3,-0.8 -4.2,-2.4 0.2,-1.5 -6,-6.6 -6,-6.6 0,0 -2,-1.3 -2.3,-0.3 -0.3,1 -1,1.7 0,2.2 1,0.5 0.8,-0.8 2,0.3 1.2,1.2 3.3,2.7 2.5,3.7 -0.8,1 -1.8,1.4 -1.8,1.4l1.2,1.4l1.8,0l0.3,2.9c0,0 2,1 2.5,2.2 0.5,1.2 0.5,1.9 0,2.5 -0.5,0.7 -1.5,1.9 -1.3,3 0.2,1.2 1.5,1.7 1.5,1.7l1.3,0.2 1,0.5l0,2.2c1.3,-0.3 3.5,1.5 3.3,2.7 -0.2,1.2 0.3,0.5 2,1.7 1.7,1.2 1.2,1.4 2.3,2.2 1.1,0.7 2.1,0.2 2.6,-1.3zM393.8,190c0,0.5 -0.3,1.2 0.7,1.4 1,0.2 2.8,-0.7 3,0.3 0.2,1 0.2,1.7 1.5,2.2 1.3,0.5 2.2,0.7 3.2,0.7 1,0 3.2,-0.3 3.2,-0.3 0,0 2.4,0.4 2.8,0.8 1.8,1.9 3,2.4 3.5,1.5 0.5,-0.8 -0.2,-2.7 -0.3,-3.4 -0.2,-0.7 -2.5,-3.9 -3.3,-3.2 -0.8,0.7 -1,0 -2.5,0.5 -1.5,0.5 -4.7,0.2 -4.8,-0.5 -0.2,-0.7 -2.5,-1 -2.5,-1.7 0,-0.7 -1.7,-1.5 -1.5,-0.5 0.2,1 -1.2,1.5 -1.5,1.2 -0.5,-0.4 -1.5,1 -1.5,1zM385.5,191.8 L385.3,193 387.1,193.2c0,0 0.8,0.7 0.8,1.2 0,0.5 1.2,1 1.8,1 0.7,0 2.5,-1.4 2.5,-1.4 0,0 0.8,-2.4 0.2,-2.2 -0.7,0.2 -2,1.2 -2.2,0.2 -0.2,-1 -2.2,-0.5 -2.2,-0.5zM376.9,193.7 L377.4,193.6 377.7,194.5 377.2,194.7zM377.5,192.1 L378.5,191.9 378.8,193.4 377.9,193.6zM380.3,192.3 L380.4,193.3 384,193.2l0,-1zM412.7,191.5 L414.4,191.3 414.5,192.3 412.8,192.5zM417.1,195.2 L417.6,194 418.5,194.4 418,195.6zM431.6,178.3 L433.3,178.2 433.4,179.2 431.7,179.3zM434.4,179.3l1,0l0,0.8l-1,0zM437.4,165.1 L436.4,165.2 436.2,163.7 437.2,163.6zM436.4,186.1l1,0l0,1.2l-1,0zM438.6,186.7 L439.5,187.1 439,188.2 438.1,187.7zM433.7,173.4c1,0 -0.3,3.9 2.3,3.5 2.7,-0.3 0.2,1.2 2.2,1.3 2,0.2 1.5,-1.5 2.2,-2.7 0.7,-1.2 0.3,-1.9 -0.8,-2.2 -1.2,-0.3 -1.2,-0.3 -1.5,-1.7 -0.3,-1.3 -1.7,-1.7 -1.7,-1.7l-0.5,-2 -2.2,1.3 -2.2,2.9c0,2.4 1.2,1.3 2.2,1.3zM440.2,182.6c1.3,-0.7 4.2,-0.7 4,-1.7 -0.2,-1 1.7,-1.3 1.7,-1.3l0.5,2 1.5,1 0.2,1.9c0,0 0.5,-0.3 -1.3,0.2 -1.8,0.5 -0.7,1.3 -0.7,1.3l-4,0.2 -0.5,-1.7zM418.7,196.7c0.8,-0.2 2.8,-0.3 3.2,0.2 0.3,0.5 -1.2,1.2 -1.2,1.2l-2,0.3c-0.6,-0.8 -0.8,-1.5 0,-1.7zM429.4,195.2c0.9,0.9 -5,0.7 -5,0 0,-0.7 0.5,-3 2,-2.5 1.5,0.5 1.7,-3 1.7,-3 0,0 -1.3,0.2 -0.2,-0.5 1.2,-0.7 0,-1.7 -0.5,-2.2 -0.5,-0.5 -1,-1.4 -1,-1.4l2.3,0c1,-0.7 1.3,-3.9 1.3,-3.9 2,0.7 3,-0.7 3,-0.7 0,0 0.3,1 1,1.9 0.7,0.8 -1.7,1.2 -0.8,1.7 0.8,0.5 1.2,2 0.8,2.5 -0.3,0.5 -2.2,0.2 -2.2,-0.5 0,-0.7 -0.7,0.8 0,1.7 0.7,0.8 -0.8,2 -1.2,2 -0.3,0 -2.5,0.3 -0.7,1.4 1.8,1 3.8,0.5 3.8,0.5 0,0 1.5,-0.2 2,0.7 0.5,0.8 -0.2,1 -1,1 -0.8,0 -4.8,-0.3 -4.8,-0.3 0,0 -1,1.1 -0.5,1.6zM448.8,176.1c-0.5,-0.7 -1,-1.2 -1.7,-1.5 -0.7,-0.3 -1.2,-0.7 -1.8,-0.7 -0.7,0 -1.3,-0.7 -1,-1.5 0.3,-0.8 -0.5,-1.2 -0.5,-1.9 0,-0.7 0.5,-0.7 1.3,-0.2 0.8,0.5 0.7,0.7 1.3,1.5 0.7,0.8 1,1.7 1.7,1.5 0.7,-0.2 1.2,1.5 1.8,1 0.7,-0.5 0.5,1.2 0.5,1.2zM447.2,177.7c0.5,0.7 1.5,1.2 1.5,1.9 0,0.7 -0.3,1.2 0.7,1.3 1,0.2 1.7,-0.2 2,0.7 0.3,0.8 0.3,2.2 0.2,2.9 -0.2,0.7 0.2,1.7 1,1.7 0.8,0 1,0.2 1,0.7 0,0.5 1,-1.9 1,-1.9 -0.8,-0.7 -1.5,-2.2 -1.5,-2.2 0,0 -0.8,-2.4 -0.8,-2.7 0,-0.3 -1.2,-0.7 -1.7,-0.8 -0.5,-0.2 -1.3,-1.7 -1.3,-1.7zM458,205 L457.3,203.5c0,0 0,-1.3 0.3,-2 0.3,-0.7 -0.7,-1.3 -1.2,-1.5 -0.5,-0.2 -0.3,-1.5 -0.5,-2.2 -0.2,-0.7 -1.3,-1.2 -1.3,-1.2 0,0 -0.3,-2.5 -0.3,-3 0,-0.5 -1.5,-1.2 -1,-1.7 0.5,-0.5 0.8,-1.2 1.3,-1.5 0.5,-0.3 -0.5,-2.7 0.3,-2.2 0.8,0.5 0.8,1.4 1.2,2 0.3,0.7 -0.2,3 0.7,3.5 0.8,0.5 -0.2,2.2 1.2,2.2 1.3,0 0.5,3.2 0.5,3.2 0,0 -0.3,2.4 0.5,2.5 0.8,0.2 0.3,4.2 0.3,4.2zM458.5,217.9 L459,216.9 459.9,217.4 459.4,218.4zM459.6,212.4 L460.6,212.5 460.5,213.9 459.5,213.7zM457.5,206.8 L456.2,206.6 453.2,207.1 451.5,210.3c0,0 0.8,0.5 1.5,1.7 0.7,1.2 1,8.1 -1,9.3 -2,1.2 0.2,0.5 0.2,0.5l-0.3,3.7c0.5,1.7 1.3,0.8 1.8,0 0.5,-0.8 1,-1 1.7,-1.9 0.7,-0.8 1.7,-2.4 1.8,-3.5 0.2,-1.2 1,-3 0.5,-3.5 -0.5,-0.5 0.5,-2.9 0.5,-2.9 0,0 0.7,-1.4 0,-2.7 -0.7,-1.4 0.2,-2.9 0.7,-3.5zM450.2,189.6l-2.5,0c0,0 0.8,0.3 -1.5,-1.9 -2.3,-2.2 -3.8,0.5 -3.8,0.5l-2.7,0.3l0,2.7l-1.3,0.5 0.2,1.7 1.8,-0.2c0,0 0,2 0.5,1.2 0.5,-0.8 4.7,0.2 4.3,2.2 -0.1,0.8 4.2,3 3.7,5.7 2.2,0.3 1.7,2.5 1.7,2.5l2.8,0.3 0.8,-1.7 0.8,0.2l0,-1l-1.8,-0.5 -0.3,-5.4 -1.2,-0.8 0.3,-1.4 -1.3,-0.5 0.7,-2.2zM444,231 L445,230.6 444.6,229.8 444.4,229.2 443.9,229.5 442.7,230.2 441.6,229.5 441.1,230.4 442.4,231.2 442.7,231.4 442.9,231.2 443.9,230.7zM448.4,228.8 L450.2,229.1 450.4,228.1 448.6,227.8zM445,250.4c-0.7,-1 3.3,-2.7 4,-0.7 0.7,2 0,1.7 -0.7,1.5 -0.6,-0.2 -2.3,0.5 -3.3,-0.8zM427.8,282.9l1.2,0l0,3.2l-1.2,0zM435.5,313.8c-0.3,1.3 -1.5,2 -2.2,1.5 -0.7,-0.5 0.8,0.8 1.2,1.5 0.3,0.7 1.3,0.7 1.7,0 0.3,-0.7 0.2,-2.2 0.5,-2.9 0.3,-0.6 -1,-0.8 -1.2,-0.1zM439.2,320.6 L440.7,321.3 440.9,324.2c2,2 8.5,0.3 8.5,-0.2 0,-0.5 -0.3,-6.2 -0.3,-6.2l-0.8,-0.8 -0.2,-4.2c0.7,-2.2 -3.2,-5.4 -3.5,-4.7 -0.3,0.7 -2.5,0.2 -2.5,0.8 0,0.7 -1.3,4 -0.7,5.2 0.7,1.2 -0.5,1.2 -0.7,2.4 -0.2,1 -1.9,3 -1.5,4.1zM392.4,284.5 L391.9,283.7 390.5,284.5 391.1,285.4zM367,287.8c-0.8,0.8 -0.6,1.5 0,2.1m5.2,2 l1.1,-1.9 -0.9,-0.3 -1.2,0.8 0.5,0.5zM371.2,239.2c0.7,1.5 0.5,3.7 3,5.4 0.8,0.6 -0.5,1.7 -1.3,1.2 -0.8,-0.5 -3.2,-4.2 -3.2,-4.2l0,-2.2c0.5,-1.3 1.2,-0.8 1.5,-0.2zM362.4,248c0.4,1.5 0.3,-2.4 1,-2.2 0.7,0.2 0.2,-2.4 0.2,-2.4l-3,2.2c1.4,0.2 1.6,1.7 1.8,2.4zM353.4,258.8c-0.2,2 -2.7,2.7 -2.7,2.7l-1.8,-0.5 -1,-0.8 -0.2,-2.4 1.5,-0.2 0.3,1zM350.7,238.4l0,-2.4l-0.3,-2.2 -2.5,-1.2 -1.8,1.7 -0.3,2.4l0,1.5l-1.7,0.3 -0.3,4.6 -1.3,0.5 0.2,1.7 -3.6,1 -0.3,2.2 -1.3,0.8 -0.7,2 -0.8,4.9c0,0 1.5,2.9 2.3,1.5 0.8,-1.3 2.2,-1.5 2.2,-1.5l0.5,-1.2 4.5,0.2c0.3,-1.9 2.5,-1.2 2.5,-0.3 0,0.8 1.7,0.2 1.7,0.2l1.2,-1.9l1.8,0l0.2,-2 0.8,-0.5l0,-3c2.7,-0.8 2.3,-3.4 2.3,-3.4l0.7,-0.8 -0.3,-1.2c-1.3,-0.5 -0.7,-1.7 0.2,-1.4 0.8,0.3 -1.2,-1.5 -1.2,-1.5 -1,0.8 -1.8,-1 -1.8,-1zM343.1,231.5 L341.8,231.8 338.8,234.7 338.6,236 337.8,237.2 336.8,239.7 333.3,239.9 332.6,242.9 333.1,245.5 336.1,246.7 336.4,245 337.4,244.5 337.6,242.8 338.3,241.6 339.3,240.4 339.6,239.1 341.3,238.1 343.3,237.7 344.1,236.7 344.4,234.7 344.6,233.2 345.3,232.1 347.3,231.3l0,-3.2l-1,0l-0.2,-1.2 -1.8,-0.2 -0.4,0.9l-0.8,0l-0.2,1.3l1,0l0.2,1.1 -0.7,0.6zM290.3,251.8c0,0.4 -0.3,0.7 -0.7,0.7 -0.4,0 -0.7,-0.3 -0.7,-0.7 0,-0.4 0.3,-0.7 0.7,-0.7 0.4,0 0.7,0.3 0.7,0.7zM290.2,271.1c0,0.4 -0.3,0.7 -0.7,0.7 -0.4,0 -0.7,-0.3 -0.7,-0.7 0,-0.4 0.3,-0.7 0.7,-0.7 0.4,0 0.7,0.3 0.7,0.7zM288.4,268.3c0.4,0 0.7,-0.3 0.7,-0.7 0,-0.4 -0.3,-0.7 -0.7,-0.7 -0.4,0 -0.7,0.3 -0.7,0.7 0,0.4 0.3,0.7 0.7,0.7zM286.4,272.3 L285,272.5l0,1.2l1.4,-0.2zM287.9,263.7 L286.7,263.9 286.6,265.2 287.9,265.4zM287.6,254.6 L287.7,253.4 285.2,255.1 283.6,254.1l0,4l2.6,3.6 1,-2.4 0.4,-1.5 -1.2,-0.5 0.2,-2.5zM286.6,240.4 L283.6,240.1 283.8,241.3l0.8,0c1.3,2.4 0.2,8.1 0.2,8.1 0,0 -2,0.2 -2.3,-0.8 -0.3,-1 -1.2,2.2 -0.5,2.7 0.7,0.5 3,0 3.2,1.9 0.2,1.9 1.5,-1.2 1.5,-1.2zM353.6,207l-1.8,0l-0.3,-3.7 1,-0.7l0,-1.9l-5.8,0l-0.2,-1.9 0.8,-0.5 -1.3,-0.5 -1,1.3 -0.3,1.5 -1.7,0.3l0,0.8L341.8,201.7l0,2.2L337.1,207.8 327.8,207.5c-0.7,1.5 -2.3,-0.2 -2.3,-0.2 -0.3,-1 -2.7,0 -2.7,0 0,1.9 -3.2,-0.8 -3.2,-0.8l-5.8,-4.2c-3.3,-3 -8.3,0.8 -8.5,1.7 0.2,2.4 -3.8,0.5 -3.8,0.5 0,0 -3.3,-1 -3.8,0.3 -0.5,1.3 -2.7,1 -2.7,1l-0.3,0.7 -1.7,0.3 -0.3,1 -2,0.3 5,-0.2c1.3,-0.2 -0.5,2.9 -1.3,2.7l-2.3,0.2 -0.8,0.8l-2.2,0l-1,1.4 -3.2,-0.2c0,0 -1.8,1.5 -1.7,2 0.2,0.5 -0.3,2 -0.8,2 -0.5,0 -1.5,1.5 -1.2,2 0.3,0.5 -1,2.2 -1,2.2l-0.3,1.7 -1,0.3l0,4.6l-2,1.4l0,2l-3,3.2 0.3,2.7 -2.5,2.7 0.3,2.7 -1.5,0.5 -0.3,1.2 -0.7,3.5 1.7,0.2c0.8,-0.3 0.7,2.2 0,2.5 -0.7,0.3 -2.5,1 -1.5,1.7 1,0.7 -2.7,0.5 -2.7,-0.5 0,-1 -2,-1.9 -2.5,-1.5 -0.5,0.3 -1.3,-1.5 -1.3,-1.5 -1.8,-1.9 -7.5,0.2 -7.5,0.2l-0.8,2.7c-1.8,0.3 -3,3.4 -3,3.4 -1.5,0.5 -2.7,2.4 -2.2,2.9 0.5,0.5 -0.8,0.7 -0.8,0.7l0,3.7l-0.8,1.2 0.2,4c1,0 0.8,1.9 0.8,1.9 -1.7,0.2 -1.3,2.4 -1.3,2.4l-3.5,1.2 -0.7,1 -4.3,-0.2 -1.2,1.2 -1.2,-1.2l-8.3,0l-0.3,-0.8 -1.7,-0.3 -0.2,-1.9 -2.5,0.2 -0.5,1 -2.7,0.2c0.2,1.7 -2.7,4.2 -3,3.5 -0.3,-0.7 -2.2,-2.5 -1.3,-2.9 0.8,-0.3 3,-0.7 3,-0.7l0,-1.2l-6.2,-0.2 -0.7,1 -2.5,0.2l0,2.7l-1.2,0.3c-0.8,0.5 0.2,2.4 0.2,2.4 1.2,1.2 -0.2,3 -0.2,3 -1,1 0.8,2.9 0.8,2.9 1.3,0.3 -0.8,1.3 -0.8,1.3 0.3,1.7 1.3,2.2 1.3,2.2 -1,1.7 0.7,2.5 0.7,2.5l0.2,2.9 1.2,0.7l0,1.9l0.7,1.2l2.7,0l-0.2,-4.2c-2.3,-2.7 2,-3.4 2.2,-2.4 0.2,1 2,1.5 2,1.5 0.3,2.5 3.2,4 4,1.5 0.8,-2.5 1.5,-1 2,0.2 0.5,1.2 3.7,4.1 3.7,4.1l2.5,0l0.3,2.4c2.8,-0.2 3.7,0.2 4.8,4 1.2,3.9 4.3,4.9 4.3,4.9l2.3,-0.2c0,-2 2.3,0.3 2.3,1.4 0,1 4.5,4.9 4.5,4.9l4.5,1 4.2,3.4 3.2,-0.3l1.3,0c0.8,-2.9 4.8,0.2 5.2,1.2 0.3,1 3,2.7 3.3,1.9 0.3,-0.8 2.2,-0.3 2.5,2.2 0.3,2.5 1.5,2 1.5,2l9.5,-0.2 3.3,-2.9 8.5,-0.2c4.3,-0.2 1.7,-6.1 0.8,-6.1 -1.5,-1.2 0.5,-6.1 0.5,-6.1L286.5,298.3c-2.8,0 -0.3,-4.1 -0.3,-4.1 2.2,-1.4 -0.5,-3.5 -0.5,-3.5 0.3,-2 -1.2,-4.4 -1.2,-4.4 -3,-2 -2.2,-5.9 -2.2,-5.9l0,-2.7c-2.5,-2.4 1,-2.7 1,-2.7 1.2,-2 -0.8,-3.5 -0.8,-3.5l-0.2,-2.2 -2.7,-0.3 -0.3,-7.9 -6,-8.6c-1.2,-0.3 -0.3,-2.4 -0.3,-2.4 1.5,-0.8 -0.3,-2.9 -0.3,-2.9l-0.2,-3.7 3.5,-0.3 0.8,-1.3l1.7,0l-0.2,-4.4c0.8,-2.2 2.8,-1 2.8,-1l2.3,0.2 1.3,-2.5 0.3,-2 -1.8,-0.2c-2,-1.2 -1,-5.6 -1,-5.6 3.2,-4.7 6.8,-2 6.8,-2l2.3,-0.2c3.5,2.4 0.3,6.7 0.3,6.7 -0.7,1 -0.3,4.2 -0.3,4.2l0.8,5.4 -2.2,1.9c-1.8,1 -1.8,3.4 0.2,3.9 1.3,0.2 0.8,3.4 -1.2,1.2 -3,0 1.7,2.7 0.3,2 3,1.5 2.3,-1.3 2.3,-1.3l4,-3.2c1.5,-1.2 4.2,2.5 4.2,3 0,0.5 6.6,0.2 6.6,0.2 1.8,1.2 2.5,4.2 2.5,4.2 1.8,-2.4 5.7,-0.2 2.8,1.2 2.7,1.7 2.7,3.2 2.7,3.2 2.2,-0.7 2.2,1 2.2,1.5 0,0.5 0.7,-2.5 0.7,-2.5 -2.5,-1.9 3.3,-2.5 1.7,0.8l-1,1.5 1.7,1.3 0.2,3.9c3.7,-0.3 2.7,-4.9 2.7,-4.9l1.7,-0.3c0,-1.5 1.2,-0.7 1.2,-0.7 -1.2,-5.7 2.7,-6.7 2.7,-6.7 2.2,-0.5 2.3,-5.1 2.3,-5.1 -1.5,-0.7 -0.7,-3 1,-1 1.7,2 -1,-4.1 -1,-4.1l-1.3,-1.2 -1.8,-0.2 -0.2,-1.9l-3,0l-0.5,2.4 -1.1,0.5 -0.3,-0.7 -0.5,1.9l-3,0l-0.2,-2 1.8,-0.5 0.7,-1 0.5,-2.7l2.2,0l2.8,-0.8c0.2,-2.9 1.7,-2.2 1.7,-2.2l2.5,2 0.2,1 -1,0.5 -0.2,1.4 0.5,1.9l1.3,0c0.5,-2.7 4,-2.7 5,-1l1,-2.4c-2.3,-1.2 0,-3 0.6,-2.2 0.7,0.8 2.2,-2.2 2.2,-2.2 0,0 1.2,1.5 0,-0.5 -1.2,-2 0.8,-3 0.8,-3 -0.3,-2 2.2,-1.7 2.2,-1.7l0.2,-2.7 -2.3,-0.2c-0.5,2.4 -2.5,0.3 -1.5,-0.2 1,-0.5 2,-1.5 2,-1.5l0,-1.7l1,-0.3 0.2,-1.7l2.5,0l2.2,-1 0.5,-0.8 2.3,-0.2 3.3,-3 -0.3,-1.3c-2,0 0,-1.5 0,-1.5zM263.3,358.7 L262,356.7 264,357 266.1,358.8 267,361 265.8,361.7 265.1,360.7 263.5,360.2zM226.6,308.1 L227.4,310.4 228.6,311.3 229.7,313.8 229.1,315 227.2,313.3 225.9,311.4 225.2,309.9 224.1,306.9zM216.6,299.1l-0.8,0l0,1.7l1.3,0l0,2.2l1,0l-0.2,-2.5 -1.3,-0.5zM347.4,196.3 L348.4,196.1 348.6,197.1 347.6,197.3zM348.6,195.7 L348.9,194.7 350.2,195.1 350,196.1zM351,194.7 L351.1,193.7 350,193.5 349.8,194.5zM352.7,192.5l1.3,0l0,1l-1.3,0zM361.2,193.7 L361.3,192.7 362.5,192.8 362.3,193.8zM364.5,194.4 L364.6,193.4 363.4,193.2 363.3,194.2zM365.7,194.5l1.3,0l0,1l-1.3,0zM367.2,196.2l0,1.2l1,-0.1l0,-1.2z&quot;/>"
+        errorLine2="                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_flag_un.xml"
+            line="21"
+            column="55"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="        mutableStateOf(currentPage.toFloat())"
+        errorLine2="        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/exh/pagepreview/components/PagePreviewScreen.kt"
+            line="131"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/komikku.png` in densityless folder">
+        <location
+            file="src/debug/res/drawable/komikku.png"/>
+    </issue>
+
+    <issue
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/komikku.png` in densityless folder">
+        <location
+            file="src/main/res/drawable/komikku.png"/>
+    </issue>
+
+    <issue
+        id="IconMissingDensityFolder"
+        message="Missing density variation folders in `src/main/res`: drawable-mdpi, drawable-xhdpi, drawable-xxhdpi">
+        <location
+            file="src/main/res"/>
+    </issue>
+
+    <issue
+        id="ButtonStyle"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)"
+        errorLine1="        &lt;Button"
+        errorLine2="         ~~~~~~">
+        <location
+            file="src/main/res/layout/edit_manga_dialog.xml"
+            line="164"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="ButtonStyle"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)"
+        errorLine1="        &lt;Button"
+        errorLine2="         ~~~~~~">
+        <location
+            file="src/main/res/layout/edit_manga_dialog.xml"
+            line="174"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="ViewConstructor"
+        message="Custom view `Pager` is missing constructor used by tools: `(Context)` or `(Context,AttributeSet)` or `(Context,AttributeSet,int)`"
+        errorLine1="open class Pager("
+        errorLine2="           ~~~~~">
+        <location
+            file="src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/pager/Pager.kt"
+            line="16"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="            data = Uri.parse(authorizationUrl)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/eu/kanade/tachiyomi/data/sync/service/GoogleDriveSyncService.kt"
+            line="282"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="            data = Uri.parse(authorizationUrl)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/eu/kanade/tachiyomi/data/sync/service/GoogleDriveSyncService.kt"
+            line="282"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="        val bitmap = Bitmap.createBitmap(wheelSize, wheelSize, Bitmap.Config.ARGB_8888)"
+        errorLine2="                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/eu/kanade/presentation/more/settings/widget/ThemeColorPickerWidget.kt"
+            line="72"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="ClickableViewAccessibility"
+        message="Custom view `Pager` overrides `onTouchEvent` but not `performClick`"
+        errorLine1="    override fun onTouchEvent(ev: MotionEvent): Boolean {"
+        errorLine2="                 ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/pager/Pager.kt"
+            line="97"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="ClickableViewAccessibility"
+        message="Custom view `ReaderButton` overrides `onTouchEvent` but not `performClick`"
+        errorLine1="    override fun onTouchEvent(event: MotionEvent): Boolean {"
+        errorLine2="                 ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/ReaderButton.kt"
+            line="22"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="ClickableViewAccessibility"
+        message="Custom view `WebtoonRecyclerView` overrides `onTouchEvent` but not `performClick`"
+        errorLine1="    override fun onTouchEvent(e: MotionEvent): Boolean {"
+        errorLine2="                 ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/WebtoonRecyclerView.kt"
+            line="72"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="ClickableViewAccessibility"
+        message="Custom view `WebtoonSubsamplingImageView` overrides `onTouchEvent` but not `performClick`"
+        errorLine1="    override fun onTouchEvent(event: MotionEvent): Boolean {"
+        errorLine2="                 ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/WebtoonSubsamplingImageView.kt"
+            line="17"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="ContentDescription"
+        message="Missing `contentDescription` attribute on image"
+        errorLine1="        &lt;ImageView"
+        errorLine2="         ~~~~~~~~~">
+        <location
+            file="src/main/res/layout/edit_manga_dialog.xml"
+            line="15"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="ContentDescription"
+        message="Missing `contentDescription` attribute on image"
+        errorLine1="        &lt;ImageView"
+        errorLine2="         ~~~~~~~~~">
+        <location
+            file="src/main/res/layout/edit_manga_dialog.xml"
+            line="24"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="ContentDescription"
+        message="Missing `contentDescription` attribute on image"
+        errorLine1="        &lt;ImageView"
+        errorLine2="         ~~~~~~~~~">
+        <location
+            file="src/main/res/layout/edit_merged_settings_item.xml"
+            line="18"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="ContentDescription"
+        message="Missing `contentDescription` attribute on image"
+        errorLine1="        &lt;ImageView"
+        errorLine2="         ~~~~~~~~~">
+        <location
+            file="src/main/res/layout/edit_merged_settings_item.xml"
+            line="32"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        binding.downloadProgressText.text = &quot;${download.downloadedImages}/${pages.size}&quot;"
+        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/eu/kanade/tachiyomi/ui/download/DownloadHolder.kt"
+            line="76"
+            column="45"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Number formatting does not take into account locale settings. Consider using `String.format` instead."
+        errorLine1="            binding.favorites.text = (meta.favorites ?: 0).toString()"
+        errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/exh/ui/metadata/adapters/EHentaiDescriptionAdapter.kt"
+            line="76"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Number formatting does not take into account locale settings. Consider using `String.format` instead."
+        errorLine1="                binding.favorites.text = it.toString()"
+        errorLine2="                                         ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/exh/ui/metadata/adapters/NHentaiDescriptionAdapter.kt"
+            line="66"
+            column="42"/>
+    </issue>
+
+</issues>
