@@ -144,6 +144,22 @@ class ReaderViewModel @JvmOverloads constructor(
     private val mutableState = MutableStateFlow(State())
     val state = mutableState.asStateFlow()
 
+    // KMK -->
+    /**
+     * Ids the reader was launched with. They arrive as intent extras, which reach [savedState] as
+     * the activity's default arguments, so the view model can start loading without waiting to be
+     * handed them.
+     */
+    val mangaId = savedState.get<Long>("manga") ?: -1L
+    private val initialChapterId = savedState.get<Long>("chapter") ?: -1L
+
+    // SY -->
+    private val initialPage = savedState.get<Int>("page")?.takeUnless { it == -1 }
+    // SY <--
+
+    val hasValidArgs = mangaId != -1L && initialChapterId != -1L
+    // KMK <--
+
     private val eventChannel = Channel<Event>()
     val eventFlow = eventChannel.receiveAsFlow()
 
@@ -397,6 +413,14 @@ class ReaderViewModel @JvmOverloads constructor(
             }
             .launchIn(viewModelScope)
         // SY <--
+
+        // KMK -->
+        // Loading is owned by the view model, so it survives the activity being recreated and
+        // cannot be dropped by an activity that goes away before the load finishes.
+        if (hasValidArgs) {
+            viewModelScope.launch { init() }
+        }
+        // KMK <--
     }
 
     override fun onCleared() {
@@ -418,19 +442,14 @@ class ReaderViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Whether this presenter is initialized yet.
+     * Initializes this presenter with the [mangaId] and [initialChapterId] the reader was launched
+     * with. This method will fetch the manga from the database and initialize the initial chapter.
+     *
+     * Failure is reported through [State.initError] instead of being returned, so it still reaches
+     * the activity when the load finishes before the activity subscribes.
      */
-    fun needsInit(): Boolean {
-        return manga == null
-    }
-
-    /**
-     * Initializes this presenter with the given [mangaId] and [initialChapterId]. This method will
-     * fetch the manga from the database and initialize the initial chapter.
-     */
-    suspend fun init(mangaId: Long, initialChapterId: Long /* SY --> */, page: Int?/* SY <-- */): Result<Boolean> {
-        if (!needsInit()) return Result.success(true)
-        return withIOContext {
+    private suspend fun init() {
+        withIOContext {
             try {
                 val manga = getManga.await(mangaId)
                 if (manga != null) {
@@ -498,19 +517,21 @@ class ReaderViewModel @JvmOverloads constructor(
                         loader!!,
                         chapterList.first { chapterId == it.chapter.id },
                         // SY -->
-                        page,
+                        initialPage,
                         // SY <--
                     )
-                    Result.success(true)
                 } else {
-                    // Unlikely but okay
-                    Result.success(false)
+                    // KMK -->
+                    error("Requested manga of id $mangaId not found")
+                    // KMK <--
                 }
             } catch (e: Throwable) {
                 if (e is CancellationException) {
                     throw e
                 }
-                Result.failure(e)
+                // KMK -->
+                mutableState.update { it.copy(initError = e) }
+                // KMK <--
             }
         }
     }
@@ -1499,6 +1520,9 @@ class ReaderViewModel @JvmOverloads constructor(
     @Immutable
     data class State(
         val manga: Manga? = null,
+        // KMK -->
+        val initError: Throwable? = null,
+        // KMK <--
         val viewerChapters: ViewerChapters? = null,
         val bookmarked: Boolean = false,
         val isLoadingAdjacentChapter: Boolean = false,
