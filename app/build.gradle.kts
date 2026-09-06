@@ -162,10 +162,15 @@ android {
         shaders = false
     }
 
+    // KMK --> lint used to report into a file nobody read. The existing warnings are parked in
+    // lint-baseline.xml so only new ones fail the build; errors fail regardless.
     lint {
-        abortOnError = false
+        abortOnError = true
         checkReleaseBuilds = false
+        warningsAsErrors = false
+        baseline = file("lint-baseline.xml")
     }
+    // KMK <--
 }
 
 kotlin {
