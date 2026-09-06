@@ -22,6 +22,7 @@ import exh.source.EXHENTAI_EXT_SOURCES
 import exh.source.ExhPreferences
 import exh.source.MERGED_SOURCE_ID
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
@@ -84,8 +86,12 @@ class ExtensionManager(
     val untrustedExtensionsFlow = untrustedExtensionMapFlow.mapExtensions(scope)
 
     init {
-        initExtensions()
-        ExtensionInstallReceiver(InstallationListener()).register(context)
+        // KMK -->
+        scope.launch(Dispatchers.IO) {
+            initExtensions()
+            ExtensionInstallReceiver(InstallationListener()).register(context)
+        }
+        // KMK <--
     }
 
     private var subLanguagesEnabledOnFirstRun = preferences.enabledLanguages().isSet()
