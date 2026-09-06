@@ -14,14 +14,15 @@ fun Project.getCommitCount(): String {
 }
 
 /**
- * `v1.0.0` on a tag, `v1.0.0-3-gabc1234` past one, `-dirty` on top of uncommitted work.
+ * `1.0.0` on a tag, `1.0.0-3-gabc1234` past one, `-dirty` on top of uncommitted work. The tag's
+ * `v` is dropped: callers prepend their own, from tracker user agents to the release tag.
  *
  * Falls back to `unknown` rather than a plausible number: a version nobody can compare is better
  * than one that compares wrongly. A shallow clone has no tags, so CI must check out with
  * `fetch-depth: 0`.
  */
 fun Project.getVersionName(): String {
-    return runCommandOrNull("git describe --tags --always --dirty") ?: "unknown"
+    return runCommandOrNull("git describe --tags --always --dirty")?.removePrefix("v") ?: "unknown"
 }
 
 /**

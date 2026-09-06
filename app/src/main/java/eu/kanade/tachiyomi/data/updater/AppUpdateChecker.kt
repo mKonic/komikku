@@ -104,7 +104,7 @@ fun getReleaseTag(peekIntoPreview: Boolean = false): String =
     if (isPreviewBuildType || peekIntoPreview) {
         "r${BuildConfig.COMMIT_COUNT}"
     } else {
-        BuildConfig.VERSION_NAME
+        "v${BuildConfig.VERSION_NAME}"
     }
 
 val RELEASE_URL = "https://github.com/$GITHUB_REPO/releases/tag/$RELEASE_TAG"
