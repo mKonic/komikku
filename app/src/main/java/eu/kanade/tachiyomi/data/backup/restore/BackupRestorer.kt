@@ -23,9 +23,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.core.common.util.system.logcat
+import tachiyomi.data.DatabaseHandler
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -45,6 +50,7 @@ class BackupRestorer(
     // SY <--
     // KMK -->
     private val feedRestorer: FeedRestorer = FeedRestorer(),
+    private val handler: DatabaseHandler = Injekt.get(),
     // KMK <--
 ) {
 
@@ -185,25 +191,31 @@ class BackupRestorer(
         backupMangas: List<BackupManga>,
         backupCategories: List<BackupCategory>,
     ) = launch {
-        mangaRestorer.sortByNew(backupMangas)
-            .forEach {
-                ensureActive()
-
-                try {
-                    mangaRestorer.restore(it, backupCategories)
-                } catch (e: Exception) {
-                    val sourceName = sourceMapping[it.source] ?: it.source.toString()
-                    errors.add(Date() to "${it.title} [$sourceName]: ${e.message}")
-                }
-
-                restoreProgress += 1
+        // KMK --> One transaction per chunk instead of one per entry. Every restore() runs several
+        // writes that each committed on their own; nesting them under one transaction is supported
+        // by design (see withTransaction) and turns a large restore from thousands of commits into
+        // a handful. Shape adapted from mihonapp/mihon#3667.
+        chunkedRestore(
+            items = mangaRestorer.sortByNew(backupMangas),
+            chunkSize = MANGA_RESTORE_CHUNK_SIZE,
+            inTransaction = { block -> handler.await(inTransaction = true) { block() } },
+            restore = { mangaRestorer.restore(it, backupCategories) },
+            onError = { manga, e ->
+                val sourceName = sourceMapping[manga.source] ?: manga.source.toString()
+                errors.add(Date() to "${manga.title} [$sourceName]: ${e.message}")
+            },
+            onChunkFailed = { e ->
+                logcat(LogPriority.WARN, e) { "Restoring a chunk failed, retrying entry by entry" }
+            },
+            onChunkRestored = { restored, last ->
+                restoreProgress = restored
                 with(notifier) {
-                    showRestoreProgress(it.title, restoreProgress, restoreAmount, isSync)
-                        // KMK -->
+                    showRestoreProgress(last.title, restoreProgress, restoreAmount, isSync)
                         .show(Notifications.ID_RESTORE_PROGRESS)
-                    // KMK <--
                 }
-            }
+            },
+        )
+        // KMK <--
     }
 
     private fun CoroutineScope.restoreAppPreferences(
@@ -297,3 +309,11 @@ class BackupRestorer(
         return File("")
     }
 }
+
+/**
+ * Manga restored under a single transaction.
+ *
+ * Also the granularity of the progress notification, since posting one is itself a binder call -
+ * a 2000-entry restore posted 2000 of them before.
+ */
+private const val MANGA_RESTORE_CHUNK_SIZE = 100
