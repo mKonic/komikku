@@ -12,6 +12,26 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+## [v1.2.0] - 2026-09-07
+### Improved
+- Library, Updates, History, Extensions and Feed stop recomputing while their screen is off screen.
+  These tab screen models outlive the tab being selected, so every database write - every row a
+  library update touches - re-ran the whole library filter, sort and search pipeline for screens
+  nobody was looking at. Verified on device: zero emissions off screen, where there had been one
+  per write.
+- Backup restore commits a chunk of 100 entries per transaction instead of one transaction per
+  entry, falling back to entry-by-entry if a chunk fails so one bad entry cannot drop the other 99.
+- Update checks no longer re-run on every rotation or theme change (mihonapp/mihon#3708).
+
+### Fixed
+- Extension installation via Shizuku in release builds: R8 could not see the reflective calls and
+  stripped the methods (mihonapp/mihon#3676).
+
+### Other
+- Voyager 1.1.0-beta03 -> 2.2.21-1.10.3.
+- coil 3.6.2, okio 3.18.2, conscrypt 2.7.0, kim 0.38.1, materialKolor 5.0.1 (stable, off an alpha).
+- Silenced the R8 warnings for `androidx.window` extension classes the OEM provides at runtime.
+
 ## [v1.1.0] - 2026-09-07
 ### Added
 - Setting to trust every extension without prompting, under Advanced -> Extensions (off by default).
