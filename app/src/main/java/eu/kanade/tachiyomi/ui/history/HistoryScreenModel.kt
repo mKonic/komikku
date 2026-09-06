@@ -3,7 +3,6 @@ package eu.kanade.tachiyomi.ui.history
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.util.fastFilter
-import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.util.insertSeparators
 import eu.kanade.domain.manga.interactor.UpdateManga
@@ -29,6 +28,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import mihon.core.common.utils.mutate
+import mihon.core.screenmodel.ObservedStateScreenModel
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.mapAsCheckboxState
@@ -69,7 +69,7 @@ class HistoryScreenModel(
     // KMK -->
     private val historyPreferences: HistoryPreferences = Injekt.get(),
     // KMK <--
-) : StateScreenModel<HistoryScreenModel.State>(State()) {
+) : ObservedStateScreenModel<HistoryScreenModel.State>(State()) {
 
     private val _events: Channel<Event> = Channel(Channel.UNLIMITED)
     val events: Flow<Event> = _events.receiveAsFlow()
@@ -107,6 +107,7 @@ class HistoryScreenModel(
                         }
                         .flowOn(Dispatchers.IO)
                 }
+                .whileObserved()
                 .collect { newList ->
                     mutableState.update {
                         it.copy(

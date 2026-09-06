@@ -9,7 +9,6 @@ import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMapNotNull
-import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.preference.PreferenceMutableState
 import eu.kanade.core.preference.asState
@@ -83,6 +82,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.runBlocking
 import mihon.core.common.utils.mutate
+import mihon.core.screenmodel.ObservedStateScreenModel
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState
@@ -162,7 +162,7 @@ class LibraryScreenModel(
     // KMK -->
     private val smartSearchMerge: SmartSearchMerge = Injekt.get(),
     // KMK <--
-) : StateScreenModel<LibraryScreenModel.State>(State()) {
+) : ObservedStateScreenModel<LibraryScreenModel.State>(State()) {
 
     // SY -->
     val favoritesSync = FavoritesSyncHelper(preferences.context)
@@ -226,6 +226,7 @@ class LibraryScreenModel(
                 )
             }
                 .distinctUntilChanged()
+                .whileObserved()
                 .collectLatest { libraryData ->
                     mutableState.update { state ->
                         state.copy(libraryData = libraryData)

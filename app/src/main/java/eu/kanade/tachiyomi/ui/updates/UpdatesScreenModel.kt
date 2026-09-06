@@ -5,7 +5,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.util.fastFilter
-import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.preference.asState
 import eu.kanade.core.util.addOrRemove
@@ -40,6 +39,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import logcat.LogPriority
+import mihon.core.screenmodel.ObservedStateScreenModel
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
@@ -73,7 +73,7 @@ class UpdatesScreenModel(
     // SY -->
     readerPreferences: ReaderPreferences = Injekt.get(),
     // SY <--
-) : StateScreenModel<UpdatesScreenModel.State>(State()) {
+) : ObservedStateScreenModel<UpdatesScreenModel.State>(State()) {
 
     private val _events: Channel<Event> = Channel(Int.MAX_VALUE)
     val events: Flow<Event> = _events.receiveAsFlow()
@@ -122,6 +122,7 @@ class UpdatesScreenModel(
                     logcat(LogPriority.ERROR, it)
                     _events.send(Event.InternalError)
                 }
+                .whileObserved()
                 .collectLatest { updateItems ->
                     mutableState.update { state ->
                         state.copy(
