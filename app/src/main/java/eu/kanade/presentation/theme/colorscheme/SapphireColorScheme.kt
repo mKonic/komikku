@@ -36,7 +36,7 @@ internal object SapphireColorScheme : BaseColorScheme() {
         surface = Color(0xFF212121),
         onSurface = Color(0xFFFFFFFF),
         surfaceVariant = Color(0xFF424242),
-        onSurfaceVariant = Color(0xFFD8FFFFFF),
+        onSurfaceVariant = Color(0xD8FFFFFF),
         surfaceTint = Color(0xFF1E88E5), // Assuming 'surfaceTint' maps to 'sapphire_primary' or similar
         inverseSurface = Color(0xFFFAFAFA),
         inverseOnSurface = Color(0xFF313131),
@@ -62,7 +62,7 @@ internal object SapphireColorScheme : BaseColorScheme() {
         surface = Color(0xFFFFFFFF),
         onSurface = Color(0xFF212121),
         surfaceVariant = Color(0xFFB3E5FC),
-        onSurfaceVariant = Color(0xFFD849454E),
+        onSurfaceVariant = Color(0xD849454E),
         surfaceTint = Color(0xFF1E88E5), // Assuming 'surfaceTint' maps to 'sapphire_primary' or similar
         inverseSurface = Color(0xFF424242),
         inverseOnSurface = Color(0xFFFAFAFA),

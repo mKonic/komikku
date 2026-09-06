@@ -36,7 +36,7 @@ internal object CloudflareColorScheme : BaseColorScheme() {
         surface = Color(0xFF1B1B22),
         onSurface = Color(0xFFEFF2F5),
         surfaceVariant = Color(0xFF3F3F46),
-        onSurfaceVariant = Color(0xFFD8FFFFFF),
+        onSurfaceVariant = Color(0xD8FFFFFF),
         surfaceTint = Color(0xFFF38020), // Assuming 'surfaceTint' maps to 'cloudflare_primary' or similar
         inverseSurface = Color(0xFFF3EFF4),
         inverseOnSurface = Color(0xFF313033),
@@ -62,7 +62,7 @@ internal object CloudflareColorScheme : BaseColorScheme() {
         surface = Color(0xFFEFF2F5),
         onSurface = Color(0xFF1B1B22),
         surfaceVariant = Color(0xFFB9B0CC),
-        onSurfaceVariant = Color(0xFFD849454E),
+        onSurfaceVariant = Color(0xD849454E),
         surfaceTint = Color(0xFFF38020), // Assuming 'surfaceTint' maps to 'cloudflare_primary' or similar
         inverseSurface = Color(0xFF313033),
         inverseOnSurface = Color(0xFFF3EFF4),

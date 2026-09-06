@@ -56,6 +56,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import mihon.core.designsystem.utils.currentLocale
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.topSmallPaddingValues
@@ -166,11 +167,12 @@ class SettingsDebugScreen : Screen() {
                     )
                 }
                 items(toggles) { (name, pref, default) ->
+                    val locale = currentLocale()
                     var state by pref
                     TextPreferenceWidget(
                         title = name.replace('_', ' ')
-                            .lowercase(Locale.getDefault())
-                            .capitalize(Locale.getDefault()),
+                            .lowercase(locale)
+                            .capitalize(locale),
                         subtitle = if (pref.value != default) {
                             AnnotatedString("MODIFIED", SpanStyle(color = Color.Red))
                         } else {

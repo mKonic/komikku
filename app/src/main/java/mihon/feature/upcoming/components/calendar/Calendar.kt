@@ -25,6 +25,7 @@ import io.woong.compose.grid.VerticalGrid
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableList
+import mihon.core.designsystem.utils.currentLocale
 import mihon.core.designsystem.utils.isExpandedWidthWindow
 import mihon.core.designsystem.utils.isMediumWidthWindow
 import tachiyomi.presentation.core.components.material.padding
@@ -33,7 +34,6 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields
-import java.util.Locale
 
 private val FontSize = 16.sp
 private const val DAYS_OF_WEEK = 7
@@ -74,8 +74,9 @@ private fun CalendarGrid(
     events: ImmutableMap<LocalDate, Int>,
     onClickDay: (day: LocalDate) -> Unit,
 ) {
-    val localeFirstDayOfWeek = WeekFields.of(Locale.getDefault()).firstDayOfWeek.value
-    val weekDays = remember {
+    val locale = currentLocale()
+    val localeFirstDayOfWeek = WeekFields.of(locale).firstDayOfWeek.value
+    val weekDays = remember(localeFirstDayOfWeek) {
         (0 until DAYS_OF_WEEK)
             .map { DayOfWeek.of((localeFirstDayOfWeek - 1 + it) % DAYS_OF_WEEK + 1) }
             .toImmutableList()
@@ -96,7 +97,7 @@ private fun CalendarGrid(
             Text(
                 text = item.getDisplayName(
                     TextStyle.NARROW,
-                    Locale.getDefault(),
+                    locale,
                 ),
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.SemiBold,

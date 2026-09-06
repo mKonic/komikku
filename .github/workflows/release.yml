@@ -38,11 +38,11 @@ jobs:
       - name: Check code format
         run: ./gradlew spotlessCheck
 
-      - name: Build release APKs
-        run: ./gradlew assembleRelease -Penable-updater
-
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
+
+      - name: Build release APK
+        run: ./gradlew assembleRelease -Penable-updater
 
       - name: Sign APKs
         id: sign
@@ -56,7 +56,7 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: '35.0.1'
 
-      - name: Name the APKs after the tag
+      - name: Name the APK after the tag
         id: rename
         run: |
           set -euo pipefail
@@ -64,7 +64,7 @@ jobs:
           shopt -s nullglob
           signed=(app/build/outputs/apk/release/*-signed.apk)
           if [ ${#signed[@]} -eq 0 ]; then
-            echo "No signed APKs were produced; check the signing secrets." >&2
+            echo "No signed APK was produced; check the signing secrets." >&2
             exit 1
           fi
           for apk in "${signed[@]}"; do

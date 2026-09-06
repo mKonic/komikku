@@ -105,14 +105,17 @@ android {
         getByName("benchmark").res.srcDirs("src/debug/res")
     }
 
+    // KMK --> one ABI, one APK. Every device this fork is built for is arm64, and the dropped
+    // splits cost a full R8 + packaging pass each without ever being installed.
     splits {
         abi {
             isEnable = true
-            isUniversalApk = true
+            isUniversalApk = false
             reset()
-            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            include("arm64-v8a")
         }
     }
+    // KMK <--
 
     packaging {
         jniLibs {
@@ -327,7 +330,7 @@ dependencies {
 
     // For detecting memory leaks; see https://square.github.io/leakcanary/
     // debugImplementation(libs.leakcanary.android)
-    implementation(libs.leakcanary.plumber)
+    debugImplementation(libs.leakcanary.plumber)
 
     testImplementation(kotlinx.coroutines.test)
 
@@ -337,7 +340,11 @@ dependencies {
 
     // RatingBar (SY)
     implementation(sylibs.ratingbar)
-    implementation(sylibs.composeRatingbar)
+    implementation(sylibs.composeRatingbar) {
+        // Ships the kotlinc Compose plugin as a runtime dependency; R8 only has to see it to
+        // start reporting missing classes from it.
+        exclude(group = "androidx.compose.compiler")
+    }
 
     // Google drive
     implementation(sylibs.google.api.services.drive)
@@ -373,12 +380,6 @@ androidComponents {
         resSource.addGeneratedSourceDirectory(localesConfigTask) { it.outputDir }
     }
     // KMK <--
-
-    onVariants(selector().withFlavor("default" to "standard")) {
-        // Only excluding in standard flavor because this breaks
-        // Layout Inspector's Compose tree
-        it.packaging.resources.excludes.add("META-INF/*.version")
-    }
 }
 
 buildscript {

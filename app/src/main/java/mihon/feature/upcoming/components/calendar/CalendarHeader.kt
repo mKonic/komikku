@@ -21,6 +21,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import mihon.core.designsystem.utils.currentLocale
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.KeyboardArrowLeft
 import mihon.icons.materialsymbols.rounded.KeyboardArrowRight
@@ -28,7 +29,6 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun CalenderHeader(
@@ -85,7 +85,7 @@ private fun AnimatedContentTransitionScope<YearMonth>.getAnimation(): ContentTra
 @Composable
 @ReadOnlyComposable
 private fun getTitleText(monthYear: YearMonth): String {
-    val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
+    val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", currentLocale())
     return formatter.format(monthYear)
 }
 
