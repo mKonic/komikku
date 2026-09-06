@@ -494,6 +494,9 @@ object SettingsAdvancedScreen : SearchableSettings {
         val extensionInstallerPref = basePreferences.extensionInstaller()
         var shizukuMissing by rememberSaveable { mutableStateOf(false) }
         val trustExtension = remember { Injekt.get<TrustExtension>() }
+        // KMK -->
+        val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
+        // KMK <--
 
         if (shizukuMissing) {
             val dismiss = { shizukuMissing = false }
@@ -549,8 +552,22 @@ object SettingsAdvancedScreen : SearchableSettings {
                 // KMK -->
                 Preference.PreferenceItem.InfoPreference(stringResource(KMR.strings.pref_private_installer_warning)),
                 // KMK <--
+                // KMK -->
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = sourcePreferences.trustAllExtensions(),
+                    title = stringResource(KMR.strings.pref_trust_all_extensions),
+                    subtitle = stringResource(KMR.strings.pref_trust_all_extensions_summary),
+                    onValueChanged = {
+                        context.toast(MR.strings.requires_app_restart)
+                        true
+                    },
+                ),
+                // KMK <--
                 Preference.PreferenceItem.TextPreference(
                     title = stringResource(MR.strings.ext_revoke_trust),
+                    // Left visible while everything is trusted: `enabled` hides an item here
+                    // rather than greying it, and the stored grants still matter the moment
+                    // trust-all goes back off.
                     onClick = {
                         trustExtension.revokeAll()
                         context.toast(MR.strings.requires_app_restart)

@@ -58,7 +58,7 @@ object ImageUtil {
 
     fun findImageType(stream: InputStream): ImageType? {
         return try {
-            readHeader(stream)?.let(::sniffType)
+            ImageFormat.readHeader(stream)?.let(ImageFormat::typeOf)
         } catch (_: Exception) {
             null
         }
@@ -71,81 +71,21 @@ object ImageUtil {
 
     fun isAnimatedAndSupported(source: BufferedSource): Boolean {
         return try {
-            val header = readHeader(source.peek().inputStream()) ?: return false
+            val header = ImageFormat.readHeader(source.peek().inputStream()) ?: return false
             // https://coil-kt.github.io/coil/getting_started/#supported-image-formats
-            when (sniffType(header)) {
+            when (ImageFormat.typeOf(header)) {
                 ImageType.GIF -> true
                 // Animated WebP on Android 9+
-                ImageType.WEBP -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && isAnimatedWebp(header)
+                ImageType.WEBP ->
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && ImageFormat.isAnimatedWebp(header)
                 // Animated Heif on Android 11+
-                ImageType.HEIF -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && isAnimatedHeif(header)
+                ImageType.HEIF ->
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && ImageFormat.isAnimatedHeif(header)
                 else -> false
             }
         } catch (_: Exception) {
             false
         }
-    }
-
-    /**
-     * Reads the leading bytes every container format puts its magic number and brands in, without
-     * consuming them from a stream that can rewind.
-     */
-    private fun readHeader(stream: InputStream): ByteArray? {
-        val bytes = ByteArray(HEADER_BYTES)
-
-        val length = if (stream.markSupported()) {
-            stream.mark(bytes.size)
-            stream.readNBytes(bytes, 0, bytes.size).also { stream.reset() }
-        } else {
-            stream.readNBytes(bytes, 0, bytes.size)
-        }
-
-        return if (length <= 0) null else bytes
-    }
-
-    /**
-     * Identifies a format from its header.
-     *
-     * Parsed here rather than handed to the bundled decoder: this runs for every page, every
-     * cover and every file a local source lists, and comparing a dozen bytes costs a fraction of
-     * a JNI call - let alone of opening a decoder over the whole image just to read its type.
-     */
-    private fun sniffType(h: ByteArray): ImageType? = when {
-        h.startsWith(MAGIC_JPEG) -> ImageType.JPEG
-        h.startsWith(MAGIC_PNG) -> ImageType.PNG
-        h.startsWith(MAGIC_GIF) -> ImageType.GIF
-        h.startsWith(MAGIC_RIFF) && h.matchesAt(8, MAGIC_WEBP) -> ImageType.WEBP
-        h.startsWith(MAGIC_JXL_STREAM) || h.matchesAt(4, MAGIC_JXL_BOX) -> ImageType.JXL
-        h.matchesAt(4, MAGIC_FTYP) -> when (readBrand(h, 8)) {
-            in AVIF_BRANDS -> ImageType.AVIF
-            in HEIF_BRANDS -> ImageType.HEIF
-            else -> null
-        }
-        h.matchesAt(4, MAGIC_JP2_BOX) -> ImageType.JP2
-        h.startsWith(MAGIC_J2K_STREAM) -> ImageType.JPX
-        else -> null
-    }
-
-    /** The ANIM bit of a RIFF `VP8X` chunk - a still WebP has no such chunk at all. */
-    private fun isAnimatedWebp(h: ByteArray): Boolean =
-        h.matchesAt(12, MAGIC_VP8X) && h.size > 20 && (h[20].toInt() and 0x02) != 0
-
-    /** Sequence brands mark a multi-image HEIF; the single-image brands never animate. */
-    private fun isAnimatedHeif(h: ByteArray): Boolean = readBrand(h, 8) in HEIF_SEQUENCE_BRANDS
-
-    private fun readBrand(h: ByteArray, offset: Int): String? {
-        if (h.size < offset + 4) return null
-        return String(h, offset, 4, Charsets.US_ASCII)
-    }
-
-    private fun ByteArray.startsWith(prefix: ByteArray): Boolean = matchesAt(0, prefix)
-
-    private fun ByteArray.matchesAt(offset: Int, expected: ByteArray): Boolean {
-        if (size < offset + expected.size) return false
-        for (i in expected.indices) {
-            if (this[offset + i] != expected[i]) return false
-        }
-        return true
     }
 
     enum class ImageType(val mime: String, val extension: String) {
@@ -905,35 +845,3 @@ val getDisplayMaxHeightInPx: Int
  * bails out at, so a sampled page never gets rejected for being too small.
  */
 private const val BACKGROUND_SAMPLE_MIN_DIMENSION = 256
-
-/**
- * Enough for a RIFF header plus its first chunk's flag byte, and for an ISO-BMFF `ftyp` box's
- * major brand - the deepest either sniffed field sits.
- */
-private const val HEADER_BYTES = 32
-
-private val MAGIC_JPEG = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte())
-private val MAGIC_PNG = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
-private val MAGIC_GIF = "GIF8".toByteArray(Charsets.US_ASCII)
-private val MAGIC_RIFF = "RIFF".toByteArray(Charsets.US_ASCII)
-private val MAGIC_WEBP = "WEBP".toByteArray(Charsets.US_ASCII)
-private val MAGIC_VP8X = "VP8X".toByteArray(Charsets.US_ASCII)
-private val MAGIC_FTYP = "ftyp".toByteArray(Charsets.US_ASCII)
-
-/** A bare JPEG XL codestream; the boxed form is caught by [MAGIC_JXL_BOX] instead. */
-private val MAGIC_JXL_STREAM = byteArrayOf(0xFF.toByte(), 0x0A)
-private val MAGIC_JXL_BOX = "JXL ".toByteArray(Charsets.US_ASCII)
-
-private val MAGIC_JP2_BOX = "jP  ".toByteArray(Charsets.US_ASCII)
-private val MAGIC_J2K_STREAM = byteArrayOf(0xFF.toByte(), 0x4F, 0xFF.toByte(), 0x51)
-
-private val AVIF_BRANDS = setOf("avif", "avis")
-
-/** Every brand an image-bearing HEIF file declares, sequences included. */
-private val HEIF_BRANDS = setOf(
-    "heic", "heix", "heim", "heis", "mif1",
-    "hevc", "hevx", "hevm", "hevs", "msf1",
-)
-
-/** The subset of [HEIF_BRANDS] that carries more than one frame. */
-private val HEIF_SEQUENCE_BRANDS = setOf("hevc", "hevx", "hevm", "hevs", "msf1")

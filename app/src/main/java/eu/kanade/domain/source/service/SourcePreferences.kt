@@ -64,6 +64,16 @@ class SourcePreferences(
         emptySet(),
     )
 
+    // KMK -->
+    /**
+     * Accept any extension signature without prompting.
+     *
+     * Off by default. On, an extension APK is loaded whoever signed it, so only turn it on if you
+     * are the one deciding what gets installed.
+     */
+    fun trustAllExtensions() = preferenceStore.getBoolean("trust_all_extensions", false)
+    // KMK <--
+
     fun globalSearchFilterState() = preferenceStore.getBoolean(
         Preference.appStateKey("has_filters_toggle_state"),
         false,
