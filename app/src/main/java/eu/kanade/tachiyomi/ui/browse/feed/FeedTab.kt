@@ -32,6 +32,7 @@ import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import mihon.core.screenmodel.collectAsStateWhileObserved
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Add
 import mihon.icons.materialsymbols.rounded.Close
@@ -50,7 +51,7 @@ fun Screen.feedTab(
     // KMK <--
 ): TabContent {
     val navigator = LocalNavigator.currentOrThrow
-    val state by screenModel.state.collectAsState()
+    val state by screenModel.collectAsStateWhileObserved()
 
     // KMK -->
     val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()

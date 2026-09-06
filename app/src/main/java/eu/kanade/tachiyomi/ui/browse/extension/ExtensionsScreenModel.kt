@@ -2,7 +2,6 @@ package eu.kanade.tachiyomi.ui.browse.extension
 
 import android.app.Application
 import androidx.compose.runtime.Immutable
-import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.base.BasePreferences
@@ -29,6 +28,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import mihon.core.screenmodel.ObservedStateScreenModel
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -41,7 +41,7 @@ class ExtensionsScreenModel(
     basePreferences: BasePreferences = Injekt.get(),
     private val extensionManager: ExtensionManager = Injekt.get(),
     private val getExtensions: GetExtensionsByType = Injekt.get(),
-) : StateScreenModel<ExtensionsScreenModel.State>(State()) {
+) : ObservedStateScreenModel<ExtensionsScreenModel.State>(State()) {
 
     private val currentDownloads = MutableStateFlow<Map<String, InstallStep>>(hashMapOf())
 
@@ -119,6 +119,7 @@ class ExtensionsScreenModel(
                     // KMK <--
                 }
             }
+                .whileObserved()
                 .collectLatest { items ->
                     mutableState.update { state ->
                         state.copy(

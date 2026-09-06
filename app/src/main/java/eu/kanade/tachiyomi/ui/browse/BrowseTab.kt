@@ -35,6 +35,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
+import mihon.core.screenmodel.collectAsStateWhileObserved
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -77,7 +78,7 @@ data object BrowseTab : Tab {
 
         // Hoisted for extensions tab's search bar
         val extensionsScreenModel = rememberScreenModel { ExtensionsScreenModel() }
-        val extensionsState by extensionsScreenModel.state.collectAsState()
+        val extensionsState by extensionsScreenModel.collectAsStateWhileObserved()
 
         // KMK -->
         val feedScreenModel = rememberScreenModel { FeedScreenModel() }

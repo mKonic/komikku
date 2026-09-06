@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.util.fastAny
-import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.browse.FeedItemUI
@@ -31,6 +30,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import mihon.core.screenmodel.ObservedStateScreenModel
 import mihon.domain.manga.model.toDomainManga
 import tachiyomi.core.common.util.QuerySanitizer.sanitize
 import tachiyomi.core.common.util.lang.launchIO
@@ -71,7 +71,7 @@ open class FeedScreenModel(
     // KMK -->
     private val reorderFeed: ReorderFeed = Injekt.get(),
     // KMK <--
-) : StateScreenModel<FeedScreenState>(FeedScreenState()) {
+) : ObservedStateScreenModel<FeedScreenState>(FeedScreenState()) {
 
     private val _events = Channel<Event>(Int.MAX_VALUE)
     val events = _events.receiveAsFlow()
@@ -103,6 +103,7 @@ open class FeedScreenModel(
                 getFeed(items)
             }
             .catch { _events.send(Event.FailedFetchingSources) }
+            .whileObserved()
             .launchIn(screenModelScope)
     }
 
