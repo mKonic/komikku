@@ -95,12 +95,8 @@ class AppUpdateChecker(
 
 val GITHUB_REPO: String by lazy { getGithubRepo() }
 
-fun getGithubRepo(peekIntoPreview: Boolean = false): String =
-    if (isPreviewBuildType || peekIntoPreview) {
-        "komikku-app/komikku-preview"
-    } else {
-        "komikku-app/komikku"
-    }
+@Suppress("UNUSED_PARAMETER")
+fun getGithubRepo(peekIntoPreview: Boolean = false): String = "mKonic/komikku"
 
 val RELEASE_TAG: String by lazy { getReleaseTag() }
 
