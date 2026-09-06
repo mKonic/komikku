@@ -56,7 +56,7 @@ image-decoder = "com.github.tachiyomiorg:image-decoder:41c059e540"
 # KMK --> the WebGPU reader uses upstream's newer decoder; it ships libimagedecoder2.so
 # so it coexists with the existing one rather than replacing it
 image-decoder-webgpu = "ca.mpreg:imagedecoder:10"
-kim = "de.stefan-oltmann:kim:0.38.1"
+kim = "de.stefan-oltmann:kim:0.34.0"
 
 natural-comparator = "com.github.gpanther:java-nat-sort:natural-comparator-1.1"
 
