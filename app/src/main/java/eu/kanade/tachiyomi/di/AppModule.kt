@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.di
 
 import android.app.Application
 import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import app.cash.sqldelight.db.SqlDriver
@@ -192,25 +193,31 @@ class AppModule(val app: Application) : InjektModule {
         addSingletonFactory { ConnectionsManager() }
         // <-- AM (CONNECTIONS)
 
-        // KMK --> Warm the expensive singletons off the main thread. This block was already
-        // meant to be asynchronous, but getMainExecutor posts straight back to the main thread, so
-        // opening the database - loading libsqlite3x, running the WAL pragmas - and building the
-        // source and download managers all landed on the critical path to the first frame.
+        // KMK --> Warm the expensive singletons off the main thread.
         //
-        // Whatever asks for one of these first still blocks until it is ready, exactly as before;
-        // it just is no longer guaranteed to be the UI thread doing the construction.
-        launchIO {
-            get<NetworkHelper>()
+        // The outer post to the main executor is load-bearing and must stay: it defers this until
+        // App.onCreate() has drained, and only by then have the SY and KMK modules registered the
+        // preferences these singletons resolve. Warming directly on a background thread races
+        // module registration and dies on a missing DelegateSourcePreferences.
+        //
+        // What was wrong before is that the work then ran *on* the main thread, so opening the
+        // database - loading libsqlite3x, running the WAL pragmas - and building the source and
+        // download managers all sat on the critical path to the first frame. The inner hop moves
+        // that off it while keeping the ordering.
+        ContextCompat.getMainExecutor(app).execute {
+            launchIO {
+                get<NetworkHelper>()
 
-            get<SourceManager>()
+                get<SourceManager>()
 
-            get<Database>()
+                get<Database>()
 
-            get<DownloadManager>()
+                get<DownloadManager>()
 
-            // SY -->
-            get<GetCustomMangaInfo>()
-            // SY <--
+                // SY -->
+                get<GetCustomMangaInfo>()
+                // SY <--
+            }
         }
         // KMK <--
 
