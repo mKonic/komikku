@@ -172,8 +172,19 @@ class ChapterCache(
      */
     fun getImageFile(imageUrl: String): File {
         // Get file from md5 key.
-        val imageName = DiskUtil.hashKeyForDisk(imageUrl) + ".0"
-        return File(diskCache.directory, imageName)
+        val key = DiskUtil.hashKeyForDisk(imageUrl)
+        // KMK -->
+        // Count the read as a use. Pages are opened by path, so without this the cache never
+        // observes a read at all and evicts in write order instead of least-recently-used
+        // order -- which makes the pages at the head of a preload burst, the ones queued but
+        // not yet displayed, the first things dropped once the cache is full.
+        try {
+            diskCache.get(key)?.close()
+        } catch (_: IOException) {
+            // Nothing to promote; the caller will find out when it opens the file.
+        }
+        // KMK <--
+        return File(diskCache.directory, "$key.0")
     }
 
     /**

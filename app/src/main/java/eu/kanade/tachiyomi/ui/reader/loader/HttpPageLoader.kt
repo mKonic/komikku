@@ -27,6 +27,7 @@ import tachiyomi.core.common.util.lang.withIOContext
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
+import java.io.IOException
 import java.util.concurrent.PriorityBlockingQueue
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -246,6 +247,17 @@ internal class HttpPageLoader(
                 page.status = Page.State.DownloadImage
                 downloadImage(page, imageUrl)
             }
+
+            // KMK -->
+            // Two things can leave the cache without the file we just asked it for: a second
+            // loader racing this same key gets a null editor from DiskLruCache and returns
+            // without writing anything, and a trim can evict the entry between the write and
+            // here. Marking the page Ready either way surfaces it as a bare
+            // FileNotFoundException when the viewer renders it, which no retry can clear.
+            if (!chapterCache.isImageInCache(imageUrl)) {
+                throw IOException("Page ${page.number} left the cache before it could be read")
+            }
+            // KMK <--
 
             page.stream = { chapterCache.getImageFile(imageUrl).inputStream() }
             page.status = Page.State.Ready
