@@ -12,16 +12,14 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -33,8 +31,21 @@ class DownloadQueueScreenModel(
     // KMK <--
 ) : ScreenModel {
 
-    private val _state = MutableStateFlow(emptyList<DownloadHeaderItem>())
-    val state = _state.asStateFlow()
+    // KMK -->
+    // Built straight from the queue and shared only while something is collecting, so a
+    // backgrounded queue screen stops rebuilding this list on every download tick.
+    val state: StateFlow<List<DownloadHeaderItem>> = downloadManager.queueState
+        .map { downloads ->
+            downloads
+                .groupBy { it.source }
+                .map { entry ->
+                    DownloadHeaderItem(entry.key.id, entry.key.name, entry.value.size).apply {
+                        addSubItems(0, entry.value.map { DownloadItem(it, this) })
+                    }
+                }
+        }
+        .stateIn(screenModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // KMK <--
 
     lateinit var controllerBinding: DownloadListBinding
 
@@ -123,22 +134,6 @@ class DownloadQueueScreenModel(
                     // KMK <--
                 }
             }
-        }
-    }
-
-    init {
-        screenModelScope.launch {
-            downloadManager.queueState
-                .map { downloads ->
-                    downloads
-                        .groupBy { it.source }
-                        .map { entry ->
-                            DownloadHeaderItem(entry.key.id, entry.key.name, entry.value.size).apply {
-                                addSubItems(0, entry.value.map { DownloadItem(it, this) })
-                            }
-                        }
-                }
-                .collect { newList -> _state.update { newList } }
         }
     }
 
