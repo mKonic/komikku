@@ -6,16 +6,22 @@ import eu.kanade.tachiyomi.network.interceptor.UncaughtExceptionInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UserAgentInterceptor
 import exh.log.EHLogLevel
 import exh.pref.DelegateSourcePreferences
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import logcat.LogPriority
 import okhttp3.Cache
+import okhttp3.ConnectionPool
+import okhttp3.Dispatcher
 import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 import okio.IOException
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
 import java.io.File
 import java.io.RandomAccessFile
+import java.net.HttpURLConnection.HTTP_PARTIAL
 import java.util.concurrent.TimeUnit
 import kotlin.math.pow
 import kotlin.random.Random
@@ -32,6 +38,39 @@ import kotlin.random.Random
 
     // KMK -->
     private val delegatedSourcesEnabled = delegateSourcePreferences.delegateSources().get()
+
+    /**
+     * One [Cache] instance shared by every client built here. Two caches over the same directory
+     * race each other's journal writers and can wipe it, so this must never be built per client.
+     */
+    private val cache by lazy {
+        Cache(
+            directory = File(context.cacheDir, "network_cache"),
+            maxSize = 5L * 1024 * 1024, // 5 MiB
+        )
+    }
+
+    /**
+     * Shared so every client draws on one pool of threads and connections.
+     *
+     * OkHttp allows 5 concurrent requests per host by default, which sits below what the app itself
+     * asks for: the reader loads several pages at once and each of those can split into concurrent
+     * ranged requests, while the downloader has its own page and source parallelism settings. Left
+     * at 5, those knobs quietly cap out here instead of where the user set them.
+     */
+    private val dispatcher = Dispatcher().apply {
+        maxRequestsPerHost = MAX_REQUESTS_PER_HOST
+    }
+
+    /**
+     * Sources serve their pages from a handful of CDN hosts. The default of 5 idle connections
+     * evicts those between pages and pays a fresh TLS handshake on the next one.
+     */
+    private val connectionPool = ConnectionPool(
+        maxIdleConnections = MAX_IDLE_CONNECTIONS,
+        keepAliveDuration = 5,
+        timeUnit = TimeUnit.MINUTES,
+    )
     // KMK <--
 
     /**
@@ -50,13 +89,10 @@ import kotlin.random.Random
             .connectTimeout(connectTimeout, TimeUnit.SECONDS)
             .readTimeout(readTimeout, TimeUnit.SECONDS)
             .callTimeout(callTimeout, TimeUnit.SECONDS)
+            .dispatcher(dispatcher)
+            .connectionPool(connectionPool)
+            .cache(cache)
             // KMK <--
-            .cache(
-                Cache(
-                    directory = File(context.cacheDir, "network_cache"),
-                    maxSize = 5L * 1024 * 1024, // 5 MiB
-                ),
-            )
             .addInterceptor(UncaughtExceptionInterceptor())
             .addInterceptor(UserAgentInterceptor(::defaultUserAgentProvider))
 
@@ -120,64 +156,85 @@ import kotlin.random.Random
 
     // KMK -->
     /**
-     * Timeout in unit of seconds.
+     * Derived from [client] so the connection pool, dispatcher, cache and DNS settings are shared
+     * rather than standing up a second stack alongside it.
+     *
+     * Timeout in unit of seconds. A [callTimeout] of 0 disables the whole-call deadline.
      */
     private fun clientWithTimeOut(
         connectTimeout: Long = 30,
         readTimeout: Long = 30,
         callTimeout: Long = 120,
-    ) = clientBuilder(connectTimeout, readTimeout, callTimeout)
-        .addInterceptor(
-            CloudflareInterceptor(context, cookieJar, ::defaultUserAgentProvider),
-        )
+    ) = client.newBuilder()
+        .connectTimeout(connectTimeout, TimeUnit.SECONDS)
+        .readTimeout(readTimeout, TimeUnit.SECONDS)
+        .callTimeout(callTimeout, TimeUnit.SECONDS)
         .build()
 
     /**
      * Allow to download a big file with retry & resume capability because
      * normally it would get a Timeout exception.
      */
-    fun downloadFileWithResume(url: String, outputFile: File, progressListener: ProgressListener) {
-        val client = clientWithTimeOut(
-            callTimeout = 120,
-        )
-
-        var downloadedBytes: Long
+    suspend fun downloadFileWithResume(
+        url: String,
+        outputFile: File,
+        progressListener: ProgressListener,
+    ) = withIOContext {
+        // No whole-call deadline: this is an entire APK, and a total-call timeout kills a healthy
+        // transfer for being slow. A stall is still caught by the read timeout, and cancelling the
+        // caller now aborts the request outright instead of leaving it to run to completion.
+        val client = clientWithTimeOut(callTimeout = 0)
 
         var attempt = 0
+        var totalAttempts = 0
 
-        while (attempt < MAX_RETRY) {
+        while (attempt < MAX_RETRY && totalAttempts < MAX_TOTAL_ATTEMPTS) {
+            ensureActive()
+            totalAttempts++
+
+            // Resume from whatever earlier attempts already wrote.
+            val downloadedBytes = outputFile.length()
+            val request = GET(
+                url = url,
+                headers = Headers.Builder()
+                    .add("Range", "bytes=$downloadedBytes-")
+                    .build(),
+            )
+
             try {
-                // Check how much has already been downloaded
-                downloadedBytes = outputFile.length()
-                // Set up request with Range header to resume from the last byte
-                val request = GET(
-                    url = url,
-                    headers = Headers.Builder()
-                        .add("Range", "bytes=$downloadedBytes-")
-                        .build(),
-                )
-
-                var failed = false
-                client.newCachelessCallWithProgress(request, progressListener).execute().use { response ->
-                    if (response.isSuccessful || response.code == 206) { // 206 indicates partial content
-                        saveResponseToFile(response, outputFile, downloadedBytes)
-                        if (response.isSuccessful) {
-                            return
+                client.newCachelessCallWithProgress(request, progressListener).await().use { response ->
+                    when {
+                        // The range was honoured, so what is already on disk still stands.
+                        response.code == HTTP_PARTIAL -> {
+                            saveResponseToFile(response, outputFile, downloadedBytes)
+                            return@withIOContext
                         }
-                    } else {
-                        attempt++
-                        logcat(LogPriority.ERROR) { "Unexpected response code: ${response.code}. Retrying..." }
-                        if (response.code == 416) {
-                            // 416: Range Not Satisfiable
+                        // The server ignored the range and sent the whole file. Writing that at the
+                        // resume offset would duplicate the bytes already on disk, so restart at 0.
+                        response.isSuccessful -> {
+                            saveResponseToFile(response, outputFile, 0)
+                            return@withIOContext
+                        }
+                        // What is on disk is no shorter than the file itself. Drop it and retry.
+                        response.code == HTTP_RANGE_NOT_SATISFIABLE -> {
                             outputFile.delete()
                         }
-                        failed = true
+                        else -> {
+                            logcat(LogPriority.ERROR) { "Unexpected response code: ${response.code}. Retrying..." }
+                        }
                     }
                 }
-                if (failed) exponentialBackoff(attempt - 1)
             } catch (e: IOException) {
+                // A cancelled call surfaces here as a plain IOException, so check before retrying.
+                ensureActive()
                 logcat(LogPriority.ERROR) { "Download interrupted: ${e.message}. Retrying..." }
-                // Wait or handle as needed before retrying
+            }
+
+            if (outputFile.length() > downloadedBytes) {
+                // The attempt still gained ground, so don't spend the retry budget on it: a long
+                // download over a flaky link should keep going for as long as it keeps moving.
+                attempt = 0
+            } else {
                 attempt++
                 exponentialBackoff(attempt - 1)
             }
@@ -191,6 +248,10 @@ import kotlin.random.Random
 
         // Use RandomAccessFile to write from specific position
         RandomAccessFile(outputFile, "rw").use { file ->
+            // Drop anything past the resume point before writing. On a restart, or on an attempt
+            // that turns out shorter than an earlier one, a leftover tail would otherwise survive
+            // underneath what we write and be counted as downloaded by the next resume.
+            file.setLength(startPosition)
             file.seek(startPosition)
             body.byteStream().use { input ->
                 val buffer = ByteArray(8 * 1024)
@@ -203,9 +264,8 @@ import kotlin.random.Random
     }
 
     // Increment attempt and apply exponential backoff
-    private fun exponentialBackoff(attempt: Int) {
-        val backoffDelay = calculateExponentialBackoff(attempt)
-        Thread.sleep(backoffDelay)
+    private suspend fun exponentialBackoff(attempt: Int) {
+        delay(calculateExponentialBackoff(attempt))
     }
 
     // Helper function to calculate exponential backoff with jitter
@@ -231,7 +291,22 @@ import kotlin.random.Random
 
     companion object {
         // KMK -->
+        /** Consecutive attempts that gained no ground. */
         private const val MAX_RETRY = 5
+
+        /** Bounds a download that keeps inching forward without ever finishing. */
+        private const val MAX_TOTAL_ATTEMPTS = 50
+
+        /**
+         * Room for the reader's concurrent pages at several ranged requests each, plus headroom for
+         * a download running against the same host. Sources that want less still say so through
+         * their own rate limit interceptor.
+         */
+        private const val MAX_REQUESTS_PER_HOST = 12
+
+        private const val MAX_IDLE_CONNECTIONS = 16
+
+        private const val HTTP_RANGE_NOT_SATISFIABLE = 416
         // KMK <--
     }
 }
