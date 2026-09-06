@@ -89,6 +89,7 @@ import org.conscrypt.Conscrypt
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
+import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.storage.service.StorageManager
@@ -343,11 +344,20 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         return super.getPackageName()
     }
 
+    /**
+     * Registers the app's ~20 notification channels.
+     *
+     * Off the main thread: each channel is its own binder round trip to the system, and nothing in
+     * the first frames posts a notification, so paying for all of them before the UI appears only
+     * delays startup.
+     */
     private fun setupNotificationChannels() {
-        try {
-            Notifications.createChannels(this)
-        } catch (e: Exception) {
-            logcat(LogPriority.ERROR, e) { "Failed to modify notification channels" }
+        launchIO {
+            try {
+                Notifications.createChannels(this@App)
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e) { "Failed to modify notification channels" }
+            }
         }
     }
 

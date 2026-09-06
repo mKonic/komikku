@@ -2,7 +2,6 @@ package eu.kanade.tachiyomi.di
 
 import android.app.Application
 import android.os.Build
-import androidx.core.content.ContextCompat
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import app.cash.sqldelight.db.SqlDriver
@@ -38,6 +37,7 @@ import nl.adaptivity.xmlutil.core.XmlVersion
 import nl.adaptivity.xmlutil.serialization.XML
 import tachiyomi.core.common.storage.AndroidStorageFolderProvider
 import tachiyomi.core.common.storage.UniFileTempFileManager
+import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.data.AndroidDatabaseHandler
 import tachiyomi.data.Chapters
 import tachiyomi.data.Database
@@ -192,8 +192,14 @@ class AppModule(val app: Application) : InjektModule {
         addSingletonFactory { ConnectionsManager() }
         // <-- AM (CONNECTIONS)
 
-        // Asynchronously init expensive components for a faster cold start
-        ContextCompat.getMainExecutor(app).execute {
+        // KMK --> Warm the expensive singletons off the main thread. This block was already
+        // meant to be asynchronous, but getMainExecutor posts straight back to the main thread, so
+        // opening the database - loading libsqlite3x, running the WAL pragmas - and building the
+        // source and download managers all landed on the critical path to the first frame.
+        //
+        // Whatever asks for one of these first still blocks until it is ready, exactly as before;
+        // it just is no longer guaranteed to be the UI thread doing the construction.
+        launchIO {
             get<NetworkHelper>()
 
             get<SourceManager>()
@@ -206,6 +212,7 @@ class AppModule(val app: Application) : InjektModule {
             get<GetCustomMangaInfo>()
             // SY <--
         }
+        // KMK <--
 
         addSingletonFactory { GoogleDriveService(app) }
     }

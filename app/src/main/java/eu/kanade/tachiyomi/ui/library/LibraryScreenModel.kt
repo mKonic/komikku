@@ -1511,7 +1511,7 @@ class LibraryScreenModel(
         val context = preferences.context
         return when (groupType) {
             LibraryGroup.BY_TRACK_STATUS -> {
-                val tracks = runBlocking { getTracks.await() }.groupBy { it.mangaId }
+                val tracks = getTracks.await().groupBy { it.mangaId }
                 // KMK -->
                 val groupCache = mutableMapOf</* Track.status */ Int, MutableList</* LibraryItem */ Long>>()
                 forEach { item ->
