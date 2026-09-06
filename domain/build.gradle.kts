@@ -1,6 +1,5 @@
 plugins {
     id("mihon.library")
-    kotlin("android")
     kotlin("plugin.serialization")
 }
 
@@ -31,7 +30,10 @@ dependencies {
 
     api(libs.sqldelight.android.paging)
 
+    // KMK --> the version used to arrive transitively from :source-api while it was a KMP module
+    compileOnly(platform(compose.bom))
     compileOnly(compose.runtime.annotation)
+    // KMK <--
 
     testImplementation(libs.bundles.test)
     testImplementation(kotlinx.coroutines.test)

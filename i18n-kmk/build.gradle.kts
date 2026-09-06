@@ -1,12 +1,21 @@
+import mihon.buildlogic.AndroidConfig
+
 plugins {
-    id("mihon.library")
+    // KMK -->
+    id("com.android.kotlin.multiplatform.library")
+    // KMK <--
     kotlin("multiplatform")
     alias(libs.plugins.moko)
+    id("mihon.code.lint")
     id("com.github.ben-manes.versions")
 }
 
 kotlin {
-    androidTarget()
+    androidLibrary {
+        namespace = "tachiyomi.i18n.kmk"
+        compileSdk = AndroidConfig.COMPILE_SDK
+        minSdk = AndroidConfig.MIN_SDK
+    }
 
     applyDefaultHierarchyTemplate()
 
@@ -19,27 +28,7 @@ kotlin {
     }
 }
 
-android {
-    namespace = "tachiyomi.i18n.kmk"
-
-    sourceSets {
-        named("main") {
-            res.srcDir("src/commonMain/resources")
-        }
-    }
-
-    lint {
-        disable.addAll(listOf("MissingTranslation", "ExtraTranslation"))
-    }
-}
-
 multiplatformResources {
     resourcesClassName.set("KMR")
     resourcesPackage.set("tachiyomi.i18n.kmk")
-}
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    compilerOptions.freeCompilerArgs.addAll(
-        "-Xexpect-actual-classes",
-    )
 }

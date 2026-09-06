@@ -44,6 +44,9 @@ class OpenSourceLicensesScreen : Screen() {
                             license = it.licenses.firstOrNull()?.htmlReadyLicenseContent.orEmpty(),
                         ),
                     )
+                    // KMK --> aboutLibraries 15 expects the handler to report it consumed the click
+                    true
+                    // KMK <--
                 },
             )
         }

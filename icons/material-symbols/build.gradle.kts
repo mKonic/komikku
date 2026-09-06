@@ -1,24 +1,27 @@
 plugins {
     id("mihon.library")
     id("mihon.library.compose")
-    kotlin("android")
 
     alias(libs.plugins.valkyrie)
 }
 
 android {
     namespace = "mihon.icons.materialsymbols"
-
-    // KMK -->
-    // Valkyrie generates into the "main" source set, but only wires its per-variant tasks into the
-    // build, so the generated accessors have to be put on the compile path by hand.
-    sourceSets.getByName("main").kotlin.srcDir(
-        layout.buildDirectory.dir("generated/sources/valkyrie/main/kotlin"),
-    )
-    // KMK <--
 }
 
 // KMK -->
+// Valkyrie generates into the "main" source set but only wires up its per-variant tasks, so the
+// generated accessors have to be put on the compile path by hand.
+val valkyrieGeneratedDir = layout.buildDirectory.dir("generated/sources/valkyrie/main/kotlin")
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.kotlin?.addStaticSourceDirectory(
+            valkyrieGeneratedDir.get().asFile.also { it.mkdirs() }.absolutePath,
+        )
+    }
+}
+
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     dependsOn("generateValkyrieImageVectorMain")
 }

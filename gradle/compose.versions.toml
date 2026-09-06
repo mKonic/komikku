@@ -14,7 +14,9 @@ ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 ui-util = { module = "androidx.compose.ui:ui-util" }
 
-material3-core = { module = "androidx.compose.material3:material3" }
+# KMK --> the expressive APIs the app uses only exist here; this version used to arrive
+# implicitly through material-kolor pulling the Compose Multiplatform material3
+material3-core = { module = "androidx.compose.material3:material3", version = "1.5.0-alpha14" }
 
 glance = "androidx.glance:glance-appwidget:1.1.1"
 colorpicker = {module = "com.github.skydoves:colorpicker-compose", version = "1.2.0"}

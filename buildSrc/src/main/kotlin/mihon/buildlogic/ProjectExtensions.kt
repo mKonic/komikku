@@ -22,20 +22,16 @@ val Project.compose get() = the<LibrariesForCompose>()
 val Project.kotlinx get() = the<LibrariesForKotlinx>()
 val Project.libs get() = the<LibrariesForLibs>()
 
-internal fun Project.configureAndroid(commonExtension: CommonExtension<*, *, *, *, *, *>) {
-    commonExtension.apply {
-        compileSdk = AndroidConfig.COMPILE_SDK
-
-        defaultConfig {
-            minSdk = AndroidConfig.MIN_SDK
-        }
-
-        compileOptions {
-            sourceCompatibility = AndroidConfig.JavaVersion
-            targetCompatibility = AndroidConfig.JavaVersion
-            isCoreLibraryDesugaringEnabled = true
-        }
+internal fun Project.configureAndroid(commonExtension: CommonExtension) {
+    // KMK --> AGP 9 dropped the typed block DSL from the base CommonExtension interface
+    commonExtension.compileSdk = AndroidConfig.COMPILE_SDK
+    commonExtension.defaultConfig.minSdk = AndroidConfig.MIN_SDK
+    commonExtension.compileOptions.apply {
+        sourceCompatibility = AndroidConfig.JavaVersion
+        targetCompatibility = AndroidConfig.JavaVersion
+        isCoreLibraryDesugaringEnabled = true
     }
+    // KMK <--
 
     tasks.withType<KotlinCompile>().configureEach {
         compilerOptions {
@@ -58,18 +54,16 @@ internal fun Project.configureAndroid(commonExtension: CommonExtension<*, *, *, 
     }
 }
 
-internal fun Project.configureCompose(commonExtension: CommonExtension<*, *, *, *, *, *>) {
+internal fun Project.configureCompose(commonExtension: CommonExtension) {
     pluginManager.apply(kotlinx.plugins.compose.compiler.get().pluginId)
 
-    commonExtension.apply {
-        buildFeatures {
-            compose = true
-        }
+    // KMK -->
+    commonExtension.buildFeatures.compose = true
 
-        dependencies {
-            "implementation"(platform(compose.bom))
-        }
+    dependencies {
+        "implementation"(platform(compose.bom))
     }
+    // KMK <--
 
     extensions.configure<ComposeCompilerGradlePluginExtension> {
         val enableMetrics = project.providers.gradleProperty("enableComposeCompilerMetrics").orNull.toBoolean()

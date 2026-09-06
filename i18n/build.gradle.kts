@@ -1,16 +1,21 @@
-import mihon.buildlogic.generatedBuildDir
-import mihon.buildlogic.tasks.getLocalesConfigTask
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import mihon.buildlogic.AndroidConfig
 
 plugins {
-    id("mihon.library")
+    // KMK --> AGP 9's new DSL rejects KMP's androidTarget(); its KMP library plugin replaces it
+    id("com.android.kotlin.multiplatform.library")
+    // KMK <--
     kotlin("multiplatform")
     alias(libs.plugins.moko)
+    id("mihon.code.lint")
     id("com.github.ben-manes.versions")
 }
 
 kotlin {
-    androidTarget()
+    androidLibrary {
+        namespace = "tachiyomi.i18n"
+        compileSdk = AndroidConfig.COMPILE_SDK
+        minSdk = AndroidConfig.MIN_SDK
+    }
 
     applyDefaultHierarchyTemplate()
 
@@ -21,38 +26,8 @@ kotlin {
             }
         }
     }
-
-    @OptIn(ExperimentalKotlinGradlePluginApi::class)
-    compilerOptions {
-        freeCompilerArgs.add("-Xexpect-actual-classes")
-    }
-}
-
-val generatedAndroidResourceDir = generatedBuildDir.resolve("android/res")
-
-android {
-    namespace = "tachiyomi.i18n"
-
-    sourceSets {
-        val main by getting
-        main.res.srcDirs(
-            "src/commonMain/resources",
-            generatedAndroidResourceDir,
-        )
-    }
-
-    lint {
-        disable.addAll(listOf("MissingTranslation", "ExtraTranslation"))
-    }
 }
 
 multiplatformResources {
     resourcesPackage.set("tachiyomi.i18n")
-}
-
-tasks {
-    val localesConfigTask = project.getLocalesConfigTask(generatedAndroidResourceDir)
-    preBuild {
-        dependsOn(localesConfigTask)
-    }
 }

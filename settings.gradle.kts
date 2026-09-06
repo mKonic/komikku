@@ -1,7 +1,9 @@
 pluginManagement {
     resolutionStrategy {
         eachPlugin {
-            val regex = "com.android.(library|application)".toRegex()
+            // KMK --> the KMP library plugin ships in the same AGP artifact
+            val regex = "com.android.(library|application|kotlin.multiplatform.library)".toRegex()
+            // KMK <--
             if (regex matches requested.id.id) {
                 useModule("com.android.tools.build:gradle:${requested.version}")
             }
