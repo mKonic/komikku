@@ -10,7 +10,12 @@ import okio.buffer
 import java.io.IOException
 
 class ProgressResponseBody(
-    private val responseBody: ResponseBody,
+    /**
+     * The body being measured. Exposed so a caller that reports progress for the same
+     * [ProgressListener] itself can read the bytes from underneath this wrapper, rather than having
+     * both of them report a different figure for the same transfer.
+     */
+    val responseBody: ResponseBody,
     private val progressListener: ProgressListener,
 ) : ResponseBody() {
 

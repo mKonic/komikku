@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.reader.loader
 
+import eu.kanade.tachiyomi.network.ProgressResponseBody
 import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.source.model.Page
 import kotlinx.coroutines.CancellationException
@@ -16,8 +17,11 @@ import tachiyomi.core.common.util.system.logcat
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
+import java.net.HttpURLConnection.HTTP_FORBIDDEN
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.HttpURLConnection.HTTP_PARTIAL
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.ceil
 
@@ -49,6 +53,25 @@ internal class ParallelImageDownloader(
         data object Failed : Result
     }
 
+    /**
+     * Deletes temp files left behind by an earlier process.
+     *
+     * Each one is pre-allocated to the full size of its image, so a reader killed mid-page leaves
+     * megabytes sitting in the cache directory with nothing to reclaim them -- and unaccounted for
+     * in the chapter cache budget shown in settings. Files this process created are left alone, so
+     * this is safe to call while pages are already loading.
+     */
+    fun sweepOrphans() {
+        if (!swept.compareAndSet(false, true)) return
+        try {
+            tmpDir.listFiles()
+                ?.filter { it.lastModified() < processStartedAt - SWEEP_MARGIN_MS }
+                ?.forEach { it.delete() }
+        } catch (e: SecurityException) {
+            logcat(LogPriority.WARN, e) { "Could not sweep leftover parallel download files" }
+        }
+    }
+
     suspend fun fetch(response: Response, page: Page): Result {
         val contentLength = response.body.contentLength()
         if (!supportsRanges(response, contentLength)) return Result.Declined
@@ -68,7 +91,7 @@ internal class ParallelImageDownloader(
                 chunks.mapIndexed { index, range ->
                     async(Dispatchers.IO) {
                         if (index == 0) {
-                            writeChunk(response.body.source(), file, range, downloaded, contentLength, page)
+                            writeChunk(firstChunkSource(response), file, range, downloaded, contentLength, page)
                         } else {
                             fetchChunk(response, file, range, downloaded, contentLength, page)
                         }
@@ -78,10 +101,19 @@ internal class ParallelImageDownloader(
             response.close()
             Result.Success(file)
         } catch (e: Throwable) {
+            val host = response.request.url.host
             file.delete()
             response.close()
             if (e is CancellationException) throw e
-            logcat(LogPriority.WARN, e) { "Ranged fetch failed, falling back to a single request" }
+            if (e is RangeUnsupportedException) {
+                // The host advertised ranges and then refused one. Left alone, every large page
+                // from it would keep paying the wasted chunk requests plus a full refetch, so stop
+                // asking this host for the rest of the process.
+                rangeRejectedHosts.add(host)
+                logcat(LogPriority.INFO) { "$host refused a range request; fetching its pages whole" }
+            } else {
+                logcat(LogPriority.WARN, e) { "Ranged fetch failed, falling back to a single request" }
+            }
             Result.Failed
         }
     }
@@ -93,7 +125,8 @@ internal class ParallelImageDownloader(
     private fun supportsRanges(response: Response, contentLength: Long): Boolean {
         return response.code == HTTP_OK &&
             contentLength >= MIN_PARALLEL_SIZE &&
-            response.header("Accept-Ranges")?.equals("bytes", ignoreCase = true) == true
+            response.header("Accept-Ranges")?.equals("bytes", ignoreCase = true) == true &&
+            response.request.url.host !in rangeRejectedHosts
     }
 
     private fun splitIntoChunks(contentLength: Long): List<LongRange> {
@@ -108,6 +141,17 @@ internal class ParallelImageDownloader(
             val end = if (index == count - 1) contentLength - 1 else start + chunkSize - 1
             start..end
         }
+    }
+
+    /**
+     * The image response body is wrapped in a [ProgressResponseBody] reporting to the same [Page]
+     * this class does. Reading through it would leave both of them writing the page's progress --
+     * the wrapper counting only the first chunk, us counting all of them -- and the reader's
+     * indicator jumping between the two. Take the bytes from underneath it and report once.
+     */
+    private fun firstChunkSource(response: Response): BufferedSource {
+        val body = response.body
+        return if (body is ProgressResponseBody) body.responseBody.source() else body.source()
     }
 
     private suspend fun fetchChunk(
@@ -125,8 +169,16 @@ internal class ParallelImageDownloader(
             .build()
 
         client.newCall(request).await().use { chunkResponse ->
-            if (chunkResponse.code != HTTP_PARTIAL) {
-                throw IOException("Expected 206 for bytes=${range.first}-${range.last}, got ${chunkResponse.code}")
+            when (chunkResponse.code) {
+                HTTP_PARTIAL -> Unit
+                // 200 means the range was ignored, 416 that it was refused, and 403 that this URL
+                // only works for the single request that produced it. None improve on a retry.
+                HTTP_OK, HTTP_RANGE_NOT_SATISFIABLE, HTTP_FORBIDDEN ->
+                    throw RangeUnsupportedException(range, chunkResponse.code)
+                else ->
+                    throw IOException(
+                        "Range bytes=${range.first}-${range.last} failed with ${chunkResponse.code}",
+                    )
             }
             withContext(Dispatchers.IO) {
                 writeChunk(chunkResponse.body.source(), file, range, downloaded, contentLength, page)
@@ -162,6 +214,29 @@ internal class ParallelImageDownloader(
     }
 }
 
+/** A host answered a range request in a way that says it will never serve one. */
+private class RangeUnsupportedException(range: LongRange, code: Int) :
+    IOException("Range bytes=${range.first}-${range.last} answered with $code")
+
+/**
+ * Hosts that advertised `Accept-Ranges` and then refused an actual range. Process-wide, so one
+ * refusal is enough for the rest of the session rather than once per chapter.
+ */
+private val rangeRejectedHosts: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+private val swept = AtomicBoolean(false)
+
+/** Set before this process can have written any temp file, which is what makes the sweep safe. */
+private val processStartedAt = System.currentTimeMillis()
+
+/**
+ * Slack on the sweep cutoff. A filesystem that stores timestamps more coarsely than the clock
+ * reports them will date a file created just after [processStartedAt] as fractionally older than
+ * it, and sweeping on the bare cutoff would then delete a page this process is still writing. Real
+ * orphans come from an earlier launch and are far older than this.
+ */
+private const val SWEEP_MARGIN_MS = 60_000L
+
 /** Bodies below this arrive fast enough that the extra requests would cost more than they save. */
 private const val MIN_PARALLEL_SIZE = 2L * 1024 * 1024
 
@@ -169,9 +244,11 @@ private const val MIN_PARALLEL_SIZE = 2L * 1024 * 1024
 private const val TARGET_CHUNK_SIZE = 1L * 1024 * 1024
 
 /**
- * Kept low so the chunks of one image, plus the other reader threads, stay near OkHttp's default
- * ceiling of five concurrent requests per host.
+ * Kept low so the chunks of one image, plus the other reader threads, stay within the per-host
+ * ceiling the app configures on its OkHttp dispatcher.
  */
 private const val MAX_PARALLEL_CHUNKS = 4
 
 private const val BUFFER_SIZE = 8 * 1024
+
+private const val HTTP_RANGE_NOT_SATISFIABLE = 416

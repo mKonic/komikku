@@ -72,6 +72,9 @@ internal class HttpPageLoader(
     // KMK <--
 
     init {
+        // KMK -->
+        parallelDownloader?.let { downloader -> scope.launchIO { downloader.sweepOrphans() } }
+        // KMK <--
         // EXH -->
         repeat(readerPreferences.readerThreads().get().coerceAtLeast(1)) {
             // EXH <--
