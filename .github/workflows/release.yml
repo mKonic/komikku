@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Set up gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Resolve version
+        id: version
+        run: echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Check code format
+        run: ./gradlew spotlessCheck
+
+      - name: Build release APKs
+        run: ./gradlew assembleRelease -Penable-updater
+
+      - name: Run unit tests
+        run: ./gradlew testReleaseUnitTest
+
+      - name: Sign APKs
+        id: sign
+        uses: r0adkll/sign-android-release@f30bdd30588842ac76044ecdbd4b6d0e3e813478
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: '35.0.1'
+
+      - name: Name the APKs after the tag
+        id: rename
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          shopt -s nullglob
+          signed=(app/build/outputs/apk/release/*-signed.apk)
+          if [ ${#signed[@]} -eq 0 ]; then
+            echo "No signed APKs were produced; check the signing secrets." >&2
+            exit 1
+          fi
+          for apk in "${signed[@]}"; do
+            abi=$(basename "$apk" | sed -E 's/^app-(.*)-release-unsigned-signed\.apk$/\1/')
+            cp "$apk" "dist/Komikku-${abi}-${{ steps.version.outputs.tag }}.apk"
+          done
+          ls -l dist
+
+      - name: Create release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Komikku ${{ steps.version.outputs.tag }}
+          files: dist/*.apk
+          generate_release_notes: true
+
+      - name: Upload mapping
+        uses: actions/upload-artifact@v7
+        with:
+          name: mapping-${{ steps.version.outputs.tag }}
+          path: app/build/outputs/mapping/release
+          if-no-files-found: ignore
