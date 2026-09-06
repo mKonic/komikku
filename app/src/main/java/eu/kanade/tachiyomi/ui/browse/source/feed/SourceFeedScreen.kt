@@ -159,7 +159,7 @@ class SourceFeedScreen(val sourceId: Long) : Screen() {
                     }.takeIf { isConfigurableSource },
                     onSortFeedClick = { showingFeedOrderScreen.value = true }
                         .takeIf {
-                            screenModel.state.value.items
+                            state.items
                                 .filterIsInstance<SourceFeedUI.SourceSavedSearch>()
                                 .isNotEmpty()
                         },
