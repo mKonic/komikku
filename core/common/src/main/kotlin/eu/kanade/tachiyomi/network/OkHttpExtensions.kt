@@ -15,6 +15,7 @@ import rx.Observable
 import rx.Producer
 import rx.Subscription
 import java.io.IOException
+import java.net.HttpURLConnection.HTTP_PARTIAL
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.resumeWithException
@@ -118,13 +119,29 @@ suspend fun Call.awaitSuccess(): Response {
     return response
 }
 
-fun OkHttpClient.newCachelessCallWithProgress(request: Request, listener: ProgressListener): Call {
+fun OkHttpClient.newCachelessCallWithProgress(
+    request: Request,
+    listener: ProgressListener,
+    existingSize: Long = 0L,
+): Call {
     val progressClient = newBuilder()
         .cache(null)
         .addNetworkInterceptor { chain ->
-            val originalResponse = chain.proceed(chain.request())
+            val chainRequest = chain.request()
+            val rangedRequest = chainRequest
+                .newBuilder()
+                .apply {
+                    if (existingSize > 0 && chainRequest.header("Range") == null) {
+                        header("Range", "bytes=$existingSize-")
+                    }
+                }
+                .build()
+
+            val originalResponse = chain.proceed(rangedRequest)
+            // A server that ignored the range restarts from zero, so nothing is already downloaded.
+            val actualExistingSize = if (originalResponse.code == HTTP_PARTIAL) existingSize else 0L
             originalResponse.newBuilder()
-                .body(ProgressResponseBody(originalResponse.body, listener))
+                .body(ProgressResponseBody(originalResponse.body, listener, actualExistingSize))
                 .build()
         }
         .build()

@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.data.library.LibraryUpdateNotifier
 import eu.kanade.tachiyomi.data.notification.NotificationHandler
+import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.source.UnmeteredSource
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -67,6 +68,7 @@ import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
+import java.net.HttpURLConnection.HTTP_PARTIAL
 import java.util.Locale
 
 /**
@@ -472,15 +474,12 @@ class Downloader(
 
         val digitCount = (download.pages?.size ?: 0).toString().length.coerceAtLeast(3)
         val filename = "%0${digitCount}d".format(Locale.ENGLISH, page.number)
-        val tmpFile = tmpDir.findFile("$filename.tmp")
-
-        // Delete temp file if it exists
-        tmpFile?.delete()
-
-        // Try to find the image file
+        // KMK -->
+        // The partial file is deliberately left in place so the next attempt can resume from it.
         val imageFile = tmpDir.listFiles()?.firstOrNull {
-            it.name!!.startsWith("$filename.") || it.name!!.startsWith("${filename}__001")
+            isDownloadedPageImage(it.name ?: return@firstOrNull false, filename)
         }
+        // KMK <--
 
         try {
             // If the image is already downloaded, do nothing. Otherwise download from network
@@ -524,17 +523,27 @@ class Downloader(
         page.status = Page.State.DownloadImage
         page.progress = 0
         return flow {
-            val response = source.getImage(page, dataSaver)
-            val file = tmpDir.createFile("$filename.tmp")!!
+            // KMK -->
+            val file = tmpDir.findFile("$filename.tmp")
+                ?: tmpDir.createFile("$filename.tmp")!!
+
             try {
-                response.body.source().saveTo(file.openOutputStream())
-                val extension = getImageExtension(response, file)
-                file.renameTo("$filename.$extension")
-            } catch (e: Exception) {
-                response.close()
-                file.delete()
+                source.getImage(page, dataSaver, file.length()).use { response ->
+                    // A 206 means the server honoured the range, so append to what is already
+                    // there. Anything else is the whole file again, so overwrite.
+                    response.body.source().saveTo(file.openOutputStream(response.code == HTTP_PARTIAL))
+                    val extension = getImageExtension(response, file)
+                    file.renameTo("$filename.$extension")
+                }
+            } catch (e: HttpException) {
+                // 416 means what is on disk is already at or past the end of the file, so it is
+                // no use to anyone. Every other failure keeps the partial file for the retry.
+                if (e.code == HTTP_RANGE_NOT_SATISFIABLE) {
+                    file.delete()
+                }
                 throw e
             }
+            // KMK <--
             emit(file)
         }
             // Retry 3 times, waiting 2, 4 and 8 seconds between attempts.
@@ -560,6 +569,9 @@ class Downloader(
      * @param filename the filename of the image.
      */
     private fun copyImageFromCache(cacheFile: File, tmpDir: UniFile, filename: String): UniFile {
+        // KMK --> partial files now survive, so clear any before writing the cached copy
+        tmpDir.findFile("$filename.tmp")?.delete()
+        // KMK <--
         val tmpFile = tmpDir.createFile("$filename.tmp")!!
         cacheFile.inputStream().use { input ->
             tmpFile.openOutputStream().use { output ->
@@ -571,6 +583,17 @@ class Downloader(
         cacheFile.delete()
         return tmpFile
     }
+
+    // KMK -->
+    /**
+     * Whether [fileName] is the finished image for the page numbered [pagePrefix]. Partial `.tmp`
+     * files share the prefix but are not finished, so they must not match.
+     */
+    private fun isDownloadedPageImage(fileName: String, pagePrefix: String): Boolean {
+        return !fileName.endsWith(".tmp") &&
+            (fileName.startsWith("$pagePrefix.") || fileName.startsWith("${pagePrefix}__001"))
+    }
+    // KMK <--
 
     /**
      * Returns the extension of the downloaded image from the network response, or if it's null,
@@ -782,3 +805,7 @@ class Downloader(
 
 // Arbitrary minimum required space to start a download: 200 MB
 private const val MIN_DISK_SPACE = 200L * 1024 * 1024
+
+// KMK -->
+private const val HTTP_RANGE_NOT_SATISFIABLE = 416
+// KMK <--

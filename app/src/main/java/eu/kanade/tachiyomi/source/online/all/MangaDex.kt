@@ -240,9 +240,9 @@ class MangaDex(delegate: HttpSource, val context: Context) :
         return pageHandler.fetchPageList(chapter, usePort443Only(), dataSaver(), delegate)
     }
 
-    override suspend fun getImage(page: Page): Response {
+    override suspend fun getImage(page: Page, existingSize: Long): Response {
         val call = pageHandler.getImageCall(page)
-        return call?.awaitSuccess() ?: super.getImage(page)
+        return call?.awaitSuccess() ?: super.getImage(page, existingSize)
     }
 
     @Deprecated("Use the suspend API instead", replaceWith = ReplaceWith("getImageUrl"))

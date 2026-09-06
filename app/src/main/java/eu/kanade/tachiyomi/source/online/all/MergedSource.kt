@@ -44,7 +44,7 @@ class MergedSource : HttpSource() {
 
     @Deprecated("Use the combined suspend API instead", replaceWith = ReplaceWith("getMangaUpdate"))
     override fun fetchChapterList(manga: SManga) = throw UnsupportedOperationException()
-    override suspend fun getImage(page: Page): Response = throw UnsupportedOperationException()
+    override suspend fun getImage(page: Page, existingSize: Long): Response = throw UnsupportedOperationException()
 
     @Deprecated("Use the suspend API instead", replaceWith = ReplaceWith("getImageUrl"))
     override fun fetchImageUrl(page: Page) = throw UnsupportedOperationException()
