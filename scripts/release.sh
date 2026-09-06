@@ -114,10 +114,28 @@ if [ "$DRY" = "--dry" ]; then
     exit 0
 fi
 
+# Release notes come from CHANGELOG.md's section for this tag, so the release page reads like the
+# changelog rather than a dump of commit subjects.
+NOTES="$(mktemp)"
+trap 'rm -rf "$TMP" "$NOTES"' EXIT
+awk -v tag="$TAG" '
+    $0 ~ "^## \\[" tag "\\]" { found = 1; next }
+    found && /^## \[/ { exit }
+    found { print }
+' CHANGELOG.md | sed -e '/./,$!d' > "$NOTES"
+
 echo "==> Publishing $TAG to $REPO"
-gh release create "$TAG" "$SIGNED" \
-    --repo "$REPO" \
-    --title "Komikku $TAG" \
-    --generate-notes
+if [ -s "$NOTES" ]; then
+    gh release create "$TAG" "$SIGNED" \
+        --repo "$REPO" \
+        --title "Komikku $TAG" \
+        --notes-file "$NOTES"
+else
+    echo "   No '## [$TAG]' section in CHANGELOG.md; falling back to generated notes." >&2
+    gh release create "$TAG" "$SIGNED" \
+        --repo "$REPO" \
+        --title "Komikku $TAG" \
+        --generate-notes
+fi
 
 echo "==> Done: $(gh release view "$TAG" --repo "$REPO" --json url --jq .url)"
