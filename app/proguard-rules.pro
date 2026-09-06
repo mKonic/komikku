@@ -34,6 +34,17 @@
     java.lang.Object readResolve();
 }
 
+# Provided by the OEM at runtime when supported (mihonapp/mihon 869fa1a4b)
+-dontwarn androidx.window.extensions.**
+-dontwarn androidx.window.sidecar.**
+
+# Shizuku reaches these reflectively, so R8 cannot see the calls and strips them, breaking
+# extension installation in release builds only (mihonapp/mihon#3676)
+-keepclassmembers class mihon.app.shizuku.ShellInterface {
+    public <init>();
+    public void destroy();
+}
+
 ##---------------Begin: proguard configuration for RxJava 1.x  ----------
 -dontwarn sun.misc.**
 

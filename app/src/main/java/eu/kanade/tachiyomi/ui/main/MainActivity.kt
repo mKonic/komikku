@@ -387,7 +387,9 @@ class MainActivity : BaseActivity() {
                 // KMK -->
                 RearmJobs()
                 // KMK <--
-                CheckForUpdates()
+                // Only on a real launch: this reaches the network, and without the guard every
+                // configuration change - a rotation, a theme switch - re-ran it (mihonapp/mihon#3708)
+                if (isLaunch) CheckForUpdates()
                 ShowOnboarding()
             }
 
