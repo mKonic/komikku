@@ -120,9 +120,10 @@ android {
                 "libandroidx.graphics.path",
                 "libarchive-jni",
                 "libconscrypt_jni",
-                "libimagedecoder",
+                "libimagedecoder2",
                 "libquickjs",
                 "libsqlite3x",
+                "libssiv_crop",
             )
                 .map { "**/$it.so" }
         }
@@ -283,7 +284,6 @@ dependencies {
         exclude(module = "image-decoder")
     }
     implementation(libs.image.decoder)
-    implementation(libs.image.decoder.webgpu)
     implementation(libs.kim)
 
     // UI libraries

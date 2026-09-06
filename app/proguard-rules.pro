@@ -164,9 +164,6 @@
 -keep interface com.google.android.material.** { *; }
 -keep public class com.google.android.material.R$* { *; }
 
--keep class com.hippo.image.** { *; }
--keep interface com.hippo.image.** { *; }
-
 # === Injekt
 ## From original config: "Attempt to fix: java.lang.NoClassDefFoundError: uy.kohesive.injekt.registry.default.DefaultRegistrar$NOKEY$1"
 -keep class uy.kohesive.injekt.** { *; }

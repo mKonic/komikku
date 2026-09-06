@@ -55,7 +55,7 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.manga.EditCoverAction
-import eu.kanade.tachiyomi.data.coil.WebGpuImageDecoder
+import eu.kanade.tachiyomi.data.coil.RawImageDecoder
 import eu.kanade.tachiyomi.data.coil.newDecoder
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView
 import kotlinx.collections.immutable.persistentListOf
@@ -307,7 +307,7 @@ private fun HighQualityCover(
             .build()
 
         val decoded = (context.imageLoader.execute(request) as? SuccessResult)
-            ?.let { it.image as? WebGpuImageDecoder.WebGpuImage }
+            ?.let { it.image as? RawImageDecoder.RawImage }
             ?.result
             ?: return@LaunchedEffect
 

@@ -39,7 +39,7 @@ libarchive = "me.zhanghai.android.libarchive:library:1.1.6"
 
 sqlite-framework = { module = "androidx.sqlite:sqlite-framework", version.ref = "sqlite" }
 sqlite-ktx = { module = "androidx.sqlite:sqlite-ktx", version.ref = "sqlite" }
-sqlite-android = "com.github.requery:sqlite-android:665608662e"
+sqlite-android = "com.github.requery:sqlite-android:3.49.0"
 
 preferencektx = "androidx.preference:preference-ktx:1.2.1"
 
@@ -51,11 +51,10 @@ coil-gif = { module = "io.coil-kt.coil3:coil-gif" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp" }
 
-subsamplingscaleimageview = "com.github.tachiyomiorg:subsampling-scale-image-view:66e0db195d"
-image-decoder = "com.github.tachiyomiorg:image-decoder:41c059e540"
-# KMK --> the WebGPU reader uses upstream's newer decoder; it ships libimagedecoder2.so
-# so it coexists with the existing one rather than replacing it
-image-decoder-webgpu = "ca.mpreg:imagedecoder:10"
+subsamplingscaleimageview = "com.github.mihonapp:subsampling-scale-image-view:94915e6f73"
+# KMK --> one decoder for everything: the old com.github.tachiyomiorg:image-decoder shipped a
+# 4 KB-aligned libimagedecoder.so, which cannot be loaded on a 16 KB-page device
+image-decoder = "ca.mpreg:imagedecoder:10"
 kim = "de.stefan-oltmann:kim:0.34.0"
 
 natural-comparator = "com.github.gpanther:java-nat-sort:natural-comparator-1.1"

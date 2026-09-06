@@ -2,6 +2,9 @@ package eu.kanade.tachiyomi.data.coil
 
 import android.app.Application
 import android.graphics.Bitmap
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
+import ca.mpreg.imagedecoder.ImageDecoder
 import coil3.Canvas
 import coil3.Image
 import coil3.ImageLoader
@@ -19,11 +22,9 @@ import mihon.core.archive.CbzCrypto.getCoverStream
 import mihon.core.archive.archiveReader
 import okio.BufferedSource
 import tachiyomi.core.common.util.system.ImageUtil
-import tachiyomi.decoder.ImageDecoder
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.BufferedInputStream
-import ca.mpreg.imagedecoder.ImageDecoder as WebGpuDecoder
 
 /**
  * A [Decoder] that uses built-in [ImageDecoder] to decode images that is not supported by the system.
@@ -43,15 +44,17 @@ class TachiyomiImageDecoder(private val resources: ImageSource, private val opti
         }
         val decoder = resources.sourceOrNull()?.use {
             coverStream.use { coverStream ->
-                ImageDecoder.newInstance(coverStream ?: it.inputStream(), options.cropBorders, displayProfile)
+                ImageDecoder.new(coverStream ?: it.inputStream())
             }
         }
         // SY <--
 
-        check(decoder != null && decoder.width > 0 && decoder.height > 0) { "Failed to initialize decoder" }
+        check(decoder != null && decoder.pages > 0) { "Failed to initialize decoder" }
 
-        val srcWidth = decoder.width
-        val srcHeight = decoder.height
+        val decoded = decoder.decode()
+        val srcWidth = decoded.width
+        val srcHeight = decoded.height
+        check(srcWidth > 0 && srcHeight > 0) { "Failed to decode image" }
 
         val dstWidth = options.size.widthPx(options.scale) { srcWidth }
         val dstHeight = options.size.heightPx(options.scale) { srcHeight }
@@ -64,10 +67,21 @@ class TachiyomiImageDecoder(private val resources: ImageSource, private val opti
             scale = options.scale,
         )
 
-        var bitmap = decoder.decode(sampleSize = sampleSize)
-        decoder.recycle()
+        // The decoder hands back a full-resolution RGBA buffer, so any downsampling happens after
+        // the copy rather than during decode. Only formats the platform decoder cannot read reach
+        // this class at all, so that cost is paid on AVIF, JXL and JPEG 2000 - never on a page.
+        var bitmap = createBitmap(srcWidth, srcHeight)
+        decoded.image.rewind()
+        bitmap.copyPixelsFromBuffer(decoded.image)
 
-        check(bitmap != null) { "Failed to decode image" }
+        if (sampleSize > 1) {
+            val scaled = bitmap.scale(
+                (srcWidth / sampleSize).coerceAtLeast(1),
+                (srcHeight / sampleSize).coerceAtLeast(1),
+            )
+            bitmap.recycle()
+            bitmap = scaled
+        }
 
         if (
             options.bitmapConfig == Bitmap.Config.HARDWARE &&
@@ -91,7 +105,7 @@ class TachiyomiImageDecoder(private val resources: ImageSource, private val opti
         override fun create(result: SourceFetchResult, options: Options, imageLoader: ImageLoader): Decoder? {
             return when {
                 // KMK -->
-                options.newDecoder -> WebGpuImageDecoder(result.source)
+                options.newDecoder -> RawImageDecoder(result.source)
                 // KMK <--
                 options.customDecoder || isApplicable(result.source.source()) ->
                     TachiyomiImageDecoder(result.source, options)
@@ -118,10 +132,6 @@ class TachiyomiImageDecoder(private val resources: ImageSource, private val opti
 
         override fun hashCode() = javaClass.hashCode()
     }
-
-    companion object {
-        var displayProfile: ByteArray? = null
-    }
 }
 
 // KMK -->
@@ -130,11 +140,11 @@ class TachiyomiImageDecoder(private val resources: ImageSource, private val opti
  * normal decode would allocate and then immediately throw away.
  *
  * The result is not drawable: the pixels are meant for the GPU, never for a [Canvas]. Callers ask
- * for this decoder explicitly with [newDecoder] and unwrap [WebGpuImage.result] themselves.
+ * for this decoder explicitly with [newDecoder] and unwrap [RawImage.result] themselves.
  */
-class WebGpuImageDecoder(private val resources: ImageSource) : Decoder {
+class RawImageDecoder(private val resources: ImageSource) : Decoder {
 
-    class WebGpuImage(val result: WebGpuDecoder.DecodeResult) : Image {
+    class RawImage(val result: ImageDecoder.DecodeResult) : Image {
         override val size: Long get() = result.image.capacity().toLong()
         override val width: Int get() = result.width
         override val height: Int get() = result.height
@@ -144,8 +154,8 @@ class WebGpuImageDecoder(private val resources: ImageSource) : Decoder {
     }
 
     override suspend fun decode(): DecodeResult {
-        val decoded = WebGpuDecoder.new(resources.source().inputStream()).decode()
-        return DecodeResult(image = WebGpuImage(decoded), isSampled = false)
+        val decoded = ImageDecoder.new(resources.source().inputStream()).decode()
+        return DecodeResult(image = RawImage(decoded), isSampled = false)
     }
 }
 // KMK <--
