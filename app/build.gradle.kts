@@ -2,6 +2,8 @@ import mihon.buildlogic.Config
 import mihon.buildlogic.getBuildTime
 import mihon.buildlogic.getCommitCount
 import mihon.buildlogic.getGitSha
+import mihon.buildlogic.getVersionCode
+import mihon.buildlogic.getVersionName
 import mihon.buildlogic.tasks.GenerateLocalesConfigTask
 import mihon.buildlogic.tasks.ReplaceShortcutsPlaceholderTask
 
@@ -27,8 +29,8 @@ android {
     defaultConfig {
         applicationId = "app.komikku"
 
-        versionCode = 82
-        versionName = "1.0.0"
+        versionCode = getVersionCode()
+        versionName = getVersionName()
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getGitSha()}\"")

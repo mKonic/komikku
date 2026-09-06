@@ -13,6 +13,26 @@ fun Project.getCommitCount(): String {
     // return "1"
 }
 
+/**
+ * `v1.0.0` on a tag, `v1.0.0-3-gabc1234` past one, `-dirty` on top of uncommitted work.
+ *
+ * Falls back to `unknown` rather than a plausible number: a version nobody can compare is better
+ * than one that compares wrongly. A shallow clone has no tags, so CI must check out with
+ * `fetch-depth: 0`.
+ */
+fun Project.getVersionName(): String {
+    return runCommandOrNull("git describe --tags --always --dirty") ?: "unknown"
+}
+
+/**
+ * Monotonic, and only ever says which of two builds is newer. Offset so it stays above the
+ * hand-numbered codes this fork inherited.
+ */
+fun Project.getVersionCode(): Int {
+    val count = runCommandOrNull("git rev-list --count HEAD")?.toIntOrNull() ?: return 0
+    return 10000 + count
+}
+
 fun Project.getGitSha(): String {
     return runCommand("git rev-parse --short HEAD")
     // return "1"
@@ -42,4 +62,8 @@ private fun Project.runCommand(command: String): String {
         .asText
         .get()
         .trim()
+}
+
+private fun Project.runCommandOrNull(command: String): String? {
+    return runCatching { runCommand(command) }.getOrNull()?.takeIf { it.isNotEmpty() }
 }
