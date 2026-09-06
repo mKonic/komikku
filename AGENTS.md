@@ -12,11 +12,11 @@ Komikku is an Android manga reader (min SDK 26, target SDK 36, JVM 17 / Kotlin) 
 
 | Rule | Required behavior |
 |------|-------------------|
-| Branch | Create a **feature branch** for the task (`git checkout -b <type>/<short-description>`). |
-| Commit | **OK** on a feature branch when work is ready. **Never** commit directly to `master` / `main` unless the user explicitly asks. |
-| Push | **OK** to push the **current feature branch** when work is ready. **Never** push to `master` / `main` unless the user explicitly asks. |
+| Remote | Push to **`fork`** (`mKonic/komikku`) only. `origin` is upstream `komikku-app/komikku` and is not ours to push to. |
+| Branch | A feature branch for anything substantial; small fixes may land on `master`, which is this fork's working branch. |
+| Commit | One-line messages in the form `area: what changed`. No body, no attribution trailers. |
 
-Before `git push`, confirm the current branch is not `master` or `main` (`git branch --show-current`).
+Before `git push`, confirm the remote is `fork` (`git remote -v`).
 
 ### Internationalization (strings)
 

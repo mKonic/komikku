@@ -11,6 +11,33 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+
+## [v1.1.0] - 2026-09-07
+### Added
+- Setting to trust every extension without prompting, under Advanced -> Extensions (off by default).
+
+### Removed
+- Sponsor button on the More screen.
+
+### Fixed
+- App could not start on a device with 16 KB memory pages: the bundled SQLite and image-decoder
+  libraries were 4 KB-aligned, so the database failed to open. Both are now 16 KB clean.
+
+### Improved
+- Image format detection reads the file header directly instead of calling into the native decoder,
+  on a path that runs for every page, cover and local file listed.
+- Reader no longer blocks the UI thread on a database read when the chapter list opens, and changing
+  reading mode no longer blocks the tap.
+- Startup no longer opens the database, the source manager and the download manager on the main
+  thread, and notification channels are registered in the background.
+- Baseline profile regenerated; the previous one predated the WebGPU reader entirely.
+
+### Other
+- One APK per release (arm64-v8a) instead of five.
+- One image decoder instead of two, cutting ~8 MB off the APK.
+- Lint fails the build again, with existing warnings baselined.
+
+## [Upstream Komikku]
 ### Added
 - [Hikka](https://hikka.io/) tracker support ([@Lorg0n](https://github.com/Lorg0n)) ([#1386](https://github.com/mihonapp/mihon/pull/1386))
   - Fix Hikka not defaulting to "Plan to Read" for unread titles ([@MajorTanya](https://github.com/MajorTanya)) ([#3534](https://github.com/mihonapp/mihon/pull/3534))
