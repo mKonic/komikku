@@ -213,6 +213,22 @@ class ReaderPreferences(
     fun archiveReaderMode() = preferenceStore.getInt("archive_reader_mode", ArchiveReaderMode.LOAD_FROM_FILE)
     // SY <--
 
+    // KMK --> WebGPU reader
+    fun dualPageView() = preferenceStore.getEnum("pref_dual_page_view", DualPageView.NEVER)
+
+    fun transitionAnimation() =
+        preferenceStore.getEnum("webgpu_transition_animation", TransitionAnimation.BASIC)
+
+    fun transitionAnimationDual() =
+        preferenceStore.getEnum("webgpu_dual_transition_animation", TransitionAnimation.BASIC)
+
+    fun cutoutMode() = preferenceStore.getEnum("webgpu_cutout_mode", CutoutMode.AVOID)
+
+    fun cutoutModeDual() = preferenceStore.getEnum("webgpu_dual_cutout_mode", CutoutMode.IGNORE)
+
+    fun continuousMinWidth() = preferenceStore.getInt("webgpu_continuous_minwidth", 100)
+    // KMK <--
+
     enum class FlashColor {
         BLACK,
         WHITE,
@@ -341,4 +357,35 @@ class ReaderPreferences(
         )
         // SY <--
     }
+
+    // KMK --> WebGPU reader
+    enum class TransitionAnimation(val titleRes: StringResource) {
+        BASIC(MR.strings.transition_animation_basic),
+        FLIP(MR.strings.transition_animation_flip),
+        FLIP_LEFT(MR.strings.transition_animation_flip_left),
+        FLIP_RIGHT(MR.strings.transition_animation_flip_right),
+        STACK_LEFT(MR.strings.transition_animation_stack_left),
+        STACK_RIGHT(MR.strings.transition_animation_stack_right),
+        STACK_UP(MR.strings.transition_animation_stack_up),
+        STACK_DOWN(MR.strings.transition_animation_stack_down),
+        SPHERE(MR.strings.transition_animation_sphere),
+        CUBE_INSIDE(MR.strings.transition_animation_cube_inside),
+        CUBE_OUTSIDE(MR.strings.transition_animation_cube_outside),
+        FADE(MR.strings.transition_animation_fade),
+        FADE_WHITE(MR.strings.transition_animation_fade_white),
+        NONE(MR.strings.transition_animation_none),
+    }
+
+    enum class CutoutMode(val titleRes: StringResource) {
+        IGNORE(MR.strings.cutout_mode_ignore),
+        AVOID(MR.strings.cutout_mode_avoid),
+        SHIFT(MR.strings.cutout_mode_shift),
+    }
+
+    enum class DualPageView(val titleRes: StringResource) {
+        NEVER(MR.strings.dual_page_view_never),
+        ALWAYS(MR.strings.dual_page_view_always),
+        WIDE(MR.strings.dual_page_view_wide),
+    }
+    // KMK <--
 }

@@ -443,6 +443,12 @@ object SettingsAdvancedScreen : SearchableSettings {
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.pref_category_reader),
             preferenceItems = persistentListOf(
+                // KMK -->
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = basePreferences.highQualityRenderer(),
+                    title = stringResource(MR.strings.pref_high_quality_renderer),
+                ),
+                // KMK <--
                 Preference.PreferenceItem.ListPreference(
                     preference = basePreferences.hardwareBitmapThreshold(),
                     entries = GLUtil.CUSTOM_TEXTURE_LIMIT_OPTIONS

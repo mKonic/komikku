@@ -12,6 +12,10 @@ class BasePreferences(
     private val preferenceStore: PreferenceStore,
 ) {
 
+    // KMK --> high quality WebGPU renderer from Mihon
+    fun highQualityRenderer() = preferenceStore.getBoolean("pref_high_quality_renderer_key", false)
+    // KMK <--
+
     fun downloadedOnly() = preferenceStore.getBoolean(
         Preference.appStateKey("pref_downloaded_only"),
         false,

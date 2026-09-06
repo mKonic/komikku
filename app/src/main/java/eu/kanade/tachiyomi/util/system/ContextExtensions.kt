@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
@@ -97,6 +98,18 @@ fun Context.createFileInCacheDir(name: String): File {
     file.createNewFile()
     return file
 }
+
+// KMK -->
+/** Matches the reader background ReaderActivity paints for each `readerTheme` value. */
+private val ReaderGrayBackgroundColor = Color.rgb(0x20, 0x21, 0x25)
+
+fun Context.readerBackgroundColor(readerTheme: Int): Int = when (readerTheme) {
+    0 -> Color.WHITE
+    2 -> ReaderGrayBackgroundColor
+    3 -> if (isNightMode()) ReaderGrayBackgroundColor else Color.WHITE
+    else -> Color.BLACK
+}
+// KMK <--
 
 /**
  * Creates night mode Context depending on reader theme/background

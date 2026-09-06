@@ -1045,4 +1045,27 @@
     <string name="migrationListScreen.migrateDialog.cancelLabel">Cancel</string>
     <string name="migrationListScreen.progressDialog.cancelLabel">Cancel</string>
     <string name="migrationListScreen.matchWithoutChapterToast">No chapters found, this entry cannot be used for migration</string>
+
+    <!-- KMK: WebGPU reader -->
+    <string name="pref_high_quality_renderer">Use high quality renderer</string>
+    <string name="transition_animation_basic">Basic</string>
+    <string name="transition_animation_flip_left">Page flip (left)</string>
+    <string name="transition_animation_flip_right">Page flip (right)</string>
+    <string name="transition_animation_stack_left">Stack (left)</string>
+    <string name="transition_animation_stack_right">Stack (right)</string>
+    <string name="transition_animation_stack_up">Stack (up)</string>
+    <string name="transition_animation_stack_down">Stack (down)</string>
+    <string name="transition_animation_sphere">Sphere</string>
+    <string name="transition_animation_cube_inside">Cube (Inside)</string>
+    <string name="transition_animation_cube_outside">Cube (Outside)</string>
+    <string name="transition_animation_fade">Fade</string>
+    <string name="transition_animation_fade_white">Fade to white</string>
+    <string name="transition_animation_none">None</string>
+    <string name="transition_animation_flip">Page flip</string>
+    <string name="cutout_mode_ignore">Ignore</string>
+    <string name="cutout_mode_avoid">Avoid</string>
+    <string name="cutout_mode_shift">Shift</string>
+    <string name="dual_page_view_never">Never</string>
+    <string name="dual_page_view_always">Always</string>
+    <string name="dual_page_view_wide">When wide</string>
 </resources>

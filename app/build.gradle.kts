@@ -205,6 +205,10 @@ dependencies {
     implementation(compose.activity)
     implementation(compose.foundation)
     implementation(compose.material3.core)
+    // KMK --> high quality WebGPU renderer from Mihon
+    implementation(libs.webgpuviewer)
+    // KMK <--
+
     // KMK --> Material Symbols, generated from SVG by Valkyrie
     implementation(projects.icons.materialSymbols)
     // KMK <--
@@ -277,6 +281,8 @@ dependencies {
         exclude(module = "image-decoder")
     }
     implementation(libs.image.decoder)
+    implementation(libs.image.decoder.webgpu)
+    implementation(libs.kim)
 
     // UI libraries
     implementation(libs.material)
