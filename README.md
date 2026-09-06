@@ -12,7 +12,6 @@
 *Requires Android 8.0 or higher.*
 
 [![License: Apache-2.0](https://img.shields.io/github/license/mKonic/komikku?labelColor=27303D&color=0877d2)](/LICENSE)
-[![Translation status](https://img.shields.io/weblate/progress/komikku-app?labelColor=27303D&color=946300)](https://hosted.weblate.org/engage/komikku-app/)
 
 ## Download
 
@@ -79,8 +78,6 @@ Thank you to all the people who have contributed!
 <a href="https://github.com/mKonic/komikku/graphs/contributors">
     <img src="https://contrib.rocks/image?repo=mKonic/komikku" alt="Komikku app contributors" title="Komikku app contributors" width="800"/>
 </a>
-
-![Visitor Count](https://count.getloli.com/get/@komikku-app?theme=capoo-2)
 
 ### Disclaimer
 
