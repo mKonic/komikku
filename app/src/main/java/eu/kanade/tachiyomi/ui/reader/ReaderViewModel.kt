@@ -73,7 +73,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import logcat.LogPriority
 import tachiyomi.core.common.preference.toggle
 import tachiyomi.core.common.storage.UniFileTempFileManager
@@ -264,33 +263,45 @@ class ReaderViewModel @JvmOverloads constructor(
 
     private var chapterToDownload: Download? = null
 
-    private val unfilteredChapterList by lazy {
-        val manga = manga!!
-        runBlocking {
-            // KMK -->
-            if (manga.source == MERGED_SOURCE_ID) {
-                getMergedChaptersByMangaId.await(manga.id, dedupe = false, applyFilter = false)
-            } else {
-                getChaptersByMangaId.await(manga.id, applyFilter = false)
-            }
-            // KMK <--
-        }
-    }
+    /**
+     * Every chapter of the active manga, unfiltered. Loaded once by [loadChapterLists].
+     */
+    @Volatile
+    private var unfilteredChapterList: List<Chapter> = emptyList()
 
     /**
-     * Chapter list for the active manga. It's retrieved lazily and should be accessed for the first
-     * time in a background thread to avoid blocking the UI.
+     * Chapter list the reader navigates, with the user's skip/filter preferences applied. Loaded
+     * once by [loadChapterLists].
+     *
+     * Held rather than computed on first read. Both lists used to be `by lazy { runBlocking { … } }`
+     * around a database query, and their readers run on whatever thread reaches them first -
+     * `getChapters()` from composition, `toggleBookmark` from a dialog tap - so the first such read
+     * was a synchronous query on the main thread, or a wait on the lazy's own monitor while a
+     * background thread ran one.
      */
-    private val chapterList by lazy {
+    @Volatile
+    private var chapterList: List<ReaderChapter> = emptyList()
+
+    /**
+     * Populates [unfilteredChapterList] and [chapterList]. Must run before the reader loads its
+     * first chapter, and [init] is the only caller - it is already on [Dispatchers.IO] there.
+     */
+    private suspend fun loadChapterLists() {
         val manga = manga!!
+        // KMK -->
+        unfilteredChapterList = if (manga.source == MERGED_SOURCE_ID) {
+            getMergedChaptersByMangaId.await(manga.id, dedupe = false, applyFilter = false)
+        } else {
+            getChaptersByMangaId.await(manga.id, applyFilter = false)
+        }
+        // KMK <--
+
         // SY -->
-        val (chapters, mangaMap) = runBlocking {
-            if (manga.source == MERGED_SOURCE_ID) {
-                getMergedChaptersByMangaId.await(manga.id, applyFilter = true) to
-                    state.value.mergedManga
-            } else {
-                getChaptersByMangaId.await(manga.id, applyFilter = true) to null
-            }
+        val (chapters, mangaMap) = if (manga.source == MERGED_SOURCE_ID) {
+            getMergedChaptersByMangaId.await(manga.id, applyFilter = true) to
+                state.value.mergedManga
+        } else {
+            getChaptersByMangaId.await(manga.id, applyFilter = true) to null
         }
         fun isChapterDownloaded(chapter: Chapter): Boolean {
             val chapterManga = mangaMap?.get(chapter.mangaId) ?: manga
@@ -341,7 +352,7 @@ class ReaderViewModel @JvmOverloads constructor(
             else -> chapters
         }
 
-        chaptersForReader
+        chapterList = chaptersForReader
             .sortedWith(getChapterSort(manga, sortDescending = false))
             .run {
                 if (readerPreferences.skipDupe().get()) {
@@ -462,16 +473,12 @@ class ReaderViewModel @JvmOverloads constructor(
                         null
                     }
                     val mergedReferences = if (source is MergedSource) {
-                        runBlocking {
-                            getMergedReferencesById.await(manga.id)
-                        }
+                        getMergedReferencesById.await(manga.id)
                     } else {
                         emptyList()
                     }
                     val mergedManga = if (source is MergedSource) {
-                        runBlocking {
-                            getMergedMangaById.await(manga.id)
-                        }.associateBy { it.id }
+                        getMergedMangaById.await(manga.id).associateBy { it.id }
                     } else {
                         null
                     }
@@ -495,6 +502,10 @@ class ReaderViewModel @JvmOverloads constructor(
                         )
                     }
                     if (chapterId == -1L) chapterId = initialChapterId
+
+                    // Before anything can reach chapterList - loadChapter below reads it, and so
+                    // does the chapter-list dialog from composition.
+                    loadChapterLists()
 
                     val context = Injekt.get<Application>()
                     // val source = sourceManager.getOrStub(manga.source)
@@ -1074,7 +1085,9 @@ class ReaderViewModel @JvmOverloads constructor(
      */
     fun setMangaReadingMode(readingMode: ReadingMode) {
         val manga = manga ?: return
-        runBlocking(Dispatchers.IO) {
+        // Nothing reads a result from here - the viewer reloads off the event below, exactly as
+        // it does for setMangaOrientationType - so blocking the caller only stalled the tap.
+        viewModelScope.launchIO {
             setMangaViewerFlags.awaitSetReadingMode(manga.id, readingMode.flagValue.toLong())
             val currChapters = state.value.viewerChapters
             if (currChapters != null) {
