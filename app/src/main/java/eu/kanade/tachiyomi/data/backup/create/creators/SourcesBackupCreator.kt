@@ -11,14 +11,13 @@ class SourcesBackupCreator(
     private val sourceManager: SourceManager = Injekt.get(),
 ) {
 
-    operator fun invoke(mangas: List<BackupManga>): List<BackupSource> {
+    suspend operator fun invoke(mangas: List<BackupManga>): List<BackupSource> {
+        // KMK --> a sequence cannot carry the now-suspending lookup
         return mangas
-            .asSequence()
             .map(BackupManga::source)
             .distinct()
-            .map(sourceManager::getOrStub)
-            .map { it.toBackupSource() }
-            .toList()
+            .map { sourceManager.getOrStub(it).toBackupSource() }
+        // KMK <--
     }
 }
 

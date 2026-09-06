@@ -41,7 +41,9 @@ class PagePreviewFetcher(
     private val isInCache: () -> Boolean,
     private val writeToCache: (Source) -> Unit,
     private val diskCacheKeyLazy: Lazy<String>,
-    private val sourceLazy: Lazy<PagePreviewSource?>,
+    // KMK --> resolved when the fetch runs, since sources only exist once extensions load
+    private val getSource: suspend () -> PagePreviewSource?,
+    // KMK <--
     private val callFactoryLazy: Lazy<Call.Factory>,
     private val imageLoader: ImageLoader,
 ) : Fetcher {
@@ -124,10 +126,11 @@ class PagePreviewFetcher(
     }
 
     private suspend fun executeNetworkRequest(): Response {
-        val response = sourceLazy.value?.fetchPreviewImage(
+        val source = getSource()
+        val response = source?.fetchPreviewImage(
             page.getPagePreviewInfo(),
             getCacheControl(),
-        ) ?: callFactoryLazy.value.newCall(newRequest()).await()
+        ) ?: callFactoryLazy.value.newCall(newRequest(source)).await()
         if (!response.isSuccessful && response.code != HTTP_NOT_MODIFIED) {
             response.close()
             throw IOException(response.message)
@@ -148,11 +151,11 @@ class PagePreviewFetcher(
         }
     }
 
-    private fun newRequest(): Request {
+    private fun newRequest(source: PagePreviewSource?): Request {
         val request = Request.Builder().apply {
             url(page.imageUrl)
 
-            val sourceHeaders = (sourceLazy.value as? HttpSource)?.headers
+            val sourceHeaders = (source as? HttpSource)?.headers
             if (sourceHeaders != null) {
                 headers(sourceHeaders)
             }
@@ -250,7 +253,7 @@ class PagePreviewFetcher(
                 isInCache = { pagePreviewCache.isImageInCache(data.imageUrl) },
                 writeToCache = { pagePreviewCache.putImageToCache(data.imageUrl, it) },
                 diskCacheKeyLazy = lazy { imageLoader.components.key(data, options)!! },
-                sourceLazy = lazy { sourceManager.get(data.source)?.getMainSource<PagePreviewSource>() },
+                getSource = { sourceManager.get(data.source)?.getMainSource<PagePreviewSource>() },
                 callFactoryLazy = callFactoryLazy,
                 imageLoader = imageLoader,
             )

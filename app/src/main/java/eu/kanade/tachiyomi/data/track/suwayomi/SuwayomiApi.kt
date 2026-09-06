@@ -28,8 +28,8 @@ class SuwayomiApi(private val trackId: Long) {
     private val json: Json by injectLazy()
 
     private val sourceManager: SourceManager by injectLazy()
-    private val source: HttpSource by lazy { sourceManager.get(sourceId) as HttpSource }
-    private val configurableSource: ConfigurableSource by lazy { (sourceManager.get(sourceId) as ConfigurableSource) }
+    private val source: HttpSource by lazy { sourceManager.peek(sourceId) as HttpSource }
+    private val configurableSource: ConfigurableSource by lazy { (sourceManager.peek(sourceId) as ConfigurableSource) }
     private val client: OkHttpClient by lazy { source.client }
     private val baseUrl: String by lazy { source.baseUrl.trimEnd('/') }
     private val apiUrl: String by lazy { "$baseUrl/api/graphql" }

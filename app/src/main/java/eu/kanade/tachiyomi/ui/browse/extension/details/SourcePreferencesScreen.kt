@@ -60,7 +60,7 @@ class SourcePreferencesScreen(val sourceId: Long) : Screen() {
         Scaffold(
             topBar = {
                 AppBar(
-                    title = Injekt.get<SourceManager>().getOrStub(sourceId).toString(),
+                    title = Injekt.get<SourceManager>().peekOrStub(sourceId).toString(),
                     navigateUp = navigator::pop,
                     scrollBehavior = it,
                 )
@@ -135,7 +135,7 @@ class SourcePreferencesFragment : PreferenceFragmentCompat() {
         val sourceId = requireArguments().getLong(SOURCE_ID)
         // SY -->
         val source = Injekt.get<SourceManager>()
-            .getOrStub(sourceId)
+            .peekOrStub(sourceId)
             .let { source ->
                 if (source is EnhancedHttpSource) {
                     if (source.enhancedSource is ConfigurableSource) {

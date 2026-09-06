@@ -185,7 +185,7 @@ open class FeedScreenModel(
         return countFeedSavedSearchGlobal.await() > MaxFeedItems
     }
 
-    private fun getEnabledSources(): ImmutableList<Source> {
+    private suspend fun getEnabledSources(): ImmutableList<Source> {
         val languages = sourcePreferences.enabledLanguages().get()
         val pinnedSources = sourcePreferences.pinnedSources().get()
         val disabledSources = sourcePreferences.disabledSources().get()

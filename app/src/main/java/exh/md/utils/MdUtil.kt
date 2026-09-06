@@ -213,7 +213,7 @@ class MdUtil {
             val languages = preferences.enabledLanguages().get()
             val disabledSourceIds = preferences.disabledSources().get()
 
-            return sourceManager.getVisibleOnlineSources()
+            return sourceManager.peekVisibleOnlineSources()
                 .asSequence()
                 .mapNotNull { it.getMainSource<MangaDex>() }
                 .filter { it.lang in languages }

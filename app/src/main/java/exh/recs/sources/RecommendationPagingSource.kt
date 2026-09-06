@@ -153,7 +153,7 @@ class RecommendationSource(
     sourceManager: SourceManager = Injekt.get(),
 ) : Source {
     private val delegate by lazy {
-        sourceManager.get(id)
+        sourceManager.peek(id)
     }
 
     fun isComickSource(): Boolean = id in COMICK_IDS

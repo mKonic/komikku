@@ -77,33 +77,20 @@ class SourceRepositoryImpl(
         query: String,
         filterList: FilterList,
     ): SourcePagingSource {
-        val source = sourceManager.getOrStub(sourceId)
-        // SY -->
-        if (source.isEhBasedSource()) {
-            return EHentaiSearchPagingSource(source, query, filterList)
-        }
-        // SY <--
-        return SourceSearchPagingSource(source, query, filterList)
+        // KMK -->
+        // The source is resolved when the first page loads, not here: the E-Hentai handling that
+        // used to pick a separate paging source now lives inside the paging source itself, so a
+        // source that has not finished loading yet no longer decides that as a stub.
+        return SourceSearchPagingSource({ sourceManager.getOrStub(sourceId) }, query, filterList)
     }
 
     override fun getPopular(sourceId: Long): SourcePagingSource {
-        val source = sourceManager.getOrStub(sourceId)
-        // SY -->
-        if (source.isEhBasedSource()) {
-            return EHentaiPopularPagingSource(source)
-        }
-        // SY <--
-        return SourcePopularPagingSource(source)
+        return SourcePopularPagingSource { sourceManager.getOrStub(sourceId) }
     }
 
     override fun getLatest(sourceId: Long): SourcePagingSource {
-        val source = sourceManager.getOrStub(sourceId)
-        // SY -->
-        if (source.isEhBasedSource()) {
-            return EHentaiLatestPagingSource(source)
-        }
-        // SY <--
-        return SourceLatestPagingSource(source)
+        return SourceLatestPagingSource { sourceManager.getOrStub(sourceId) }
+        // KMK <--
     }
 
     private fun mapSourceToDomainSource(source: Source): DomainSource = DomainSource(

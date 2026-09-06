@@ -20,7 +20,7 @@ class SmartSearchScreenModel(
 ) : StateScreenModel<SmartSearchScreenModel.SearchResults?>(null) {
     private val smartSearchEngine = SmartSourceSearchEngine(null)
 
-    val source = sourceManager.getOrStub(sourceId)
+    val source = sourceManager.peekOrStub(sourceId)
 
     init {
         screenModelScope.launchIO {

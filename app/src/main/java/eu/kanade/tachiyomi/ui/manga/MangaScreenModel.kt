@@ -698,7 +698,7 @@ class MangaScreenModel(
                 ogStatus = status ?: 0,
                 lastUpdate = manga.lastUpdate + 1,
             )
-            (sourceManager.get(LocalSource.ID) as LocalSource).updateMangaInfo(manga.toSManga())
+            (sourceManager.peek(LocalSource.ID) as LocalSource).updateMangaInfo(manga.toSManga())
             screenModelScope.launchNonCancellable {
                 updateManga.await(
                     MangaUpdate(
@@ -918,7 +918,7 @@ class MangaScreenModel(
     /**
      * Deletes all the downloads for the manga.
      */
-    private fun deleteDownloads() {
+    private suspend fun deleteDownloads() {
         val state = successState ?: return
         // SY -->
         if (state.source is MergedSource) {

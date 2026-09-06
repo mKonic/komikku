@@ -200,36 +200,83 @@ class AndroidSourceManager(
         // EXH <--
     }
 
-    override fun get(sourceKey: Long): Source? {
+    // KMK -->
+    /**
+     * The source map is published only once the extensions have finished loading, so every
+     * accessor waits for that here rather than leaving each caller to remember to check
+     * [isInitialized] first and quietly get a stub when it forgets.
+     */
+    private suspend fun awaitInitialized() {
+        if (!_isInitialized.value) {
+            _isInitialized.first { it }
+        }
+    }
+    // KMK <--
+
+    override suspend fun get(sourceKey: Long): Source? {
+        awaitInitialized()
         return sourcesMapFlow.value[sourceKey]
     }
 
-    override fun getOrStub(sourceKey: Long): Source {
+    override suspend fun getOrStub(sourceKey: Long): Source {
+        awaitInitialized()
+        return peekOrStub(sourceKey)
+    }
+
+    // KMK -->
+    override fun peek(sourceKey: Long): Source? {
+        return sourcesMapFlow.value[sourceKey]
+    }
+
+    override fun peekVisibleSources(): List<Source> {
+        return sourcesMapFlow.value.values.filter { it.id !in BlacklistedSources.HIDDEN_SOURCES }
+    }
+
+    override fun peekVisibleOnlineSources(): List<HttpSource> {
+        return sourcesMapFlow.value.values
+            .filterIsInstance<HttpSource>()
+            .filter { it.id !in BlacklistedSources.HIDDEN_SOURCES }
+    }
+
+    override fun peekOrStub(sourceKey: Long): Source {
         return sourcesMapFlow.value[sourceKey] ?: stubSourcesMap.getOrPut(sourceKey) {
             runBlocking { createStubSource(sourceKey) }
         }
     }
+    // KMK <--
 
-    override fun getAll() = sourcesMapFlow.value.values.toList()
+    override suspend fun getAll(): List<Source> {
+        awaitInitialized()
+        return sourcesMapFlow.value.values.toList()
+    }
 
-    override fun getOnlineSources() = sourcesMapFlow.value.values.filterIsInstance<HttpSource>()
+    override suspend fun getOnlineSources(): List<HttpSource> {
+        awaitInitialized()
+        return sourcesMapFlow.value.values.filterIsInstance<HttpSource>()
+    }
 
-    override fun getStubSources(): List<StubSource> {
+    override suspend fun getStubSources(): List<StubSource> {
         val onlineSourceIds = getOnlineSources().map { it.id }
         return stubSourcesMap.values.filterNot { it.id in onlineSourceIds }
     }
 
     // SY -->
-    override fun getVisibleOnlineSources() = sourcesMapFlow.value.values
-        .filterIsInstance<HttpSource>()
-        .filter {
-            it.id !in BlacklistedSources.HIDDEN_SOURCES
-        }
+    override suspend fun getVisibleOnlineSources(): List<HttpSource> {
+        awaitInitialized()
+        return sourcesMapFlow.value.values
+            .filterIsInstance<HttpSource>()
+            .filter {
+                it.id !in BlacklistedSources.HIDDEN_SOURCES
+            }
+    }
 
-    override fun getVisibleSources() = sourcesMapFlow.value.values
-        .filter {
-            it.id !in BlacklistedSources.HIDDEN_SOURCES
-        }
+    override suspend fun getVisibleSources(): List<Source> {
+        awaitInitialized()
+        return sourcesMapFlow.value.values
+            .filter {
+                it.id !in BlacklistedSources.HIDDEN_SOURCES
+            }
+    }
 
     fun getDelegatedSources() = sourcesMapFlow.value.values
         .filterIsInstance<EnhancedHttpSource>()

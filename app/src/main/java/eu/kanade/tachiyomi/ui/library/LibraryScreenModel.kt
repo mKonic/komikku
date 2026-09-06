@@ -547,7 +547,7 @@ class LibraryScreenModel(
         }
     }
 
-    private fun List<LibraryItem>.applyGrouping(
+    private suspend fun List<LibraryItem>.applyGrouping(
         categories: List<Category>,
         // KMK -->
         groupType: Int,
@@ -1505,7 +1505,7 @@ class LibraryScreenModel(
     }
 
     // SY -->
-    private fun List<LibraryItem>.getGroupedMangaItems(
+    private suspend fun List<LibraryItem>.getGroupedMangaItems(
         groupType: Int,
     ): Map<Category, List</* LibraryItem */ Long>> {
         val context = preferences.context

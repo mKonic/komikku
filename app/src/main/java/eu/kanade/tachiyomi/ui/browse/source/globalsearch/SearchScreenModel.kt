@@ -92,7 +92,7 @@ abstract class SearchScreenModel(
     }
 
     open fun getEnabledSources(): List<Source> {
-        return sourceManager.getVisibleSources()
+        return sourceManager.peekVisibleSources()
             .filter { it.lang in enabledLanguages && "${it.id}" !in disabledSources }
             .sortedWith(
                 compareBy(

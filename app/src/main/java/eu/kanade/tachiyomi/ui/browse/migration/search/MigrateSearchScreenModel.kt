@@ -46,6 +46,6 @@ class MigrateSearchScreenModel(
     }
 
     override fun getEnabledSources(): List<Source> {
-        return migrationSources.mapNotNull { sourceManager.get(it) }
+        return migrationSources.mapNotNull { sourceManager.peek(it) }
     }
 }

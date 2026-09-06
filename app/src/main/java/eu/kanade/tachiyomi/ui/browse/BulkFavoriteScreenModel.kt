@@ -333,9 +333,10 @@ class BulkFavoriteScreenModel(
      * @param manga the manga to update.
      */
     internal fun changeMangaFavorite(manga: Manga) {
-        val source = sourceManager.getOrStub(manga.source)
-
         screenModelScope.launch {
+            // KMK -->
+            val source = sourceManager.getOrStub(manga.source)
+            // KMK <--
             var new = manga.copy(
                 favorite = !manga.favorite,
                 dateAdded = when (manga.favorite) {

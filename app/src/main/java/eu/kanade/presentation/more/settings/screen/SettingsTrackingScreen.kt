@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -53,6 +54,7 @@ import eu.kanade.tachiyomi.data.track.anilist.AnilistApi
 import eu.kanade.tachiyomi.data.track.bangumi.BangumiApi
 import eu.kanade.tachiyomi.data.track.myanimelist.MyAnimeListApi
 import eu.kanade.tachiyomi.data.track.shikimori.ShikimoriApi
+import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.util.system.openInBrowser
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.collections.immutable.persistentListOf
@@ -114,11 +116,14 @@ object SettingsTrackingScreen : SearchableSettings {
             }
         }
 
+        // KMK --> listing sources suspends now, so resolve it once outside the partition
+        val allSources by produceState(initialValue = emptyList<Source>()) { value = sourceManager.getAll() }
+        // KMK <--
         val enhancedTrackers = trackerManager.trackers
             .filter { it is EnhancedTracker }
             .partition { service ->
                 val acceptedSources = (service as EnhancedTracker).getAcceptedSources()
-                sourceManager.getAll().any { it::class.qualifiedName in acceptedSources }
+                allSources.any { it::class.qualifiedName in acceptedSources }
             }
         var enhancedTrackerInfo = stringResource(MR.strings.enhanced_tracking_info)
         if (enhancedTrackers.second.isNotEmpty()) {

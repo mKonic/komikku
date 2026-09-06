@@ -990,13 +990,15 @@ class ReaderViewModel @JvmOverloads constructor(
         return state.value.currentChapter
     }
 
-    fun getSource() = manga?.source?.let { sourceManager.getOrStub(it) } as? HttpSource
+    // KMK --> the reader cannot be open before its source has loaded
+    fun getSource() = manga?.source?.let { sourceManager.peekOrStub(it) } as? HttpSource
+    // KMK <--
 
     fun getChapterUrl(): String? {
         val sChapter = getCurrentChapter()?.chapter ?: return null
         val source = if (manga?.source == MERGED_SOURCE_ID) {
             state.value.mergedManga?.get(sChapter.manga_id)?.source?.let { sourceId ->
-                sourceManager.getOrStub(sourceId) as? HttpSource
+                sourceManager.peekOrStub(sourceId) as? HttpSource
             }
         } else {
             getSource()
@@ -1059,7 +1061,7 @@ class ReaderViewModel @JvmOverloads constructor(
         // SY -->
         return when {
             resolveDefault && readingMode == ReadingMode.DEFAULT && readerPreferences.useAutoWebtoon().get() -> {
-                manga.defaultReaderType(manga.mangaType(sourceName = sourceManager.get(manga.source)?.name))
+                manga.defaultReaderType(manga.mangaType(sourceName = sourceManager.peek(manga.source)?.name))
                     ?: default
             }
             resolveDefault && readingMode == ReadingMode.DEFAULT -> default

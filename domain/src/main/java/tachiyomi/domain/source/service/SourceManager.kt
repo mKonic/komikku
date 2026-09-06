@@ -12,23 +12,39 @@ interface SourceManager {
 
     val sources: Flow<List<Source>>
 
-    fun get(sourceKey: Long): Source?
+    suspend fun get(sourceKey: Long): Source?
 
-    fun getOrStub(sourceKey: Long): Source
+    suspend fun getOrStub(sourceKey: Long): Source
 
-    fun getAll(): List<Source>
+    // KMK -->
+    /**
+     * Best-effort, non-suspending lookup for the few call sites that genuinely cannot suspend --
+     * RecyclerView binds and preference fragments. Returns a stub if the extensions have not
+     * finished loading, which is exactly what every caller used to get before [getOrStub] began
+     * waiting for them. Prefer [getOrStub] everywhere else.
+     */
+    fun peek(sourceKey: Long): Source?
 
-    fun getOnlineSources(): List<HttpSource>
+    fun peekOrStub(sourceKey: Long): Source
+
+    fun peekVisibleOnlineSources(): List<HttpSource>
+
+    fun peekVisibleSources(): List<Source>
+    // KMK <--
+
+    suspend fun getAll(): List<Source>
+
+    suspend fun getOnlineSources(): List<HttpSource>
 
     // SY -->
-    fun getVisibleOnlineSources(): List<HttpSource>
+    suspend fun getVisibleOnlineSources(): List<HttpSource>
 
-    fun getVisibleSources(): List<Source>
+    suspend fun getVisibleSources(): List<Source>
     // SY <--
 
     // KMK -->
     suspend fun getMergedSources(mangaId: Long): List<Source>
     // KMK <--
 
-    fun getStubSources(): List<StubSource>
+    suspend fun getStubSources(): List<StubSource>
 }

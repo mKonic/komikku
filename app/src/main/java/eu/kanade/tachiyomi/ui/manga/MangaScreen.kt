@@ -823,7 +823,7 @@ class MangaScreen(
         // KMK -->
         val mergedMangaAndSources = mergedMangaData.manga.values
             .filterNot { it.source == MERGED_SOURCE_ID }
-            .map { manga -> manga to sourceManager.getOrStub(manga.source) }
+            .map { manga -> manga to sourceManager.peekOrStub(manga.source) }
         // KMK <--
         MaterialAlertDialogBuilder(context)
             .setTitle(titleRes.getString(context))

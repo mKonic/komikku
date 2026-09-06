@@ -61,7 +61,7 @@ class FavoritesSyncHelper(val context: Context) {
     private val exhPreferences: ExhPreferences by injectLazy()
 
     private val exh by lazy {
-        Injekt.get<SourceManager>().get(EXH_SOURCE_ID) as? EHentai
+        Injekt.get<SourceManager>().peek(EXH_SOURCE_ID) as? EHentai
             ?: EHentai(0, true, context)
     }
 

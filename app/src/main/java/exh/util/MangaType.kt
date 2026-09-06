@@ -25,22 +25,25 @@ fun Manga.mangaType(context: Context): String {
 /**
  * The type of comic the manga is (ie. manga, manhwa, manhua)
  */
-fun Manga.mangaType(sourceName: String? = Injekt.get<SourceManager>().get(source)?.name): MangaType {
+fun Manga.mangaType(sourceName: String? = null): MangaType {
+    // KMK --> rendered inside composables, so this stays a synchronous lookup
+    val resolvedSourceName = sourceName ?: Injekt.get<SourceManager>().peek(source)?.name
+    // KMK <--
     val currentTags = genre.orEmpty()
     return when {
         currentTags.any { tag -> isMangaTag(tag) } -> {
             MangaType.TYPE_MANGA
         }
-        currentTags.any { tag -> isWebtoonTag(tag) } || sourceName?.let { isWebtoonSource(it) } == true -> {
+        currentTags.any { tag -> isWebtoonTag(tag) } || resolvedSourceName?.let { isWebtoonSource(it) } == true -> {
             MangaType.TYPE_WEBTOON
         }
-        currentTags.any { tag -> isComicTag(tag) } || sourceName?.let { isComicSource(it) } == true -> {
+        currentTags.any { tag -> isComicTag(tag) } || resolvedSourceName?.let { isComicSource(it) } == true -> {
             MangaType.TYPE_COMIC
         }
-        currentTags.any { tag -> isManhuaTag(tag) } || sourceName?.let { isManhuaSource(it) } == true -> {
+        currentTags.any { tag -> isManhuaTag(tag) } || resolvedSourceName?.let { isManhuaSource(it) } == true -> {
             MangaType.TYPE_MANHUA
         }
-        currentTags.any { tag -> isManhwaTag(tag) } || sourceName?.let { isManhwaSource(it) } == true -> {
+        currentTags.any { tag -> isManhwaTag(tag) } || resolvedSourceName?.let { isManhwaSource(it) } == true -> {
             MangaType.TYPE_MANHWA
         }
         else -> {

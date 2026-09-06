@@ -121,7 +121,7 @@ class Kavita(id: Long) : BaseTracker(id, "Kavita"), EnhancedTracker {
                 (0..7).map { bytes[it].toLong() and 0xff shl 8 * (7 - it) }
                     .reduce(Long::or) and Long.MAX_VALUE
             }
-            val preferences = (sourceManager.get(sourceId) as ConfigurableSource).sourcePreferences()
+            val preferences = (sourceManager.peek(sourceId) as ConfigurableSource).sourcePreferences()
 
             val prefApiUrl = preferences.getString("APIURL", "")
             val prefApiKey = preferences.getString("APIKEY", "")

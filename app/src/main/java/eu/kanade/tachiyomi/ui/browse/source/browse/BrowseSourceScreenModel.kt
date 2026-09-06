@@ -129,7 +129,7 @@ open class BrowseSourceScreenModel(
 
     var displayMode by sourcePreferences.sourceDisplayMode().asState(screenModelScope)
 
-    var source = sourceManager.getOrStub(sourceId)
+    var source = sourceManager.peekOrStub(sourceId)
 
     // SY -->
     val ehentaiBrowseDisplayMode by exhPreferences.enhancedEHentaiView().asState(screenModelScope)

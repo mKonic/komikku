@@ -731,7 +731,7 @@ class ReaderActivity : BaseActivity() {
             autoScrollFrequency = state.ehAutoscrollFreq,
             onSetAutoScrollFrequency = viewModel::setAutoScrollFrequency,
             onClickAutoScrollHelp = viewModel::openAutoScrollHelpDialog,
-            onClickRetryAll = ::exhRetryAll,
+            onClickRetryAll = { lifecycleScope.launchIO { exhRetryAll() } },
             onClickRetryAllHelp = viewModel::openRetryAllHelp,
             onClickBoostPage = ::exhBoostPage,
             onClickBoostPageHelp = viewModel::openBoostPageHelp,
@@ -809,7 +809,7 @@ class ReaderActivity : BaseActivity() {
             .launchIn(lifecycleScope)
     }
 
-    private fun exhRetryAll() {
+    private suspend fun exhRetryAll() {
         var retried = 0
 
         viewModel.state.value.viewerChapters
@@ -937,7 +937,7 @@ class ReaderActivity : BaseActivity() {
     /**
      * Called from the presenter when a manga is ready. Used to instantiate the appropriate viewer.
      */
-    private fun updateViewer() {
+    private suspend fun updateViewer() {
         val prevViewer = viewModel.state.value.viewer
         val newViewer = ReadingMode.toViewer(
             viewModel.getMangaReadingMode(),

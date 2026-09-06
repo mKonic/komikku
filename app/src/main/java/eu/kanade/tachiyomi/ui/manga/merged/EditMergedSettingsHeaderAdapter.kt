@@ -114,7 +114,7 @@ class EditMergedSettingsHeaderAdapter(
                 android.R.layout.simple_spinner_dropdown_item,
                 // KMK <--
                 mergedMangas.map {
-                    sourceManager.getOrStub(it.second.mangaSourceId).toString() + " " + it.first?.title
+                    sourceManager.peekOrStub(it.second.mangaSourceId).toString() + " " + it.first?.title
                 },
                 // KMK -->
                 colorScheme,

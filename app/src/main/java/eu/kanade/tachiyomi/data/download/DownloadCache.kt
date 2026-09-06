@@ -151,7 +151,7 @@ class DownloadCache(
         skipCache: Boolean,
     ): Boolean {
         if (skipCache) {
-            val source = sourceManager.getOrStub(sourceId)
+            val source = sourceManager.peekOrStub(sourceId)
             return provider.findChapterDir(chapterName, chapterScanlator, chapterUrl, mangaTitle, source) != null
         }
 
@@ -481,7 +481,7 @@ class DownloadCache(
         notifyChanges()
     }
 
-    private fun getSources(): List<Source> {
+    private suspend fun getSources(): List<Source> {
         // SY -->
         return sourceManager.getVisibleOnlineSources() + sourceManager.getStubSources()
         // SY <--

@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.MetadataMangasPage
 import exh.log.xLogE
 import exh.metadata.metadata.RaisedSearchMetadata
+import exh.source.isEhBasedSource
 import mihon.domain.manga.model.toDomainManga
 import tachiyomi.core.common.util.QuerySanitizer.sanitize
 import tachiyomi.core.common.util.lang.withIOContext
@@ -17,31 +18,45 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 class SourceSearchPagingSource(
-    source: Source,
+    source: suspend () -> Source,
     private val query: String,
     private val filters: FilterList,
 ) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return source.getSearchManga(currentPage, query.sanitize(), filters)
+        return source().getSearchManga(currentPage, query.sanitize(), filters)
     }
 }
 
-class SourcePopularPagingSource(source: Source) : BaseSourcePagingSource(source) {
+class SourcePopularPagingSource(source: suspend () -> Source) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return source.getPopularManga(currentPage)
+        return source().getPopularManga(currentPage)
     }
 }
 
-class SourceLatestPagingSource(source: Source) : BaseSourcePagingSource(source) {
+class SourceLatestPagingSource(source: suspend () -> Source) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return source.getLatestUpdates(currentPage)
+        return source().getLatestUpdates(currentPage)
     }
 }
 
 abstract class BaseSourcePagingSource(
-    protected val source: Source,
+    // KMK -->
+    // Resolved lazily rather than handed over at construction: a source only exists once the
+    // extensions have finished loading, and a paging source built before that would otherwise
+    // capture a stub for its whole life.
+    private val sourceProvider: suspend () -> Source,
+    // KMK <--
     protected val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
 ) : SourcePagingSource() {
+
+    // KMK -->
+    constructor(
+        source: Source,
+        networkToLocalManga: NetworkToLocalManga = Injekt.get(),
+    ) : this({ source }, networkToLocalManga)
+
+    protected suspend fun source(): Source = sourceProvider()
+    // KMK <--
 
     protected val seenManga = hashSetOf<String>()
 
@@ -53,6 +68,9 @@ abstract class BaseSourcePagingSource(
         val page = params.key ?: 1
 
         return try {
+            // KMK -->
+            val source = sourceProvider()
+            // KMK <--
             val mangasPage = withIOContext {
                 requestNextPage(page.toInt())
                     .takeIf { it.mangas.isNotEmpty() }
@@ -60,7 +78,7 @@ abstract class BaseSourcePagingSource(
             }
 
             // SY -->
-            getPageLoadResult(params, mangasPage)
+            getPageLoadResult(source, params, mangasPage)
             // SY <--
         } catch (e: Exception) {
             xLogE("${this::class.simpleName}: Failed to load paging source", e)
@@ -70,6 +88,9 @@ abstract class BaseSourcePagingSource(
 
     // SY -->
     open suspend fun getPageLoadResult(
+        // KMK -->
+        source: Source,
+        // KMK <--
         params: LoadParams<Long>,
         mangasPage: MangasPage,
     ): LoadResult.Page<Long, /*SY --> */ Pair<Manga, RaisedSearchMetadata?>/*SY <-- */> {
@@ -92,10 +113,22 @@ abstract class BaseSourcePagingSource(
         // KMK <--
         // SY <--
 
+        // KMK -->
+        // E-Hentai paginates by an opaque key carried on the page itself rather than by a
+        // sequential page number, which is why it used to need its own paging source.
+        val nextKey = if (source.isEhBasedSource() && mangasPage is MetadataMangasPage) {
+            mangasPage.nextKey
+        } else if (mangasPage.hasNextPage) {
+            page + 1
+        } else {
+            null
+        }
+        // KMK <--
+
         return LoadResult.Page(
             data = manga,
             prevKey = null,
-            nextKey = if (mangasPage.hasNextPage) page + 1 else null,
+            nextKey = nextKey,
         )
     }
     // SY <--

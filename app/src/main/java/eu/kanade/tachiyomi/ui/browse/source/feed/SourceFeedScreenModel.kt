@@ -89,7 +89,7 @@ open class SourceFeedScreenModel(
     // KMK <--
 ) : StateScreenModel<SourceFeedState>(SourceFeedState()) {
 
-    var source = sourceManager.getOrStub(sourceId)
+    var source = sourceManager.peekOrStub(sourceId)
 
     val sourceIsMangaDex = sourceId in mangaDexSourceIds
 

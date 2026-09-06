@@ -438,7 +438,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
             saveSources()
         }
 
-        private fun initSources() {
+        private suspend fun initSources() {
             val languages = sourcePreferences.enabledLanguages().get()
             val includedSources = sourcePreferences.migrationSources().get()
                 // KMK -->

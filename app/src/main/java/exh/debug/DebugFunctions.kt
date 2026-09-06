@@ -152,22 +152,22 @@ object DebugFunctions {
 
     fun clearSavedSearches() = runBlocking { handler.await { saved_searchQueries.deleteAll() } }
 
-    fun listAllSources() = sourceManager.getAll().joinToString("\n") {
+    suspend fun listAllSources() = sourceManager.getAll().joinToString("\n") {
         "${it.id}: ${it.name} (${it.lang.uppercase()})"
     }
 
-    fun listAllSourcesClassName() = sourceManager.getAll().joinToString("\n") {
+    suspend fun listAllSourcesClassName() = sourceManager.getAll().joinToString("\n") {
         "${it::class.qualifiedName}: ${it.name} (${it.lang.uppercase()})"
     }
 
-    fun listVisibleSources() = sourceManager.getVisibleSources().joinToString("\n") {
+    suspend fun listVisibleSources() = sourceManager.getVisibleSources().joinToString("\n") {
         "${it.id}: ${it.name} (${it.lang.uppercase()})"
     }
 
-    fun listAllHttpSources() = sourceManager.getOnlineSources().joinToString("\n") {
+    suspend fun listAllHttpSources() = sourceManager.getOnlineSources().joinToString("\n") {
         "${it.id}: ${it.name} (${it.lang.uppercase()})"
     }
-    fun listVisibleHttpSources() = sourceManager.getVisibleOnlineSources().joinToString("\n") {
+    suspend fun listVisibleHttpSources() = sourceManager.getVisibleOnlineSources().joinToString("\n") {
         "${it.id}: ${it.name} (${it.lang.uppercase()})"
     }
 

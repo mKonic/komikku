@@ -17,7 +17,7 @@ class GetIncognitoState(
         if (basePreferences.incognitoMode().get()) return true
         if (sourceId == null) return false
         // KMK -->
-        return sourceManager.get(sourceId)?.isIncognitoModeEnabled() == true
+        return sourceManager.peek(sourceId)?.isIncognitoModeEnabled() == true
         // KMK <--
     }
 
