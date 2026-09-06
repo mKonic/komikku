@@ -5,9 +5,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
-import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -17,6 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import eu.kanade.presentation.manga.components.MarkdownRender
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.OpenInNew
+import mihon.icons.materialsymbols.rounded.NewReleases
 import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
@@ -33,7 +33,7 @@ fun NewUpdateScreen(
     onAcceptUpdate: () -> Unit,
 ) {
     InfoScreen(
-        icon = Icons.Outlined.NewReleases,
+        icon = MaterialSymbols.Rounded.NewReleases,
         headingText = stringResource(MR.strings.update_check_notification_update_available),
         subtitleText = stringResource(SYMR.strings.latest_, versionName),
         acceptText = stringResource(MR.strings.update_check_confirm),
@@ -57,7 +57,7 @@ fun NewUpdateScreen(
             ) {
                 Text(text = stringResource(MR.strings.update_check_open))
                 Spacer(modifier = Modifier.width(MaterialTheme.padding.extraSmall))
-                Icon(imageVector = Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
+                Icon(imageVector = MaterialSymbols.AutoMirroredRounded.OpenInNew, contentDescription = null)
             }
         }
     }

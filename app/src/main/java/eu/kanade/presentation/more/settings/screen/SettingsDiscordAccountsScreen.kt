@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,6 +42,9 @@ import eu.kanade.tachiyomi.ui.setting.connections.DiscordLoginScreen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import logcat.logcat
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Add
+import mihon.icons.materialsymbols.rounded.Delete
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -89,7 +89,7 @@ private fun DiscordAccountsScreenContent() {
                         },
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Add,
+                            imageVector = MaterialSymbols.Rounded.Add,
                             contentDescription = stringResource(MR.strings.action_add),
                         )
                     }
@@ -267,7 +267,7 @@ private fun DiscordAccountItem(
 
             IconButton(onClick = onRemove) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    imageVector = MaterialSymbols.Rounded.Delete,
                     contentDescription = stringResource(MR.strings.action_delete),
                     tint = MaterialTheme.colorScheme.error,
                 )

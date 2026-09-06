@@ -11,15 +11,6 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.ZeroCornerSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowDownward
-import androidx.compose.material.icons.outlined.ArrowUpward
-import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.FindReplace
-import androidx.compose.material.icons.outlined.FlipToBack
-import androidx.compose.material.icons.outlined.SelectAll
-import androidx.compose.material.icons.outlined.VerticalAlignBottom
-import androidx.compose.material.icons.outlined.VerticalAlignTop
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -48,6 +39,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.ArrowDownward
+import mihon.icons.materialsymbols.rounded.ArrowUpward
+import mihon.icons.materialsymbols.rounded.Delete
+import mihon.icons.materialsymbols.rounded.FindReplace
+import mihon.icons.materialsymbols.rounded.FlipToBack
+import mihon.icons.materialsymbols.rounded.SelectAll
+import mihon.icons.materialsymbols.rounded.VerticalAlignBottom
+import mihon.icons.materialsymbols.rounded.VerticalAlignTop
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
@@ -240,7 +240,7 @@ private fun LibraryUpdateErrorBottomBar(
         ) {
             Button(
                 title = stringResource(KMR.strings.action_scroll_to_top),
-                icon = Icons.Outlined.VerticalAlignTop,
+                icon = MaterialSymbols.Rounded.VerticalAlignTop,
                 toConfirm = confirm[0],
                 onLongClick = { onLongClickItem(0) },
                 onClick = if (enableScrollToTop) {
@@ -252,7 +252,7 @@ private fun LibraryUpdateErrorBottomBar(
             )
             Button(
                 title = stringResource(KMR.strings.action_scroll_to_previous),
-                icon = Icons.Outlined.ArrowUpward,
+                icon = MaterialSymbols.Rounded.ArrowUpward,
                 toConfirm = confirm[1],
                 onLongClick = { onLongClickItem(1) },
                 onClick = if (enableScrollToPrevious) {
@@ -264,7 +264,7 @@ private fun LibraryUpdateErrorBottomBar(
             )
             Button(
                 title = stringResource(MR.strings.migrate),
-                icon = Icons.Outlined.FindReplace,
+                icon = MaterialSymbols.Rounded.FindReplace,
                 toConfirm = confirm[2],
                 onLongClick = { onLongClickItem(2) },
                 onClick = if (selected.isNotEmpty()) {
@@ -276,7 +276,7 @@ private fun LibraryUpdateErrorBottomBar(
             )
             Button(
                 title = stringResource(KMR.strings.action_scroll_to_next),
-                icon = Icons.Outlined.ArrowDownward,
+                icon = MaterialSymbols.Rounded.ArrowDownward,
                 toConfirm = confirm[3],
                 onLongClick = { onLongClickItem(3) },
                 onClick = if (enableScrollToNext) {
@@ -288,7 +288,7 @@ private fun LibraryUpdateErrorBottomBar(
             )
             Button(
                 title = stringResource(KMR.strings.action_scroll_to_bottom),
-                icon = Icons.Outlined.VerticalAlignBottom,
+                icon = MaterialSymbols.Rounded.VerticalAlignBottom,
                 toConfirm = confirm[4],
                 onLongClick = { onLongClickItem(4) },
                 onClick = if (enableScrollToBottom) {
@@ -323,7 +323,7 @@ private fun LibraryUpdateErrorAppBar(
                     persistentListOf(
                         AppBar.Action(
                             title = stringResource(MR.strings.action_select_all),
-                            icon = Icons.Outlined.SelectAll,
+                            icon = MaterialSymbols.Rounded.SelectAll,
                             onClick = onClickSelectAll,
                         ),
                     ),
@@ -337,17 +337,17 @@ private fun LibraryUpdateErrorAppBar(
                 persistentListOf(
                     AppBar.Action(
                         title = stringResource(MR.strings.action_delete),
-                        icon = Icons.Outlined.DeleteOutline,
+                        icon = MaterialSymbols.Rounded.Delete,
                         onClick = onClickDeleteErrors,
                     ),
                     AppBar.Action(
                         title = stringResource(MR.strings.action_select_all),
-                        icon = Icons.Outlined.SelectAll,
+                        icon = MaterialSymbols.Rounded.SelectAll,
                         onClick = onClickSelectAll,
                     ),
                     AppBar.Action(
                         title = stringResource(MR.strings.action_select_inverse),
-                        icon = Icons.Outlined.FlipToBack,
+                        icon = MaterialSymbols.Rounded.FlipToBack,
                         onClick = onClickInvertSelection,
                     ),
                 ),

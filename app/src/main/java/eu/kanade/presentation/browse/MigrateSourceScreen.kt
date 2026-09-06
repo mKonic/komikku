@@ -10,12 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowDownward
-import androidx.compose.material.icons.outlined.ArrowUpward
-import androidx.compose.material.icons.outlined.NewReleases
-import androidx.compose.material.icons.outlined.Numbers
-import androidx.compose.material.icons.outlined.SortByAlpha
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -44,6 +38,12 @@ import eu.kanade.tachiyomi.util.system.copyToClipboard
 import exh.source.ExhPreferences
 import exh.source.eHentaiSourceIds
 import kotlinx.collections.immutable.ImmutableList
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.ArrowDownward
+import mihon.icons.materialsymbols.rounded.ArrowUpward
+import mihon.icons.materialsymbols.rounded.NewReleases
+import mihon.icons.materialsymbols.rounded.Numbers
+import mihon.icons.materialsymbols.rounded.SortByAlpha
 import tachiyomi.domain.source.model.Source
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -145,7 +145,7 @@ private fun MigrateSourceList(
             // KMK -->
             IconButton(onClick = { filterObsoleteSource = !filterObsoleteSource }) {
                 Icon(
-                    Icons.Outlined.NewReleases,
+                    MaterialSymbols.Rounded.NewReleases,
                     contentDescription = stringResource(MR.strings.ext_obsolete),
                     tint = MaterialTheme.colorScheme.error
                         .takeIf { filterObsoleteSource } ?: LocalContentColor.current,
@@ -155,11 +155,11 @@ private fun MigrateSourceList(
             IconButton(onClick = onToggleSortingMode) {
                 when (sortingMode) {
                     SetMigrateSorting.Mode.ALPHABETICAL -> Icon(
-                        Icons.Outlined.SortByAlpha,
+                        MaterialSymbols.Rounded.SortByAlpha,
                         contentDescription = stringResource(MR.strings.action_sort_alpha),
                     )
                     SetMigrateSorting.Mode.TOTAL -> Icon(
-                        Icons.Outlined.Numbers,
+                        MaterialSymbols.Rounded.Numbers,
                         contentDescription = stringResource(MR.strings.action_sort_count),
                     )
                 }
@@ -167,11 +167,11 @@ private fun MigrateSourceList(
             IconButton(onClick = onToggleSortingDirection) {
                 when (sortingDirection) {
                     SetMigrateSorting.Direction.ASCENDING -> Icon(
-                        Icons.Outlined.ArrowUpward,
+                        MaterialSymbols.Rounded.ArrowUpward,
                         contentDescription = stringResource(MR.strings.action_asc),
                     )
                     SetMigrateSorting.Direction.DESCENDING -> Icon(
-                        Icons.Outlined.ArrowDownward,
+                        MaterialSymbols.Rounded.ArrowDownward,
                         contentDescription = stringResource(MR.strings.action_desc),
                     )
                 }

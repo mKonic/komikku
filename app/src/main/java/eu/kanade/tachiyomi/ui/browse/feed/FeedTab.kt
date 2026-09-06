@@ -2,10 +2,6 @@ package eu.kanade.tachiyomi.ui.browse.feed
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -36,6 +32,10 @@ import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Add
+import mihon.icons.materialsymbols.rounded.Close
+import mihon.icons.materialsymbols.rounded.SwapVert
 import tachiyomi.domain.source.interactor.GetRemoteManga
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -85,7 +85,7 @@ fun Screen.feedTab(
             persistentListOf(
                 AppBar.Action(
                     title = stringResource(KMR.strings.action_sort_feed),
-                    icon = Icons.Outlined.Close,
+                    icon = MaterialSymbols.Rounded.Close,
                     iconTint = MaterialTheme.colorScheme.primary,
                     onClick = { showingFeedOrderScreen.value = false },
                 ),
@@ -95,7 +95,7 @@ fun Screen.feedTab(
             persistentListOf(
                 AppBar.Action(
                     title = stringResource(MR.strings.action_add),
-                    icon = Icons.Outlined.Add,
+                    icon = MaterialSymbols.Rounded.Add,
                     onClick = {
                         screenModel.openAddDialog()
                     },
@@ -103,7 +103,7 @@ fun Screen.feedTab(
                 // KMK -->
                 AppBar.Action(
                     title = stringResource(KMR.strings.action_sort_feed),
-                    icon = Icons.Outlined.SwapVert,
+                    icon = MaterialSymbols.Rounded.SwapVert,
                     onClick = { showingFeedOrderScreen.value = true },
                 ),
                 bulkSelectionButton(

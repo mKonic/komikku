@@ -49,6 +49,9 @@ include(":data")
 include(":domain")
 include(":i18n")
 // KMK -->
+include(":icons:material-symbols")
+// KMK <--
+// KMK -->
 include(":i18n-kmk")
 include(":flagkit")
 // KMK <--

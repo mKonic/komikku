@@ -206,7 +206,9 @@ dependencies {
     implementation(compose.activity)
     implementation(compose.foundation)
     implementation(compose.material3.core)
-    implementation(compose.material.icons)
+    // KMK --> Material Symbols, generated from SVG by Valkyrie
+    implementation(projects.icons.materialSymbols)
+    // KMK <--
     implementation(compose.animation)
     implementation(compose.animation.graphics)
     debugImplementation(compose.ui.tooling)

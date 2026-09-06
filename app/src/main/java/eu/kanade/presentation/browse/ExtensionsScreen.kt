@@ -13,13 +13,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.GetApp
-import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -62,6 +55,13 @@ import eu.kanade.tachiyomi.util.system.launchRequestPackageInstallsPermission
 import kotlinx.collections.immutable.persistentListOf
 import mihon.domain.extension.model.ExtensionStore
 import mihon.domain.extension.model.KOMIKKU_SIGNATURE
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Close
+import mihon.icons.materialsymbols.rounded.Download
+import mihon.icons.materialsymbols.rounded.Public
+import mihon.icons.materialsymbols.rounded.Refresh
+import mihon.icons.materialsymbols.rounded.Settings
+import mihon.icons.materialsymbols.rounded.VerifiedUser
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
@@ -115,7 +115,7 @@ fun ExtensionScreen(
                     actions = persistentListOf(
                         EmptyScreenAction(
                             stringRes = MR.strings.extensionStores,
-                            icon = Icons.Outlined.Settings,
+                            icon = MaterialSymbols.Rounded.Settings,
                             onClick = { navigator.push(ExtensionStoresScreen()) },
                         ),
                     ),
@@ -469,7 +469,7 @@ private fun ExtensionItemActions(
             !isIdle -> {
                 IconButton(onClick = { onClickItemCancel(extension) }) {
                     Icon(
-                        imageVector = Icons.Outlined.Close,
+                        imageVector = MaterialSymbols.Rounded.Close,
                         contentDescription = stringResource(MR.strings.action_cancel),
                     )
                 }
@@ -477,7 +477,7 @@ private fun ExtensionItemActions(
             installStep == InstallStep.Error -> {
                 IconButton(onClick = { onClickItemAction(extension) }) {
                     Icon(
-                        imageVector = Icons.Outlined.Refresh,
+                        imageVector = MaterialSymbols.Rounded.Refresh,
                         contentDescription = stringResource(MR.strings.action_retry),
                     )
                 }
@@ -487,7 +487,7 @@ private fun ExtensionItemActions(
                     is Extension.Installed -> {
                         IconButton(onClick = { onClickItemSecondaryAction(extension) }) {
                             Icon(
-                                imageVector = Icons.Outlined.Settings,
+                                imageVector = MaterialSymbols.Rounded.Settings,
                                 contentDescription = stringResource(MR.strings.action_settings),
                             )
                         }
@@ -495,7 +495,7 @@ private fun ExtensionItemActions(
                         if (extension.hasUpdate) {
                             IconButton(onClick = { onClickItemAction(extension) }) {
                                 Icon(
-                                    imageVector = Icons.Outlined.GetApp,
+                                    imageVector = MaterialSymbols.Rounded.Download,
                                     contentDescription = stringResource(MR.strings.ext_update),
                                 )
                             }
@@ -504,7 +504,7 @@ private fun ExtensionItemActions(
                     is Extension.Untrusted -> {
                         IconButton(onClick = { onClickItemAction(extension) }) {
                             Icon(
-                                imageVector = Icons.Outlined.VerifiedUser,
+                                imageVector = MaterialSymbols.Rounded.VerifiedUser,
                                 contentDescription = stringResource(MR.strings.ext_trust),
                             )
                         }
@@ -515,7 +515,7 @@ private fun ExtensionItemActions(
                                 onClick = { onClickItemSecondaryAction(extension) },
                             ) {
                                 Icon(
-                                    imageVector = Icons.Outlined.Public,
+                                    imageVector = MaterialSymbols.Rounded.Public,
                                     contentDescription = stringResource(MR.strings.action_open_in_web_view),
                                 )
                             }
@@ -523,7 +523,7 @@ private fun ExtensionItemActions(
 
                         IconButton(onClick = { onClickItemAction(extension) }) {
                             Icon(
-                                imageVector = Icons.Outlined.GetApp,
+                                imageVector = MaterialSymbols.Rounded.Download,
                                 contentDescription = stringResource(MR.strings.ext_install),
                             )
                         }

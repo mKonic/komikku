@@ -5,9 +5,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Help
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +25,9 @@ import mihon.domain.extension.model.ExtensionStore
 import mihon.domain.extension.model.KOMIKKU_SIGNATURE
 import mihon.domain.extension.model.REPO_HELP
 import mihon.domain.extension.model.REPO_SIGNATURE
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.Help
+import mihon.icons.materialsymbols.rounded.Refresh
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
@@ -61,7 +61,7 @@ fun ExtensionStoresScreen(
                 actions = {
                     IconButton(onClick = onClickRefresh) {
                         Icon(
-                            imageVector = Icons.Outlined.Refresh,
+                            imageVector = MaterialSymbols.Rounded.Refresh,
                             contentDescription = stringResource(resource = MR.strings.action_webview_refresh),
                         )
                     }
@@ -86,7 +86,7 @@ fun ExtensionStoresScreen(
                         onClick = { context.openInBrowser(REPO_HELP) },
                         modifier = Modifier.padding(top = MaterialTheme.padding.small),
                     ) {
-                        Icon(imageVector = Icons.AutoMirrored.Outlined.Help, contentDescription = null)
+                        Icon(imageVector = MaterialSymbols.AutoMirroredRounded.Help, contentDescription = null)
                         Spacer(modifier = Modifier.width(MaterialTheme.padding.extraSmall))
                         Text(text = stringResource(MR.strings.label_help))
                     }

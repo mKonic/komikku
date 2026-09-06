@@ -10,10 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.DoneAll
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -30,6 +26,10 @@ import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.SourceFilter
 import kotlinx.collections.immutable.persistentListOf
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.DoneAll
+import mihon.icons.materialsymbols.rounded.FilterList
+import mihon.icons.materialsymbols.rounded.PushPin
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -99,7 +99,7 @@ fun GlobalSearchToolbar(
                         onClick = { onChangeSearchFilter(SourceFilter.PinnedOnly) },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Outlined.PushPin,
+                                imageVector = MaterialSymbols.Rounded.PushPin,
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(FilterChipDefaults.IconSize),
@@ -115,7 +115,7 @@ fun GlobalSearchToolbar(
                     onClick = { onChangeSearchFilter(SourceFilter.All) },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Outlined.DoneAll,
+                            imageVector = MaterialSymbols.Rounded.DoneAll,
                             contentDescription = null,
                             modifier = Modifier
                                 .size(FilterChipDefaults.IconSize),
@@ -134,7 +134,7 @@ fun GlobalSearchToolbar(
                 onClick = { onToggleResults() },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.FilterList,
+                        imageVector = MaterialSymbols.Rounded.FilterList,
                         contentDescription = null,
                         modifier = Modifier
                             .size(FilterChipDefaults.IconSize),

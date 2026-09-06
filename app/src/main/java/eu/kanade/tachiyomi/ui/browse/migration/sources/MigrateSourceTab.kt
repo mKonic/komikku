@@ -1,7 +1,5 @@
 package eu.kanade.tachiyomi.ui.browse.migration.sources
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -15,6 +13,8 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.TabContent
 import eu.kanade.tachiyomi.ui.browse.migration.manga.MigrateMangaScreen
 import kotlinx.collections.immutable.persistentListOf
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.Help
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -30,7 +30,7 @@ fun Screen.migrateSourceTab(): TabContent {
         actions = persistentListOf(
             AppBar.Action(
                 title = stringResource(MR.strings.migration_help_guide),
-                icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                icon = MaterialSymbols.AutoMirroredRounded.Help,
                 onClick = {
                     uriHandler.openUri("https://komikku-app.github.io/docs/guides/source-migration")
                 },

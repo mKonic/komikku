@@ -3,9 +3,6 @@ package eu.kanade.presentation.browse
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SmallExtendedFloatingActionButton
 import androidx.compose.material3.Text
@@ -29,6 +26,9 @@ import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.FilterList
+import mihon.icons.materialsymbols.rounded.Public
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
@@ -171,7 +171,7 @@ fun SourceFeedScreen(
                         },
                     )
                 },
-                icon = { Icon(Icons.Outlined.FilterList, contentDescription = "") },
+                icon = { Icon(MaterialSymbols.Rounded.FilterList, contentDescription = "") },
                 onClick = onFabClick,
             )
             // KMK <--
@@ -344,7 +344,7 @@ fun SourceFeedToolbar(
                             AppBar.Action(
                                 title = stringResource(MR.strings.action_web_view),
                                 onClick = { func() },
-                                icon = Icons.Outlined.Public,
+                                icon = MaterialSymbols.Rounded.Public,
                             ),
                         )
                     }

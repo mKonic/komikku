@@ -2,10 +2,6 @@ package eu.kanade.presentation.library.components
 
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.LocalLibrary
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -18,6 +14,10 @@ import eu.kanade.domain.extension.interactor.GetExtensionLanguages.Companion.get
 import eu.kanade.domain.source.model.icon
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.tachiyomi.R
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Folder
+import mihon.icons.materialsymbols.rounded.LocalLibrary
+import mihon.icons.materialsymbols.rounded.Warning
 import tachiyomi.domain.source.model.Source
 import tachiyomi.presentation.core.components.Badge
 import tachiyomi.presentation.core.components.BadgeGroup
@@ -82,7 +82,7 @@ fun SourceIconBadge(
     when {
         source.isStub && icon == null -> {
             Badge(
-                imageVector = Icons.Filled.Warning,
+                imageVector = MaterialSymbols.Rounded.Warning,
                 iconColor = MaterialTheme.colorScheme.error,
                 color = MaterialTheme.colorScheme.errorContainer,
             )
@@ -97,7 +97,7 @@ fun SourceIconBadge(
         }
         source.isLocal() -> {
             Badge(
-                imageVector = Icons.Outlined.Folder,
+                imageVector = MaterialSymbols.Rounded.Folder,
                 color = MaterialTheme.colorScheme.tertiary,
                 iconColor = MaterialTheme.colorScheme.onTertiary,
             )
@@ -105,7 +105,7 @@ fun SourceIconBadge(
         else -> {
             // Default source icon (if source doesn't have an icon)
             Badge(
-                imageVector = Icons.Outlined.LocalLibrary,
+                imageVector = MaterialSymbols.Rounded.LocalLibrary,
                 color = MaterialTheme.colorScheme.tertiary,
                 iconColor = MaterialTheme.colorScheme.onTertiary,
             )

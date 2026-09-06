@@ -16,11 +16,6 @@ import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material.icons.outlined.Deselect
-import androidx.compose.material.icons.outlined.DragHandle
-import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -62,6 +57,11 @@ import eu.kanade.tachiyomi.util.system.LocaleHelper
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.update
 import mihon.feature.migration.list.MigrationListScreen
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.ArrowForward
+import mihon.icons.materialsymbols.rounded.Deselect
+import mihon.icons.materialsymbols.rounded.DragHandle
+import mihon.icons.materialsymbols.rounded.PushPin
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.ReorderableLazyListState
@@ -167,12 +167,12 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
                             persistentListOf(
                                 AppBar.Action(
                                     title = stringResource(MR.strings.migrationConfigScreen_selectPinnedLabel),
-                                    icon = Icons.Outlined.PushPin,
+                                    icon = MaterialSymbols.Rounded.PushPin,
                                     onClick = { screenModel.toggleSelection(ScreenModel.SelectionConfig.Pinned) },
                                 ),
                                 AppBar.Action(
                                     title = stringResource(MR.strings.migrationConfigScreen_selectNoneLabel),
-                                    icon = Icons.Outlined.Deselect,
+                                    icon = MaterialSymbols.Rounded.Deselect,
                                     onClick = { screenModel.toggleSelection(ScreenModel.SelectionConfig.None) },
                                 ),
                                 AppBar.OverflowAction(
@@ -198,7 +198,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
                         // KMK <--
                         SmallExtendedFloatingActionButton(
                             text = { Text(text = stringResource(MR.strings.migrationConfigScreen_continueButtonText)) },
-                            icon = { Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = null) },
+                            icon = { Icon(imageVector = MaterialSymbols.AutoMirroredRounded.ArrowForward, contentDescription = null) },
                             onClick = {
                                 screenModel.saveSources()
                                 continueMigration(openSheet = true, extraSearchQuery = null)
@@ -382,7 +382,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
             trailingContent = if (dragEnabled) {
                 {
                     Icon(
-                        imageVector = Icons.Outlined.DragHandle,
+                        imageVector = MaterialSymbols.Rounded.DragHandle,
                         contentDescription = null,
                         modifier = with(scope) {
                             Modifier.draggableHandle()

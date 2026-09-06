@@ -1,8 +1,6 @@
 package eu.kanade.presentation.browse.components
 
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -20,6 +18,8 @@ import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel.Dialog
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import mihon.feature.migration.dialog.MigrateMangaDialog
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Checklist
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -233,7 +233,7 @@ fun bulkSelectionButton(
     } else {
         AppBar.Action(
             title = title,
-            icon = Icons.Outlined.Checklist,
+            icon = MaterialSymbols.Rounded.Checklist,
             onClick = toggleSelectionMode,
         )
     }
