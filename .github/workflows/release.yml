@@ -42,7 +42,7 @@ jobs:
         run: ./gradlew assembleRelease -Penable-updater
 
       - name: Run unit tests
-        run: ./gradlew testReleaseUnitTest
+        run: ./gradlew testDebugUnitTest
 
       - name: Sign APKs
         id: sign
