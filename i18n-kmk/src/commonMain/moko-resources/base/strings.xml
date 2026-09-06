@@ -238,4 +238,8 @@
     <string name="pref_discord_show_download_button_summary">Displays a button to download the app</string>
     <string name="pref_discord_show_discord_button">Show Discord Button</string>
     <string name="pref_discord_show_discord_button_summary">Displays a button to join the Discord server</string>
+
+    <!-- WebGPU reader -->
+    <string name="pref_transition_animation_dual">Transition animation (dual page)</string>
+    <string name="pref_cutout_mode_dual">Display cutout mode (dual page)</string>
 </resources>

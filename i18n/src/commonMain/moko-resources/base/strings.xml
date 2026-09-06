@@ -1048,6 +1048,10 @@
 
     <!-- KMK: WebGPU reader -->
     <string name="pref_high_quality_renderer">Use high quality renderer</string>
+    <string name="webgpu_viewer">WebGPU</string>
+    <string name="pref_transition_animation">Transition animation</string>
+    <string name="pref_cutout_mode">Display cutout mode</string>
+    <string name="pref_dual_page_view">Dual page view</string>
     <string name="transition_animation_basic">Basic</string>
     <string name="transition_animation_flip_left">Page flip (left)</string>
     <string name="transition_animation_flip_right">Page flip (right)</string>

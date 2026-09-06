@@ -46,6 +46,21 @@ private val customDecoderKey = Extras.Key(default = false)
 
 // KMK -->
 /**
+ * Routes the request through the decoder the WebGPU renderer draws from, which hands back the raw
+ * pixels rather than a [android.graphics.Bitmap].
+ */
+fun ImageRequest.Builder.newDecoder(enable: Boolean) = apply {
+    extras[newDecoderKey] = enable
+}
+
+val Options.newDecoder: Boolean
+    get() = getExtra(newDecoderKey)
+
+private val newDecoderKey = Extras.Key(default = false)
+// KMK <--
+
+// KMK -->
+/**
  * Calculate the best [Palette.Swatch] from [Palette]
  * @author Jays2Kings
  */

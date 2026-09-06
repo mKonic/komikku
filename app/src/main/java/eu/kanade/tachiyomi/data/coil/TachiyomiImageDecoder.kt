@@ -2,6 +2,8 @@ package eu.kanade.tachiyomi.data.coil
 
 import android.app.Application
 import android.graphics.Bitmap
+import coil3.Canvas
+import coil3.Image
 import coil3.ImageLoader
 import coil3.asImage
 import coil3.decode.DecodeResult
@@ -21,6 +23,7 @@ import tachiyomi.decoder.ImageDecoder
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.BufferedInputStream
+import ca.mpreg.imagedecoder.ImageDecoder as WebGpuDecoder
 
 /**
  * A [Decoder] that uses built-in [ImageDecoder] to decode images that is not supported by the system.
@@ -86,10 +89,13 @@ class TachiyomiImageDecoder(private val resources: ImageSource, private val opti
     class Factory : Decoder.Factory {
 
         override fun create(result: SourceFetchResult, options: Options, imageLoader: ImageLoader): Decoder? {
-            return if (options.customDecoder || isApplicable(result.source.source())) {
-                TachiyomiImageDecoder(result.source, options)
-            } else {
-                null
+            return when {
+                // KMK -->
+                options.newDecoder -> WebGpuImageDecoder(result.source)
+                // KMK <--
+                options.customDecoder || isApplicable(result.source.source()) ->
+                    TachiyomiImageDecoder(result.source, options)
+                else -> null
             }
         }
 
@@ -117,3 +123,29 @@ class TachiyomiImageDecoder(private val resources: ImageSource, private val opti
         var displayProfile: ByteArray? = null
     }
 }
+
+// KMK -->
+/**
+ * Decodes straight into the pixel buffer the WebGPU renderer uploads, skipping the [Bitmap] a
+ * normal decode would allocate and then immediately throw away.
+ *
+ * The result is not drawable: the pixels are meant for the GPU, never for a [Canvas]. Callers ask
+ * for this decoder explicitly with [newDecoder] and unwrap [WebGpuImage.result] themselves.
+ */
+class WebGpuImageDecoder(private val resources: ImageSource) : Decoder {
+
+    class WebGpuImage(val result: WebGpuDecoder.DecodeResult) : Image {
+        override val size: Long get() = result.image.capacity().toLong()
+        override val width: Int get() = result.width
+        override val height: Int get() = result.height
+        override val shareable: Boolean get() = true
+
+        override fun draw(canvas: Canvas) = Unit
+    }
+
+    override suspend fun decode(): DecodeResult {
+        val decoded = WebGpuDecoder.new(resources.source().inputStream()).decode()
+        return DecodeResult(image = WebGpuImage(decoded), isSampled = false)
+    }
+}
+// KMK <--

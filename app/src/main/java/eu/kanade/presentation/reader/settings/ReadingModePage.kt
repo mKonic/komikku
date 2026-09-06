@@ -13,6 +13,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsScreenModel
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonViewer
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -65,8 +66,85 @@ internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
         // SY <--
     } else {
         PagerViewerSettings(screenModel)
+        // KMK -->
+        // The WebGPU renderer draws both the paged and the continuous modes off the pager
+        // preferences above, so its own settings are an addition to them rather than a
+        // replacement.
+        (viewer as? WebGpuViewer)?.let { WebGpuViewerSettings(screenModel, it.isContinuous) }
+        // KMK <--
     }
 }
+
+// KMK -->
+@Composable
+private fun WebGpuViewerSettings(screenModel: ReaderSettingsScreenModel, isContinuous: Boolean) {
+    HeadingItem(MR.strings.webgpu_viewer)
+
+    val dualPageView by screenModel.preferences.dualPageView().collectAsState()
+
+    // A continuous strip has no page turns to animate and no second page to lay out beside the
+    // first, so only the cutout setting means anything there.
+    if (!isContinuous) {
+        SettingsChipRow(MR.strings.pref_dual_page_view) {
+            ReaderPreferences.DualPageView.entries.map {
+                FilterChip(
+                    selected = it == dualPageView,
+                    onClick = { screenModel.preferences.dualPageView().set(it) },
+                    label = { Text(stringResource(it.titleRes)) },
+                )
+            }
+        }
+
+        val transitionAnimation by screenModel.preferences.transitionAnimation().collectAsState()
+        SettingsChipRow(MR.strings.pref_transition_animation) {
+            ReaderPreferences.TransitionAnimation.entries.map {
+                FilterChip(
+                    selected = it == transitionAnimation,
+                    onClick = { screenModel.preferences.transitionAnimation().set(it) },
+                    label = { Text(stringResource(it.titleRes)) },
+                )
+            }
+        }
+    }
+
+    val cutoutMode by screenModel.preferences.cutoutMode().collectAsState()
+    SettingsChipRow(MR.strings.pref_cutout_mode) {
+        ReaderPreferences.CutoutMode.entries.map {
+            FilterChip(
+                selected = it == cutoutMode,
+                onClick = { screenModel.preferences.cutoutMode().set(it) },
+                label = { Text(stringResource(it.titleRes)) },
+            )
+        }
+    }
+
+    // Two pages side by side are turned and inset differently from one, so the renderer keeps a
+    // separate pair of settings for it. They are only reachable once dual page view is on.
+    if (!isContinuous && dualPageView != ReaderPreferences.DualPageView.NEVER) {
+        val transitionAnimationDual by screenModel.preferences.transitionAnimationDual().collectAsState()
+        SettingsChipRow(KMR.strings.pref_transition_animation_dual) {
+            ReaderPreferences.TransitionAnimation.entries.map {
+                FilterChip(
+                    selected = it == transitionAnimationDual,
+                    onClick = { screenModel.preferences.transitionAnimationDual().set(it) },
+                    label = { Text(stringResource(it.titleRes)) },
+                )
+            }
+        }
+
+        val cutoutModeDual by screenModel.preferences.cutoutModeDual().collectAsState()
+        SettingsChipRow(KMR.strings.pref_cutout_mode_dual) {
+            ReaderPreferences.CutoutMode.entries.map {
+                FilterChip(
+                    selected = it == cutoutModeDual,
+                    onClick = { screenModel.preferences.cutoutModeDual().set(it) },
+                    label = { Text(stringResource(it.titleRes)) },
+                )
+            }
+        }
+    }
+}
+// KMK <--
 
 @Composable
 private fun PagerViewerSettings(screenModel: ReaderSettingsScreenModel) {
