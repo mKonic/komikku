@@ -52,9 +52,27 @@ BUILD_TOOLS="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
 APKSIGNER="$BUILD_TOOLS/apksigner"
 [ -x "$APKSIGNER" ] || { echo "No apksigner under $BUILD_TOOLS" >&2; exit 1; }
 
-: "${KEYSTORE_PASSWORD:=$(read -rsp 'Keystore password: ' v && echo >&2 && echo "$v")}"
-: "${KEY_ALIAS:=$(read -rp 'Key alias: ' v && echo "$v")}"
+# The password comes from a KEY=... line in a .env kept beside the keystore, outside the repo.
+# Override the location with KEYS_ENV, or set KEYSTORE_PASSWORD directly to skip the file.
+ENV_FILE="${KEYS_ENV:-$(dirname "$KEYSTORE")/.env}"
+if [ -z "${KEYSTORE_PASSWORD:-}" ] && [ -f "$ENV_FILE" ]; then
+    KEYSTORE_PASSWORD="$(grep -E '^KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d '\r\n')"
+fi
+if [ -z "${KEYSTORE_PASSWORD:-}" ]; then
+    read -rsp 'Keystore password: ' KEYSTORE_PASSWORD
+    echo >&2
+fi
+
+# Read the alias out of the keystore rather than storing it: it is not a secret, and one fewer
+# thing to keep in sync is one fewer way for a release to fail at the signing step.
+if [ -z "${KEY_ALIAS:-}" ]; then
+    KEY_ALIAS="$(keytool -list -keystore "$KEYSTORE" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null |
+        awk -F, '/PrivateKeyEntry/ { print $1; exit }')"
+fi
+[ -n "$KEY_ALIAS" ] || { echo "Could not read a key alias from $KEYSTORE - wrong password?" >&2; exit 1; }
 : "${KEY_PASSWORD:=$KEYSTORE_PASSWORD}"
+
+echo "==> Signing as '$KEY_ALIAS'"
 
 # --- verify then build -----------------------------------------------------
 
@@ -71,7 +89,6 @@ ABI="$(basename "$UNSIGNED" | sed -E 's/^app-(.*)-release-unsigned\.apk$/\1/')"
 mkdir -p dist
 SIGNED="dist/Komikku-${ABI}-${TAG}.apk"
 
-echo "==> Signing $ABI"
 "$APKSIGNER" sign \
     --ks "$KEYSTORE" \
     --ks-pass "pass:$KEYSTORE_PASSWORD" \
