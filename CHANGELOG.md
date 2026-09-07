@@ -12,6 +12,25 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+## [v1.2.1] - 2026-09-07
+### Fixed
+- Global search, searching inside a source, and the source filter sheet crashed the instant they were
+  opened. `androidx.compose.material3` was pinned to `1.5.0-alpha14`, while
+  `org.jetbrains.compose.material3` - a runtime-only transitive of material-kolor, richeditor and
+  aboutlibraries - dragged the runtime classpath up to `1.5.0-alpha22`. The app was therefore compiled
+  against one material3 and shipped another, and in between those two versions the expressive
+  `FilterChip` overload swapped its `Dp` parameter for an `Arrangement.Horizontal`, losing the mangled
+  `FilterChip-Qi0uq5o` name the compiled call still asked for. Nothing could catch it at build time; it
+  was a `NoSuchMethodError` at first paint. The Compose BOM was skewed the same way (2026.06.01
+  compiling, 2026.08.00 packaged), which had additionally split `material-ripple`. Both are now pinned
+  to the version the runtime classpath resolves to.
+
+### Other
+- `:app:check<Variant>ClasspathSkew` fails the build when a Compose module resolves to one version on
+  the compile classpath and a different one on the runtime classpath. The APK is packaged from the
+  runtime classpath, so such a split ships an API the code was never type-checked against and can only
+  surface on device. Runs as part of `assemble<Variant>`.
+
 ## [v1.2.0] - 2026-09-07
 ### Improved
 - Library, Updates, History, Extensions and Feed stop recomputing while their screen is off screen,
