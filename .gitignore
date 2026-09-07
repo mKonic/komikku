@@ -21,3 +21,6 @@ local.properties
 /app/google-services.json
 *.jks
 app/standard/preview/*
+
+# Locally built release artifacts (scripts/release.sh)
+/dist/

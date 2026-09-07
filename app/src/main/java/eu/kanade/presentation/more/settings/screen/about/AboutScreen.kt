@@ -285,7 +285,10 @@ class AboutScreen : Screen() {
                         LinkIcon(
                             label = "GitHub",
                             icon = CustomIcons.Github,
-                            url = "https://github.com/komikku-app",
+                            // KMK --> this fork, not upstream: it is where these builds and their
+                            // releases come from. Website and Discord above stay upstream's.
+                            url = "https://github.com/mKonic/komikku",
+                            // KMK <--
                         )
                     }
                 }

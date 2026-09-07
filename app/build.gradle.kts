@@ -178,6 +178,11 @@ android {
         checkReleaseBuilds = false
         warningsAsErrors = false
         baseline = file("lint-baseline.xml")
+
+        // These fire whenever anything we depend on publishes a release, so they would rot the
+        // baseline on someone else's schedule while never indicating a defect. Dependency currency
+        // is a deliberate decision here, not something to be nagged about on every build.
+        disable += setOf("GradleDependency", "NewerVersionAvailable", "AndroidGradlePluginVersion")
     }
     // KMK <--
 }
