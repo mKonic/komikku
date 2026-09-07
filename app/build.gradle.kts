@@ -4,6 +4,7 @@ import mihon.buildlogic.getCommitCount
 import mihon.buildlogic.getGitSha
 import mihon.buildlogic.getVersionCode
 import mihon.buildlogic.getVersionName
+import mihon.buildlogic.tasks.CheckClasspathSkewTask
 import mihon.buildlogic.tasks.GenerateLocalesConfigTask
 import mihon.buildlogic.tasks.ReplaceShortcutsPlaceholderTask
 
@@ -397,6 +398,23 @@ androidComponents {
             )
         }
         resSource.addGeneratedSourceDirectory(localesConfigTask) { it.outputDir }
+
+        // A Compose module resolving to one version at compile time and another at runtime
+        // packages the runtime one and crashes on device. Catch it here instead.
+        val checkSkew = tasks.register<CheckClasspathSkewTask>("check${variantName}ClasspathSkew") {
+            compileRoot.set(
+                configurations.named("${variant.name}CompileClasspath")
+                    .flatMap { it.incoming.resolutionResult.rootComponent },
+            )
+            runtimeRoot.set(
+                configurations.named("${variant.name}RuntimeClasspath")
+                    .flatMap { it.incoming.resolutionResult.rootComponent },
+            )
+            this.variantName.set(variant.name)
+            groupPrefixes.set(listOf("androidx.compose", "org.jetbrains.compose"))
+        }
+        // assemble* is not registered yet at onVariants time, so match lazily.
+        tasks.matching { it.name == "assemble$variantName" }.configureEach { dependsOn(checkSkew) }
     }
     // KMK <--
 }
