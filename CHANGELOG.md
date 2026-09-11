@@ -11,6 +11,55 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Added
+- Filter the Updates tab by included and excluded categories, from a new Categories tab in the
+  filter sheet. Exclusions win over inclusions, and "Default" covers uncategorised entries
+  (mihonapp/mihon#3589).
+- Filter the Upcoming calendar the same way, from a new filter action in its toolbar
+  (mihonapp/mihon#3607). Both filter icons light up while a category filter is set
+  (mihonapp/mihon#3772).
+- Tokyo Night theme (mihonapp/mihon#3502).
+
+### Fixed
+- The reader leaked a GPU texture for every page that finished decoding after it had already been
+  evicted or replaced (mihonapp/mihon#3872).
+- Dragging the chapter navigator slider once stopped the paged reader from ever hiding its app bars
+  on a tap again: the flag the slider raises was never lowered (mihonapp/mihon#3567).
+- An expired AniList token was never recognised, because the stored expiry was multiplied by 1000 on
+  every load and landed tens of thousands of years out. Every request went out with dead credentials
+  and came back as an unexplained 401. The same path dereferenced a null token before checking for
+  it (mihonapp/mihon#3888).
+- Installing an extension through Shizuku never reported its result, so the install sat at
+  "Installing" forever: the pending intent was built inside the Shizuku process, which has no
+  context to broadcast back from. It is now created by the app and passed across the AIDL boundary
+  (mihonapp/mihon#3630).
+- Shizuku is detected through the permission it declares rather than a hardcoded package name, so
+  it is found however it is installed (mihonapp/mihon#3565).
+- A privately installed extension is now always updated by the private installer, whatever is
+  selected under Advanced -> Installer; any other installer cannot replace it (mihonapp/mihon#3614).
+- Restoring a backup invalidates the download cache, so restored entries show their downloads
+  instead of appearing undownloaded until the next scan (mihonapp/mihon#3096).
+- MyAnimeList sends partial dates ("2025" or "2025-11") for list entries that have them, and parsing
+  one threw out of the whole tracker sync (mihonapp/mihon#3573).
+- The extension list is no longer published before the extensions have finished loading, so nothing
+  observing it sees the empty list the flow was seeded with (mihonapp/mihon#3841).
+
+### Improved
+- The WebView now reports `Sec-CH-UA` client hints matching the user agent it is told to send.
+  Setting only the user agent left those hints advertising the real WebView brand and version, which
+  contradicts the string. `X-Requested-With` spoofing also checked the main thread's stack rather
+  than the calling thread's (mihonapp/mihon#3678).
+- Crash log dumps include everything the app logged, not only errors, when extra logging is on
+  (mihonapp/mihon#3682).
+- MangaUpdates search results show scores, and authors and artists for `id:` lookups
+  (mihonapp/mihon#3795). A MyAnimeList `id:` query is trimmed before lookup (mihonapp/mihon#3793).
+- The divider in the global search toolbar is sized to the chip row instead of the full toolbar
+  height (mihonapp/mihon#3839).
+
+### Other
+- AGP 9.4.0, Kotlin 2.4.20, glance 1.2.0, kim 0.39.1, richeditor 1.2.0, sqlite 2.7.1,
+  firebase-bom 34.19.0, junit 6.1.3, spotless 8.10.2.
+- composeGrid moved to its new `com.cheonjaeung.compose.grid` group id (mihonapp/mihon#3877).
 
 ## [v1.2.1] - 2026-09-07
 ### Fixed
