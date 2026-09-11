@@ -285,7 +285,15 @@ class MyAnimeListApi(
     }
 
     private fun parseDate(isoDate: String): Long {
-        return SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(isoDate)?.time ?: 0L
+        // MAL accepts partial dates, and threw a ParseException all the way out of the sync when it
+        // returned one (mihonapp/mihon#3573).
+        val pattern = when (isoDate.length) {
+            10 -> "yyyy-MM-dd"
+            7 -> "yyyy-MM"
+            4 -> "yyyy"
+            else -> throw IllegalArgumentException("Unsupported date format: \"$isoDate\"")
+        }
+        return SimpleDateFormat(pattern, Locale.US).parse(isoDate)?.time ?: 0L
     }
 
     private fun convertToIsoDate(epochTime: Long): String? {

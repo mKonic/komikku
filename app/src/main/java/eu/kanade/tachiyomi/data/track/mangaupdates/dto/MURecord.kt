@@ -35,6 +35,9 @@ fun MURecord.toTrackSearch(id: Long): TrackSearch {
         publishing_status = ""
         publishing_type = this@toTrackSearch.type.toString()
         start_date = this@toTrackSearch.year.toString()
+        score = this@toTrackSearch.bayesianRating?.takeIf { it > 0 } ?: -1.0
+        authors = this@toTrackSearch.authors.orEmpty().filter { it.type == "Author" }.mapNotNull { it.name }
+        artists = this@toTrackSearch.authors.orEmpty().filter { it.type == "Artist" }.mapNotNull { it.name }
     }
 }
 
