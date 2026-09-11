@@ -31,6 +31,7 @@ import mihon.feature.upcoming.components.UpcomingItem
 import mihon.feature.upcoming.components.calendar.Calendar
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.Help
+import mihon.icons.materialsymbols.rounded.FilterList
 import mihon.icons.materialsymbols.rounded.NewReleases
 import tachiyomi.core.common.Constants
 import tachiyomi.domain.manga.model.Manga
@@ -42,6 +43,7 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
+import tachiyomi.presentation.core.theme.active
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -50,6 +52,8 @@ fun UpcomingScreenContent(
     state: UpcomingScreenModel.State,
     setSelectedYearMonth: (YearMonth) -> Unit,
     onClickUpcoming: (manga: Manga) -> Unit,
+    onClickFilter: () -> Unit,
+    hasActiveFilters: Boolean,
     // KMK -->
     showUpdatingMangas: () -> Unit,
     hideUpdatingMangas: () -> Unit,
@@ -77,6 +81,8 @@ fun UpcomingScreenContent(
     Scaffold(
         topBar = {
             UpcomingToolbar(
+                hasActiveFilters = hasActiveFilters,
+                onClickFilter = onClickFilter,
                 // KMK -->
                 state.isShowingUpdatingMangas,
                 showUpdatingMangas = showUpdatingMangas,
@@ -127,6 +133,8 @@ fun UpcomingScreenContent(
 
 @Composable
 private fun UpcomingToolbar(
+    hasActiveFilters: Boolean,
+    onClickFilter: () -> Unit,
     // KMK -->
     isShowingUpdatingMangas: Boolean,
     showUpdatingMangas: () -> Unit,
@@ -165,6 +173,13 @@ private fun UpcomingToolbar(
                 }
             }
             // KMK <--
+            IconButton(onClick = onClickFilter) {
+                Icon(
+                    imageVector = MaterialSymbols.Rounded.FilterList,
+                    contentDescription = stringResource(MR.strings.action_filter),
+                    tint = if (hasActiveFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
+                )
+            }
             IconButton(onClick = { uriHandler.openUri(Constants.URL_HELP_UPCOMING) }) {
                 Icon(
                     imageVector = MaterialSymbols.AutoMirroredRounded.Help,

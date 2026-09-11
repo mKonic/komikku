@@ -1,5 +1,6 @@
 package mihon.feature.upcoming
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMapIndexedNotNull
 import cafe.adriel.voyager.core.model.StateScreenModel
@@ -12,12 +13,21 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import mihon.domain.upcoming.interactor.GetUpcomingManga
+import tachiyomi.core.common.preference.getAndSet
+import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.upcoming.service.UpcomingPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.time.LocalDate
@@ -25,6 +35,8 @@ import java.time.YearMonth
 
 class UpcomingScreenModel(
     private val getUpcomingManga: GetUpcomingManga = Injekt.get(),
+    val getCategories: GetCategories = Injekt.get(),
+    val upcomingPreferences: UpcomingPreferences = Injekt.get(),
 ) : StateScreenModel<UpcomingScreenModel.State>(State()) {
     // KMK -->
     private val libraryPreferences: LibraryPreferences = Injekt.get()
@@ -32,19 +44,38 @@ class UpcomingScreenModel(
 
     init {
         screenModelScope.launch {
-            getUpcomingManga.subscribe().collectLatest {
-                mutableState.update { state ->
-                    val upcomingItems = it.toUpcomingUIModels()
-                    state.copy(
-                        // KMK -->
-                        isLoadingUpcoming = false,
-                        // KMK <--
-                        items = upcomingItems,
-                        events = upcomingItems.toEvents(),
-                        headerIndexes = upcomingItems.getHeaderIndexes(),
-                    )
+            getUpcomingItemPreferenceFlow()
+                .distinctUntilChanged()
+                .flatMapLatest {
+                    getUpcomingManga.subscribe(
+                        includedCategories = it.filterIncludedCategories,
+                        excludedCategories = it.filterExcludedCategories,
+                    ).distinctUntilChanged()
                 }
-            }
+                .collectLatest {
+                    mutableState.update { state ->
+                        val upcomingItems = it.toUpcomingUIModels()
+                        state.copy(
+                            // KMK -->
+                            isLoadingUpcoming = false,
+                            // KMK <--
+                            items = upcomingItems,
+                            events = upcomingItems.toEvents(),
+                            headerIndexes = upcomingItems.getHeaderIndexes(),
+                        )
+                    }
+                }
+        }
+        screenModelScope.launch {
+            getUpcomingItemPreferenceFlow()
+                .map { prefs ->
+                    listOf(prefs.filterIncludedCategories, prefs.filterExcludedCategories)
+                        .any { it.isNotEmpty() }
+                }
+                .distinctUntilChanged()
+                .collectLatest { hasActiveFilters ->
+                    mutableState.update { it.copy(hasActiveFilters = hasActiveFilters) }
+                }
         }
         // KMK -->
         screenModelScope.launch {
@@ -101,6 +132,49 @@ class UpcomingScreenModel(
         mutableState.update { it.copy(selectedYearMonth = yearMonth) }
     }
 
+    private fun getUpcomingItemPreferenceFlow(): Flow<ItemPreferences> {
+        return combine(
+            upcomingPreferences.filterIncludedCategories.changes(),
+            upcomingPreferences.filterExcludedCategories.changes(),
+        ) { included, excluded ->
+            ItemPreferences(
+                filterIncludedCategories = included,
+                filterExcludedCategories = excluded,
+            )
+        }
+    }
+
+    fun showFilterDialog() {
+        mutableState.update { it.copy(dialog = Dialog.FilterSheet) }
+    }
+
+    fun resetDialog() {
+        mutableState.update { it.copy(dialog = null) }
+    }
+
+    fun cycleCategory(category: Category) {
+        val included = upcomingPreferences.filterIncludedCategories
+        val excluded = upcomingPreferences.filterExcludedCategories
+        when (category.id) {
+            in included.get() -> {
+                included.getAndSet { it - category.id }
+                excluded.getAndSet { it + category.id }
+            }
+            in excluded.get() -> excluded.getAndSet { it - category.id }
+            else -> included.getAndSet { it + category.id }
+        }
+    }
+
+    @Immutable
+    private data class ItemPreferences(
+        val filterIncludedCategories: List<Long>,
+        val filterExcludedCategories: List<Long>,
+    )
+
+    sealed interface Dialog {
+        data object FilterSheet : Dialog
+    }
+
     // KMK -->
     val restriction by lazy { libraryPreferences.autoUpdateMangaRestrictions().get() }
 
@@ -134,5 +208,7 @@ class UpcomingScreenModel(
         val updatingHeaderIndexes: ImmutableMap<LocalDate, Int> = persistentMapOf(),
         val isLoadingUpdating: Boolean = true,
         // KMK <--
+        val hasActiveFilters: Boolean = false,
+        val dialog: Dialog? = null,
     )
 }
