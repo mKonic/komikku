@@ -1156,6 +1156,7 @@ open class WebGpuViewer(
                     pager.state.invalidate()
                 } else {
                     if (pageInCache(page)) page.state = PageState.IDLE
+                    imagePage.cleanup()
                 }
             }
         }
