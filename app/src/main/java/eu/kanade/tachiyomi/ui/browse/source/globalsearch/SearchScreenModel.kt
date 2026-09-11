@@ -19,6 +19,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -112,7 +113,7 @@ abstract class SearchScreenModel(
     }
     // KMK <--
 
-    private fun getSelectedSources(): List<Source> {
+    private suspend fun getSelectedSources(): List<Source> {
         val enabledSources = getEnabledSources()
 
         val filter = extensionFilter
@@ -121,7 +122,7 @@ abstract class SearchScreenModel(
         }
 
         // SY -->
-        val filteredSourceIds = extensionManager.installedExtensionsFlow.value
+        val filteredSourceIds = extensionManager.installedExtensionsFlow.first()
             .filter { it.pkgName == filter }
             .flatMap { it.sources }
             .map { it.id }
@@ -156,25 +157,25 @@ abstract class SearchScreenModel(
 
         searchJob?.cancel()
 
-        val sources = getSelectedSources()
-
-        // Reuse previous results if possible
-        if (sameQuery) {
-            val existingResults = state.value.items
-            updateItems(
-                sources
-                    .associateWith { existingResults[it] ?: SearchItemResult.Loading }
-                    .toPersistentMap(),
-            )
-        } else {
-            updateItems(
-                sources
-                    .associateWith { SearchItemResult.Loading }
-                    .toPersistentMap(),
-            )
-        }
-
         searchJob = ioCoroutineScope.launch {
+            val sources = getSelectedSources()
+
+            // Reuse previous results if possible
+            if (sameQuery) {
+                val existingResults = state.value.items
+                updateItems(
+                    sources
+                        .associateWith { existingResults[it] ?: SearchItemResult.Loading }
+                        .toPersistentMap(),
+                )
+            } else {
+                updateItems(
+                    sources
+                        .associateWith { SearchItemResult.Loading }
+                        .toPersistentMap(),
+                )
+            }
+
             sources.map { source ->
                 async {
                     if (state.value.items[source] !is SearchItemResult.Loading) {

@@ -77,12 +77,6 @@ class AndroidSourceManager(
 
     init {
         scope.launch {
-            // KMK -->
-            // Extensions now load off the main thread, so wait for that to finish before
-            // building the source map from a list that is still empty.
-            extensionManager.isInitialized.first { it }
-            // KMK <--
-
             extensionManager.installedExtensionsFlow
                 // SY -->
                 .combine(exhPreferences.enableExhentai().changes()) { extensions, enableExhentai ->

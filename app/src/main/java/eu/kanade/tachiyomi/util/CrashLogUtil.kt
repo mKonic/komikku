@@ -10,6 +10,7 @@ import eu.kanade.tachiyomi.util.system.createFileInCacheDir
 import eu.kanade.tachiyomi.util.system.toShareIntent
 import eu.kanade.tachiyomi.util.system.toast
 import exh.log.EHLogLevel
+import kotlinx.coroutines.flow.first
 import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.lang.withUIContext
 import uy.kohesive.injekt.Injekt
@@ -58,10 +59,10 @@ class CrashLogUtil(
         """.trimIndent()
     }
 
-    private fun getExtensionsInfo(): String? {
+    private suspend fun getExtensionsInfo(): String? {
         val availableExtensions = extensionManager.availableExtensionsFlow.value.associateBy { it.pkgName }
 
-        val extensionInfoList = extensionManager.installedExtensionsFlow.value
+        val extensionInfoList = extensionManager.installedExtensionsFlow.first()
             .sortedBy { it.name }
             .mapNotNull {
                 val availableExtension = availableExtensions[it.pkgName]
