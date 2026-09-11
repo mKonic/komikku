@@ -321,7 +321,13 @@ class ExtensionManager(
                 "_${extension.signatureHash}",
             // KMK <--
         ] ?: return emptyFlow()
-        return installExtension(availableExt)
+        // A privately installed extension can only be replaced by the private installer, whatever
+        // the user picked in Settings -> Advanced -> Installer (mihonapp/mihon#3614).
+        return installer.downloadAndInstall(
+            availableExt.apkUrl,
+            availableExt,
+            isUpdateForPrivatelyInstalled = !extension.isShared,
+        )
     }
 
     fun cancelInstallUpdateExtension(extension: Extension) {
