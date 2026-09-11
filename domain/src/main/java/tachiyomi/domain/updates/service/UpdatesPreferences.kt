@@ -3,6 +3,7 @@ package tachiyomi.domain.updates.service
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.getEnum
+import tachiyomi.core.common.preference.getLongArray
 
 class UpdatesPreferences(
     private val preferenceStore: PreferenceStore,
@@ -31,6 +32,16 @@ class UpdatesPreferences(
     fun filterExcludedScanlators() = preferenceStore.getBoolean(
         "pref_filter_updates_hide_excluded_scanlators",
         false,
+    )
+
+    fun filterIncludedCategories() = preferenceStore.getLongArray(
+        "pref_filter_updates_included_categories",
+        emptyList(),
+    )
+
+    fun filterExcludedCategories() = preferenceStore.getLongArray(
+        "pref_filter_updates_excluded_categories",
+        emptyList(),
     )
 
     // KMK -->

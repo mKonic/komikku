@@ -104,6 +104,8 @@ class UpdatesScreenModel(
                             started = it.filterStarted.toBooleanOrNull(),
                             bookmarked = it.filterBookmarked.toBooleanOrNull(),
                             hideExcludedScanlators = it.filterExcludedScanlators,
+                            includedCategories = it.filterIncludedCategories,
+                            excludedCategories = it.filterExcludedCategories,
                         ).distinctUntilChanged()
                     },
                 downloadCache.changes,
@@ -160,7 +162,13 @@ class UpdatesScreenModel(
                     prefs.filterStarted,
                     prefs.filterBookmarked,
                 )
-                    .any { it != TriState.DISABLED }
+                    .any { it != TriState.DISABLED } ||
+                    prefs.filterExcludedScanlators ||
+                    listOf(
+                        prefs.filterIncludedCategories,
+                        prefs.filterExcludedCategories,
+                    )
+                        .any { it.isNotEmpty() }
             }
             .distinctUntilChanged()
             .onEach {
@@ -557,13 +565,18 @@ class UpdatesScreenModel(
             updatesPreferences.filterStarted().changes(),
             updatesPreferences.filterBookmarked().changes(),
             updatesPreferences.filterExcludedScanlators().changes(),
-        ) { downloaded, unread, started, bookmarked, excludedScanlators ->
+            updatesPreferences.filterIncludedCategories().changes(),
+            updatesPreferences.filterExcludedCategories().changes(),
+        ) {
+            @Suppress("UNCHECKED_CAST")
             ItemPreferences(
-                filterDownloaded = downloaded,
-                filterUnread = unread,
-                filterStarted = started,
-                filterBookmarked = bookmarked,
-                filterExcludedScanlators = excludedScanlators,
+                filterDownloaded = it[0] as TriState,
+                filterUnread = it[1] as TriState,
+                filterStarted = it[2] as TriState,
+                filterBookmarked = it[3] as TriState,
+                filterExcludedScanlators = it[4] as Boolean,
+                filterIncludedCategories = it[5] as List<Long>,
+                filterExcludedCategories = it[6] as List<Long>,
             )
         }
     }
@@ -579,6 +592,8 @@ class UpdatesScreenModel(
         val filterStarted: TriState,
         val filterBookmarked: TriState,
         val filterExcludedScanlators: Boolean,
+        val filterIncludedCategories: List<Long>,
+        val filterExcludedCategories: List<Long>,
     )
 
     @Immutable
