@@ -11,6 +11,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+
+## [v1.3.0] - 2026-09-11
 ### Added
 - Filter the Updates tab by included and excluded categories, from a new Categories tab in the
   filter sheet. Exclusions win over inclusions, and "Default" covers uncategorised entries
