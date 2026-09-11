@@ -5,13 +5,13 @@ moko = "0.26.4"
 okhttp_version = "5.5.0"
 shizuku_version = "13.1.5"
 sqldelight = "2.3.2"
-sqlite = "2.6.2"
+sqlite = "2.7.1"
 voyager = "2.2.21-1.10.3"
-spotless = "8.8.0"
+spotless = "8.10.2"
 ktlint-core = "1.8.0"
-firebase-bom = "34.15.0"
+firebase-bom = "34.19.0"
 markdown = "0.39.2"
-junit = "6.0.3"
+junit = "6.1.3"
 materialKolor = "5.0.1"
 
 [libraries]
@@ -55,11 +55,11 @@ subsamplingscaleimageview = "com.github.mihonapp:subsampling-scale-image-view:94
 # KMK --> one decoder for everything: the old com.github.tachiyomiorg:image-decoder shipped a
 # 4 KB-aligned libimagedecoder.so, which cannot be loaded on a 16 KB-page device
 image-decoder = "ca.mpreg:imagedecoder:10"
-kim = "de.stefan-oltmann:kim:0.38.1"
+kim = "de.stefan-oltmann:kim:0.39.1"
 
 natural-comparator = "com.github.gpanther:java-nat-sort:natural-comparator-1.1"
 
-richeditor-compose = "com.mohamedrejeb.richeditor:richeditor-compose:1.0.0-rc13"
+richeditor-compose = "com.mohamedrejeb.richeditor:richeditor-compose:1.2.0"
 
 material = "com.google.android.material:material:1.13.0"
 flexible-adapter-core = "com.github.arkon.FlexibleAdapter:flexible-adapter:c8013533"
@@ -67,7 +67,7 @@ photoview = "com.github.chrisbanes:PhotoView:2.3.0"
 directionalviewpager = "com.github.tachiyomiorg:DirectionalViewPager:1.0.0"
 compose-materialmotion = "io.github.fornewid:material-motion-compose-core:2.0.1"
 compose-webview = "io.github.kevinnzou:compose-webview:0.33.6"
-compose-grid = "io.woong.compose.grid:grid:1.2.2"
+compose-grid = "com.cheonjaeung.compose.grid:grid:2.8.0"
 reorderable = { module = "sh.calvin.reorderable:reorderable", version = "3.1.0" }
 palette-ktx = "androidx.palette:palette-ktx:1.0.0"
 haze = "dev.chrisbanes.haze:haze:1.7.2"
