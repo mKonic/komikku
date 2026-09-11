@@ -33,6 +33,7 @@ import eu.kanade.presentation.theme.colorscheme.TachiyomiColorScheme
 import eu.kanade.presentation.theme.colorscheme.TakoColorScheme
 import eu.kanade.presentation.theme.colorscheme.TealTurqoiseColorScheme
 import eu.kanade.presentation.theme.colorscheme.TidalWaveColorScheme
+import eu.kanade.presentation.theme.colorscheme.TokyoNightColorScheme
 import eu.kanade.presentation.theme.colorscheme.YinYangColorScheme
 import eu.kanade.presentation.theme.colorscheme.YotsubaColorScheme
 import uy.kohesive.injekt.Injekt
@@ -149,6 +150,7 @@ private val colorSchemes: Map<AppTheme, BaseColorScheme> = mapOf(
     AppTheme.TAKO to TakoColorScheme,
     AppTheme.TEALTURQUOISE to TealTurqoiseColorScheme,
     AppTheme.TIDAL_WAVE to TidalWaveColorScheme,
+    AppTheme.TOKYONIGHT to TokyoNightColorScheme,
     AppTheme.YINYANG to YinYangColorScheme,
     AppTheme.YOTSUBA to YotsubaColorScheme,
     AppTheme.CLOUDFLARE to CloudflareColorScheme,
