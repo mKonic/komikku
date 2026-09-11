@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.util.system.WebViewUtil
 import eu.kanade.tachiyomi.util.system.createFileInCacheDir
 import eu.kanade.tachiyomi.util.system.toShareIntent
 import eu.kanade.tachiyomi.util.system.toast
+import exh.log.EHLogLevel
 import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.lang.withUIContext
 import uy.kohesive.injekt.Injekt
@@ -29,7 +30,11 @@ class CrashLogUtil(
             getExtensionsInfo()?.let { file.appendText("$it\n\n") }
             exception?.let { file.appendText("$it\n\n") }
 
-            Runtime.getRuntime().exec("logcat *:E -d -v year -v zone -f ${file.absolutePath}").waitFor()
+            // A dump of only *:E leaves out everything the app itself logged on the way to the
+            // crash, which is the half worth reading (mihonapp/mihon#3682). EHLogLevel is this
+            // fork's equivalent of Mihon's verboseLogging preference.
+            val logPriority = if (EHLogLevel.isExtraLogging()) "V" else "E"
+            Runtime.getRuntime().exec("logcat *:$logPriority -d -v year -v zone -f ${file.absolutePath}").waitFor()
 
             val uri = file.getUriCompat(context)
             context.startActivity(uri.toShareIntent(context, "text/plain"))
