@@ -63,6 +63,7 @@ fun ChapterNavigator(
     // SY <--
     totalPages: Int,
     onPageIndexChange: (Int) -> Unit,
+    onPageIndexChangeFinished: () -> Unit,
 ) {
     // SY -->
     if (isVerticalSlider) {
@@ -75,6 +76,7 @@ fun ChapterNavigator(
             currentPageText = currentPageText,
             totalPages = totalPages,
             onPageIndexChange = onPageIndexChange,
+            onPageIndexChangeFinished = onPageIndexChangeFinished,
         )
         return
     }
@@ -158,6 +160,7 @@ fun ChapterNavigator(
                                 if (it == currentPage) return@f
                                 onPageIndexChange(it - 1)
                             },
+                            onValueChangeFinished = onPageIndexChangeFinished,
                             interactionSource = interactionSource,
                         )
 
@@ -201,6 +204,7 @@ fun ChapterNavigatorVert(
     // SY <--
     totalPages: Int,
     onPageIndexChange: (Int) -> Unit,
+    onPageIndexChangeFinished: () -> Unit,
 ) {
     val isTabletUi = isTabletUi()
     val verticalPadding = if (isTabletUi) 24.dp else 8.dp
@@ -290,6 +294,7 @@ fun ChapterNavigatorVert(
                         if (it == currentPage) return@f
                         onPageIndexChange(it - 1)
                     },
+                    onValueChangeFinished = onPageIndexChangeFinished,
                     interactionSource = interactionSource,
                 )
 
@@ -332,6 +337,7 @@ private fun ChapterNavigatorPreview() {
             currentPage = currentPage,
             totalPages = 10,
             onPageIndexChange = { currentPage = (it + 1) },
+            onPageIndexChangeFinished = {},
             // SY -->
             currentPageText = "1",
             isVerticalSlider = false,
@@ -347,6 +353,7 @@ private fun ChapterNavigatorPreview() {
             currentPage = currentPage,
             totalPages = 10,
             onPageIndexChange = { currentPage = (it + 1) },
+            onPageIndexChangeFinished = {},
             currentPageText = "1",
             isVerticalSlider = true,
         )
