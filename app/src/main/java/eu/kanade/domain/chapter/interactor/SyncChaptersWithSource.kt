@@ -74,10 +74,31 @@ class SyncChaptersWithSource(
 
         val newChapters = mutableListOf<Chapter>()
         val updatedChapters = mutableListOf<Chapter>()
-        val removedChapters = dbChapters.filterNot { dbChapter ->
+        val chaptersMissingFromSource = dbChapters.filterNot { dbChapter ->
             sourceChapters.any { sourceChapter ->
                 dbChapter.url == sourceChapter.url
             }
+        }
+
+        // A queued chapter that no longer exists at the source cannot make progress.
+        val orphanedDownloads = chaptersMissingFromSource.mapNotNull { chapter ->
+            downloadManager.getQueuedDownloadOrNull(chapter.id)
+        }
+        if (orphanedDownloads.isNotEmpty()) {
+            downloadManager.cancelQueuedDownloads(orphanedDownloads)
+        }
+
+        // Keep completed downloads readable after the source stops listing them.
+        val removedChapters = chaptersMissingFromSource.filterNot { chapter ->
+            downloadManager.isChapterDownloaded(
+                chapter.name,
+                chapter.scanlator,
+                chapter.url,
+                // SY --> the download folder is named after the original title, not a custom one
+                manga.ogTitle,
+                // SY <--
+                manga.source,
+            )
         }
 
         // Used to not set upload date of older chapters
