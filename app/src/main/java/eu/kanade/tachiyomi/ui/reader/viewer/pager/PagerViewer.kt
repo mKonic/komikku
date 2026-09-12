@@ -76,6 +76,13 @@ abstract class PagerViewer(
     private var awaitingIdleViewerChapters: ViewerChapters? = null
 
     /**
+     * The chapter transition a page turn was stranded on because its destination chapter had not
+     * loaded yet (see [onEdgeTransition]). [setChaptersInternal] carries the reader across once that
+     * chapter arrives; landing back on a page clears it.
+     */
+    private var pendingChapterCross: ChapterTransition? = null
+
+    /**
      * Whether the view pager is currently in idle mode. It sets the awaiting chapters if setting
      * this field to true.
      */
@@ -198,6 +205,8 @@ abstract class PagerViewer(
     fun onPageChange(position: Int) {
         val pagePair = adapter.joinedItems.getOrNull(position)
         val page = pagePair?.first
+        // Back on a page: a turn away from the transition, or the stranded cross itself, happened.
+        if (page is ReaderPage) pendingChapterCross = null
         if (page != null && currentPage != page) {
             val allowPreload = checkAllowPreload(page as? ReaderPage)
             val forward = when {
@@ -319,6 +328,20 @@ abstract class PagerViewer(
         // Since we removed the listener while shifting,
         // Manually call onPageChange to update the UI
         onPageChange(pager.currentItem)
+
+        // A turn stranded on a transition whose chapter had not loaded is honoured now that it has:
+        // the transition is no longer the last item, so carry on across it.
+        val position = pager.currentItem
+        val item = adapter.joinedItems.getOrNull(position)?.first
+        if (pendingChapterCross != null && item is ChapterTransition &&
+            position != 0 && position != adapter.count - 1
+        ) {
+            pendingChapterCross = null
+            when (item) {
+                is ChapterTransition.Next -> moveToNext()
+                is ChapterTransition.Prev -> moveToPrevious()
+            }
+        }
     }
 
     /**
@@ -371,6 +394,8 @@ abstract class PagerViewer(
             } else {
                 pager.setCurrentItem(pager.currentItem + 1, config.usePageTransitions)
             }
+        } else {
+            onEdgeTransition()
         }
     }
 
@@ -385,7 +410,22 @@ abstract class PagerViewer(
             } else {
                 pager.setCurrentItem(pager.currentItem - 1, config.usePageTransitions)
             }
+        } else {
+            onEdgeTransition()
         }
+    }
+
+    /**
+     * A page turn hit the last item and cannot scroll. When that item is a chapter transition whose
+     * chapter simply has not loaded yet - the reader got there before the preload did - the turn
+     * would be dropped. Remember it and make sure the load is running; [setChaptersInternal] carries
+     * the reader across once the chapter lands. A transition with nowhere to go stays a no-op.
+     */
+    private fun onEdgeTransition() {
+        val transition = adapter.joinedItems.getOrNull(pager.currentItem)?.first as? ChapterTransition ?: return
+        val to = transition.to ?: return
+        pendingChapterCross = transition
+        activity.requestPreloadChapter(to)
     }
 
     /**
