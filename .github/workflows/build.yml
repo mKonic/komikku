@@ -1,14 +1,22 @@
 name: CI
 
+# Same triggers upstream Komikku's build_push and build_pull_request used. Releases build on a tag
+# push in release.yml instead.
 on:
   push:
     branches:
       - master
-    paths-ignore:
-      - '**.md'
+    paths:
+      - '**'
+      - '!**.md'
   pull_request:
-    paths-ignore:
-      - '**.md'
+    paths:
+      - '**'
+      - '!**.md'
+      - '!i18n-kmk/src/commonMain/moko-resources/**/strings.xml'
+      - '!i18n-kmk/src/commonMain/moko-resources/**/plurals.xml'
+      - 'i18n-kmk/src/commonMain/moko-resources/base/strings.xml'
+      - 'i18n-kmk/src/commonMain/moko-resources/base/plurals.xml'
   workflow_dispatch:
 
 concurrency:
