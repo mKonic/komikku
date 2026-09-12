@@ -82,6 +82,7 @@ class ShizukuInstaller(private val service: Service) : Installer(service) {
 
     private val shizukuDeadListener = Shizuku.OnBinderDeadListener {
         logcat { "Shizuku was killed prematurely" }
+        continueQueue(InstallStep.Error)
         service.stopSelf()
     }
 

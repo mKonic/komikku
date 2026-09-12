@@ -112,7 +112,10 @@ abstract class Installer(private val service: Service) {
         cancelListeners -= cancelListener
         queue.forEach { extensionManager.updateInstallStep(it.downloadId, InstallStep.Error) }
         queue.clear()
-        waitingInstall.store(null)
+        // The entry mid-install when the service dies would otherwise sit at "Installing" forever.
+        waitingInstall.exchange(null)?.let { entry ->
+            extensionManager.updateInstallStep(entry.downloadId, InstallStep.Error)
+        }
     }
 
     protected fun getActiveEntry(): Entry? = waitingInstall.load()
