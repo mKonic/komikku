@@ -74,49 +74,63 @@ import kotlin.random.Random
      * Sources serve their pages from a handful of CDN hosts. The default of 5 idle connections
      * evicts those between pages and pays a fresh TLS handshake on the next one.
      */
-    private val connectionPool = ConnectionPool(
-        maxIdleConnections = MAX_IDLE_CONNECTIONS,
-        keepAliveDuration = 5,
-        timeUnit = TimeUnit.MINUTES,
-    )
+    private val connectionPool = SharedConnections.pool
 
     init {
-        evictStaleConnections()
+        SharedConnections.evictStaleOnce(context)
     }
 
     /**
-     * Idle keep-alive connections die while the app is backgrounded or the network changes, and a
-     * request handed one hangs until the 5-minute idle reap. Drop them whenever either happens.
-     * Every client here shares [connectionPool], the DNS-over-HTTPS resolvers included.
+     * One pool and one set of listeners for the whole process. Every source builds its own
+     * NetworkHelper, and registering a network callback per instance ran into Android's per-app
+     * limit (TooManyRequestsException) at launch.
      */
-    private fun evictStaleConnections() {
-        val connectivityManager = context.getSystemService(ConnectivityManager::class.java) ?: return
-        connectivityManager.registerDefaultNetworkCallback(
-            object : ConnectivityManager.NetworkCallback() {
-                private var wasOnline = false
-
-                override fun onAvailable(network: Network) = connectionPool.evictAll()
-
-                override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
-                    val isOnline = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                    if (isOnline != wasOnline) {
-                        wasOnline = isOnline
-                        connectionPool.evictAll()
-                    }
-                }
-
-                override fun onLost(network: Network) = connectionPool.evictAll()
-
-                override fun onUnavailable() = connectionPool.evictAll()
-            },
+    private object SharedConnections {
+        val pool = ConnectionPool(
+            maxIdleConnections = MAX_IDLE_CONNECTIONS,
+            keepAliveDuration = 5,
+            timeUnit = TimeUnit.MINUTES,
         )
-        // Lifecycle observers may only be added on the main thread, and this can be built off it.
-        Handler(Looper.getMainLooper()).post {
-            ProcessLifecycleOwner.get().lifecycle.addObserver(
-                LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_START) connectionPool.evictAll()
+
+        private var registered = false
+
+        /**
+         * Idle keep-alive connections die while the app is backgrounded or the network changes, and
+         * a request handed one hangs until the 5-minute idle reap. Drop them whenever either happens.
+         * Every client shares [pool], the DNS-over-HTTPS resolvers included.
+         */
+        @Synchronized
+        fun evictStaleOnce(context: Context) {
+            if (registered) return
+            registered = true
+            val connectivityManager = context.getSystemService(ConnectivityManager::class.java) ?: return
+            connectivityManager.registerDefaultNetworkCallback(
+                object : ConnectivityManager.NetworkCallback() {
+                    private var wasOnline = false
+
+                    override fun onAvailable(network: Network) = pool.evictAll()
+
+                    override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                        val isOnline = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        if (isOnline != wasOnline) {
+                            wasOnline = isOnline
+                            pool.evictAll()
+                        }
+                    }
+
+                    override fun onLost(network: Network) = pool.evictAll()
+
+                    override fun onUnavailable() = pool.evictAll()
                 },
             )
+            // Lifecycle observers may only be added on the main thread, and this can be built off it.
+            Handler(Looper.getMainLooper()).post {
+                ProcessLifecycleOwner.get().lifecycle.addObserver(
+                    LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_START) pool.evictAll()
+                    },
+                )
+            }
         }
     }
     // KMK <--
