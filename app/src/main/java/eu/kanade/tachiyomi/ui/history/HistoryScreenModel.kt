@@ -143,20 +143,20 @@ class HistoryScreenModel(
     }
 
     suspend fun getNextChapter(): Chapter? {
-        return withIOContext { getNextChapters.await(onlyUnread = false).firstOrNull() }
+        return withIOContext { getNextChapters.awaitResumeTarget() }
     }
 
     fun resume(mangaId: Long, chapterId: Long) {
         screenModelScope.launchIO {
             // The row names the chapter last read, so open that one where it was left instead of
             // skipping to whatever follows it.
-            if (libraryPreferences.historyResumeLastPage().get()) {
-                getChapter.await(chapterId)?.let {
-                    _events.send(Event.OpenChapter(it, it.lastPageRead.toInt()))
-                }
+            val lastRead = getChapter.await(chapterId)
+                ?.takeIf { libraryPreferences.historyResumeLastPage().get() }
+            if (lastRead != null) {
+                _events.send(Event.OpenChapter(lastRead, lastRead.lastPageRead.toInt()))
             } else {
-                val chapter = getNextChapters.await(mangaId, chapterId, onlyUnread = false).firstOrNull()
-                _events.send(Event.OpenChapter(chapter))
+                // Nothing unread after it falls back to the first chapter rather than opening nothing.
+                _events.send(Event.OpenChapter(getNextChapters.awaitResumeTarget(mangaId, chapterId)))
             }
         }
     }

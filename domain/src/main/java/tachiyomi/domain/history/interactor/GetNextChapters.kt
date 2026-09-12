@@ -83,4 +83,21 @@ class GetNextChapters(
             nextChapters.drop(1)
         }
     }
+
+    // KMK -->
+    /**
+     * The chapter to open when resuming [mangaId] from [fromChapterId]: the next one to read, or the
+     * first chapter once everything after it is read, so resuming a finished entry still opens it.
+     */
+    suspend fun awaitResumeTarget(mangaId: Long, fromChapterId: Long): Chapter? {
+        return await(mangaId, fromChapterId, onlyUnread = false).firstOrNull()
+            ?: await(mangaId, onlyUnread = false).firstOrNull()
+    }
+
+    /** [awaitResumeTarget] for the entry read most recently. */
+    suspend fun awaitResumeTarget(): Chapter? {
+        val history = historyRepository.getLastHistory() ?: return null
+        return awaitResumeTarget(history.mangaId, history.chapterId)
+    }
+    // KMK <--
 }
