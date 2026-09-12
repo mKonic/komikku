@@ -43,6 +43,7 @@ dependencies {
     api(kotlinx.serialization.json.okio)
 
     api(libs.preferencektx)
+    implementation(androidx.lifecycle.process)
     implementation(androidx.webkit)
 
     implementation(libs.jsoup)

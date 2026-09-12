@@ -1,6 +1,14 @@
 package eu.kanade.tachiyomi.network
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.os.Handler
+import android.os.Looper
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ProcessLifecycleOwner
 import eu.kanade.tachiyomi.network.interceptor.CloudflareInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UncaughtExceptionInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UserAgentInterceptor
@@ -71,6 +79,46 @@ import kotlin.random.Random
         keepAliveDuration = 5,
         timeUnit = TimeUnit.MINUTES,
     )
+
+    init {
+        evictStaleConnections()
+    }
+
+    /**
+     * Idle keep-alive connections die while the app is backgrounded or the network changes, and a
+     * request handed one hangs until the 5-minute idle reap. Drop them whenever either happens.
+     * Every client here shares [connectionPool], the DNS-over-HTTPS resolvers included.
+     */
+    private fun evictStaleConnections() {
+        val connectivityManager = context.getSystemService(ConnectivityManager::class.java) ?: return
+        connectivityManager.registerDefaultNetworkCallback(
+            object : ConnectivityManager.NetworkCallback() {
+                private var wasOnline = false
+
+                override fun onAvailable(network: Network) = connectionPool.evictAll()
+
+                override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                    val isOnline = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    if (isOnline != wasOnline) {
+                        wasOnline = isOnline
+                        connectionPool.evictAll()
+                    }
+                }
+
+                override fun onLost(network: Network) = connectionPool.evictAll()
+
+                override fun onUnavailable() = connectionPool.evictAll()
+            },
+        )
+        // Lifecycle observers may only be added on the main thread, and this can be built off it.
+        Handler(Looper.getMainLooper()).post {
+            ProcessLifecycleOwner.get().lifecycle.addObserver(
+                LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_START) connectionPool.evictAll()
+                },
+            )
+        }
+    }
     // KMK <--
 
     /**
