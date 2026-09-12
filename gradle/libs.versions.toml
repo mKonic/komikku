@@ -55,7 +55,7 @@ subsamplingscaleimageview = "com.github.mihonapp:subsampling-scale-image-view:94
 # KMK --> one decoder for everything: the old com.github.tachiyomiorg:image-decoder shipped a
 # 4 KB-aligned libimagedecoder.so, which cannot be loaded on a 16 KB-page device
 image-decoder = "ca.mpreg:imagedecoder:10"
-kim = "de.stefan-oltmann:kim:0.39.1"
+kim = "de.stefan-oltmann:kim:0.40.0"
 
 natural-comparator = "com.github.gpanther:java-nat-sort:natural-comparator-1.1"
 
@@ -98,7 +98,7 @@ sqldelight-dialects-sql = { module = "app.cash.sqldelight:sqlite-3-38-dialect", 
 
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
-kotest-assertions = "io.kotest:kotest-assertions-core:6.2.1"
+kotest-assertions = "io.kotest:kotest-assertions-core:6.2.5"
 mockk = "io.mockk:mockk:1.14.11"
 
 voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "voyager" }
