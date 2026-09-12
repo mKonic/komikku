@@ -1129,98 +1129,102 @@ open class WebGpuViewer(
                 )
             }
 
-            val dec = ImageDecoder.new(bytes?.inputStream() ?: input)
+            // KMK --> closed here rather than by the finalizer: the decoder keeps the encoded page in
+            // native memory the collector cannot see, and a reader decodes page after page.
+            // The decoded pixels are Java direct buffers, so they outlive it.
+            val imagePage = ImageDecoder.new(bytes?.inputStream() ?: input).use { dec ->
+                // KMK <--
+                val pageCount = dec.pages
 
-            val pageCount = dec.pages
+                if (pageCount == 0) throw Exception("No frames decoded")
 
-            if (pageCount == 0) throw Exception("No frames decoded")
+                val backgroundColor = if (config.automaticBackground) null else readerBackgroundColor()
 
-            val backgroundColor = if (config.automaticBackground) null else readerBackgroundColor()
+                val firstFrame = dec.decodeNext()
 
-            val firstFrame = dec.decodeNext()
+                if (pageCount == 1) {
+                    // Only trim when not animated and not in dual page mode
+                    val trimColors = if (config.imageCropBorders && !isDualPageMode()) {
+                        listOf(
+                            floatArrayOf(1f, 1f, 1f),
+                            floatArrayOf(0f, 0f, 0f),
+                        )
+                    } else {
+                        null
+                    }
 
-            val imagePage = if (pageCount == 1) {
-                // Only trim when not animated and not in dual page mode
-                val trimColors = if (config.imageCropBorders && !isDualPageMode()) {
-                    listOf(
-                        floatArrayOf(1f, 1f, 1f),
-                        floatArrayOf(0f, 0f, 0f),
+                    val firstImage = Image(
+                        firstFrame.image,
+                        firstFrame.width,
+                        firstFrame.height,
+                        createMipMaps = true,
+                        trimColors = trimColors,
+                        trimThreshold = 0.15f,
+                        backgroundColor = backgroundColor,
+                        hdr = firstFrame.isHdr,
+                        hdrHeadroom = firstFrame.hdrHeadroom,
+                        gainmap = firstFrame.gainmapInput(),
                     )
+
+                    ImagePage.ImageSingle(firstImage)
                 } else {
-                    null
-                }
+                    val frames = ArrayList<Pair<Image, Int>>(pageCount)
 
-                val firstImage = Image(
-                    firstFrame.image,
-                    firstFrame.width,
-                    firstFrame.height,
-                    createMipMaps = true,
-                    trimColors = trimColors,
-                    trimThreshold = 0.15f,
-                    backgroundColor = backgroundColor,
-                    hdr = firstFrame.isHdr,
-                    hdrHeadroom = firstFrame.hdrHeadroom,
-                    gainmap = firstFrame.gainmapInput(),
-                )
+                    // Built frames hold uploaded textures, and ImageSingle owns the only teardown.
+                    fun discardFrames() {
+                        if (frames.isNotEmpty()) ImagePage.ImageSingle(frames).cleanup()
+                    }
 
-                ImagePage.ImageSingle(firstImage)
-            } else {
-                val frames = ArrayList<Pair<Image, Int>>(pageCount)
+                    val firstImage = Image(
+                        firstFrame.image,
+                        firstFrame.width,
+                        firstFrame.height,
+                        createMipMaps = false,
+                        backgroundColor = backgroundColor,
+                        hdr = firstFrame.isHdr,
+                        hdrHeadroom = firstFrame.hdrHeadroom,
+                        gainmap = firstFrame.gainmapInput(),
+                    )
 
-                // Built frames hold uploaded textures, and ImageSingle owns the only teardown.
-                fun discardFrames() {
-                    if (frames.isNotEmpty()) ImagePage.ImageSingle(frames).cleanup()
-                }
+                    frames.add(Pair(firstImage, firstFrame.duration))
 
-                val firstImage = Image(
-                    firstFrame.image,
-                    firstFrame.width,
-                    firstFrame.height,
-                    createMipMaps = false,
-                    backgroundColor = backgroundColor,
-                    hdr = firstFrame.isHdr,
-                    hdrHeadroom = firstFrame.hdrHeadroom,
-                    gainmap = firstFrame.gainmapInput(),
-                )
-
-                frames.add(Pair(firstImage, firstFrame.duration))
-
-                try {
-                    for (i in 1 until pageCount) {
-                        // Under lock: a decode this long gives an eviction's cleanup() time to land.
-                        val stillWanted = synchronized(lock) {
-                            pageInCache(page).also { inCache ->
-                                if (inCache) {
-                                    (page.imagePage as? ProgressPage)?.progress = i.toFloat() / pageCount
+                    try {
+                        for (i in 1 until pageCount) {
+                            // Under lock: a decode this long gives an eviction's cleanup() time to land.
+                            val stillWanted = synchronized(lock) {
+                                pageInCache(page).also { inCache ->
+                                    if (inCache) {
+                                        (page.imagePage as? ProgressPage)?.progress = i.toFloat() / pageCount
+                                    }
                                 }
                             }
-                        }
 
-                        // Scrolled past: the frames left are work nothing will draw.
-                        if (!stillWanted) {
-                            discardFrames()
-                            return
-                        }
+                            // Scrolled past: the frames left are work nothing will draw.
+                            if (!stillWanted) {
+                                discardFrames()
+                                return
+                            }
 
-                        val frame = dec.decodeNext()
-                        val image = Image(
-                            frame.image,
-                            frame.width,
-                            frame.height,
-                            createMipMaps = false,
-                            backgroundColor = firstImage.backgroundColor,
-                            hdr = frame.isHdr,
-                            hdrHeadroom = frame.hdrHeadroom,
-                            gainmap = frame.gainmapInput(),
-                        )
-                        frames.add(Pair(image, frame.duration))
+                            val frame = dec.decodeNext()
+                            val image = Image(
+                                frame.image,
+                                frame.width,
+                                frame.height,
+                                createMipMaps = false,
+                                backgroundColor = firstImage.backgroundColor,
+                                hdr = frame.isHdr,
+                                hdrHeadroom = frame.hdrHeadroom,
+                                gainmap = frame.gainmapInput(),
+                            )
+                            frames.add(Pair(image, frame.duration))
+                        }
+                    } catch (e: Throwable) {
+                        discardFrames()
+                        throw e
                     }
-                } catch (e: Throwable) {
-                    discardFrames()
-                    throw e
-                }
 
-                ImagePage.ImageSingle(frames)
+                    ImagePage.ImageSingle(frames)
+                }
             }
 
             synchronized(lock) {

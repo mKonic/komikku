@@ -2,7 +2,6 @@ package eu.kanade.tachiyomi.data.coil
 
 import android.app.Application
 import android.graphics.Bitmap
-import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import ca.mpreg.imagedecoder.ImageDecoder
 import coil3.Canvas
@@ -49,9 +48,12 @@ class TachiyomiImageDecoder(private val resources: ImageSource, private val opti
         }
         // SY <--
 
-        check(decoder != null && decoder.pages > 0) { "Failed to initialize decoder" }
-
-        val decoded = decoder.decode()
+        // The pixels come back in a Java direct buffer, so the decoder's native copy of the source
+        // can go now rather than whenever the finalizer gets to it.
+        val decoded = decoder.use {
+            check(it != null && it.pages > 0) { "Failed to initialize decoder" }
+            it.decode()
+        }
         val srcWidth = decoded.width
         val srcHeight = decoded.height
         check(srcWidth > 0 && srcHeight > 0) { "Failed to decode image" }
@@ -70,9 +72,7 @@ class TachiyomiImageDecoder(private val resources: ImageSource, private val opti
         // The decoder hands back a full-resolution RGBA buffer, so any downsampling happens after
         // the copy rather than during decode. Only formats the platform decoder cannot read reach
         // this class at all, so that cost is paid on AVIF, JXL and JPEG 2000 - never on a page.
-        var bitmap = createBitmap(srcWidth, srcHeight)
-        decoded.image.rewind()
-        bitmap.copyPixelsFromBuffer(decoded.image)
+        var bitmap = ImageUtil.toBitmap(decoded)
 
         if (sampleSize > 1) {
             val scaled = bitmap.scale(
@@ -154,7 +154,7 @@ class RawImageDecoder(private val resources: ImageSource) : Decoder {
     }
 
     override suspend fun decode(): DecodeResult {
-        val decoded = ImageDecoder.new(resources.source().inputStream()).decode()
+        val decoded = ImageDecoder.new(resources.source().inputStream()).use { it.decode() }
         return DecodeResult(image = RawImage(decoded), isSampled = false)
     }
 }

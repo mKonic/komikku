@@ -359,6 +359,21 @@ object ImageUtil {
     }
 
     /**
+     * Copies a bundled-decoder result into a new ARGB_8888 bitmap.
+     *
+     * An HDR source (PQ, HLG, float) decodes to half-floats, which a straight byte copy turns into
+     * noise, so those are clipped to 8 bits first.
+     */
+    fun toBitmap(result: ImageDecoder.DecodeResult): Bitmap {
+        val pixels = if (result.pixelFormat == ImageDecoder.PixelFormat.RGBA16F) {
+            halfFloatRgbaToUnorm8(result.image, result.width * result.height)
+        } else {
+            result.image.apply { rewind() }
+        }
+        return createBitmap(result.width, result.height).apply { copyPixelsFromBuffer(pixels) }
+    }
+
+    /**
      * Decodes [imageSource] to a bitmap, subsampled by [sampleSize] when it is above 1.
      *
      * The platform decoder handles every format a manga page realistically arrives in and honours
@@ -374,15 +389,13 @@ object ImageUtil {
         BitmapFactory.decodeStream(imageSource.peek().inputStream(), null, options)?.let { return it }
 
         val decoded = try {
-            ImageDecoder.new(imageSource.peek().inputStream()).decode()
+            ImageDecoder.new(imageSource.peek().inputStream()).use { it.decode() }
         } catch (e: Exception) {
             logcat(LogPriority.WARN, e) { "Failed to decode image" }
             return null
         }
 
-        val full = createBitmap(decoded.width, decoded.height)
-        decoded.image.rewind()
-        full.copyPixelsFromBuffer(decoded.image)
+        val full = toBitmap(decoded)
 
         if (options.inSampleSize <= 1) return full
 
