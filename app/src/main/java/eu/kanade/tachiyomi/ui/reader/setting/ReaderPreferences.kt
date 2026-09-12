@@ -227,6 +227,8 @@ class ReaderPreferences(
     fun cutoutModeDual() = preferenceStore.getEnum("webgpu_dual_cutout_mode", CutoutMode.IGNORE)
 
     fun continuousMinWidth() = preferenceStore.getInt("webgpu_continuous_minwidth", 100)
+
+    fun continuousGap() = preferenceStore.getInt("webgpu_continuous_gap", 10)
     // KMK <--
 
     enum class FlashColor {

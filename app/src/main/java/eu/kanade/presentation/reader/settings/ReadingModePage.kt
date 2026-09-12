@@ -14,6 +14,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsScreenModel
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewer
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewerContinuous
 import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonViewer
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -70,15 +71,53 @@ internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
         // The WebGPU renderer draws both the paged and the continuous modes off the pager
         // preferences above, so its own settings are an addition to them rather than a
         // replacement.
-        (viewer as? WebGpuViewer)?.let { WebGpuViewerSettings(screenModel, it.isContinuous) }
+        (viewer as? WebGpuViewer)?.let {
+            WebGpuViewerSettings(
+                screenModel,
+                isContinuous = it.isContinuous,
+                useGap = (it as? WebGpuViewerContinuous)?.useGap == true,
+            )
+        }
         // KMK <--
     }
 }
 
 // KMK -->
 @Composable
-private fun WebGpuViewerSettings(screenModel: ReaderSettingsScreenModel, isContinuous: Boolean) {
+private fun WebGpuViewerSettings(screenModel: ReaderSettingsScreenModel, isContinuous: Boolean, useGap: Boolean) {
     HeadingItem(MR.strings.webgpu_viewer)
+
+    if (isContinuous) {
+        val numberFormat = remember { NumberFormat.getPercentInstance() }
+
+        val continuousMinWidth by screenModel.preferences.continuousMinWidth().collectAsState()
+        SliderItem(
+            value = continuousMinWidth,
+            valueRange = 1..100,
+            label = stringResource(MR.strings.pref_continuous_minwidth),
+            valueString = numberFormat.format(continuousMinWidth / 100f),
+            onChange = { screenModel.preferences.continuousMinWidth().set(it) },
+            pillColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        )
+
+        // Webtoon pages butt against each other; only the gapped strip has a gap to size.
+        if (useGap) {
+            val continuousGap by screenModel.preferences.continuousGap().collectAsState()
+            SliderItem(
+                value = continuousGap,
+                valueRange = 1..100,
+                label = stringResource(MR.strings.pref_continuous_gap),
+                valueString = numberFormat.format(continuousGap / 100f),
+                onChange = { screenModel.preferences.continuousGap().set(it) },
+                pillColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            )
+        }
+
+        CheckboxItem(
+            label = stringResource(MR.strings.pref_webtoon_disable_zoom_out),
+            pref = screenModel.preferences.webtoonDisableZoomOut(),
+        )
+    }
 
     val dualPageView by screenModel.preferences.dualPageView().collectAsState()
 

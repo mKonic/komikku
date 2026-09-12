@@ -2,7 +2,7 @@
 # Must match the highest BOM anywhere in the graph (webgpuviewer and ui-tooling pull their own).
 # A BOM that differs between the compile and runtime classpaths skews every module it
 # constrains — see CheckClasspathSkewTask.
-compose-bom = "2026.08.00"
+compose-bom = "2026.09.00"
 
 [libraries]
 activity = "androidx.activity:activity-compose:1.13.0"
