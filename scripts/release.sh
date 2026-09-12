@@ -2,11 +2,11 @@
 #
 # Builds, signs and publishes a release from this machine.
 #
-# CI does not build releases any more: a GitHub runner takes ~15 minutes on this project where a
-# workstation takes ~3. See .github/workflows/release.yml for how to turn that back on.
+# Pushing a v* tag also runs .github/workflows/release.yml, which does the same on GitHub. Whichever
+# finishes first creates the release; the other uploads its APKs over the existing assets.
 #
 # Usage:
-#   scripts/release.sh v1.2.0          # build, sign, verify, and create the GitHub release
+#   scripts/release.sh v1.2.0          # build, sign, verify, and publish the GitHub release
 #   scripts/release.sh v1.2.0 --dry    # build, sign and verify, but publish nothing
 #
 # Expects the signing keystore at $KEYSTORE (default below) and its passwords in the environment:
@@ -74,57 +74,75 @@ fi
 
 echo "==> Signing as '$KEY_ALIAS'"
 
-# --- verify then build -----------------------------------------------------
+# --- verify and build ------------------------------------------------------
 
-echo "==> Verifying"
-./gradlew --max-workers=4 spotlessCheck testDebugUnitTest :app:lintDebug
+echo "==> Verifying and building"
+./gradlew --max-workers=4 spotlessCheck testDebugUnitTest :app:lintDebug :app:assembleRelease -Penable-updater
 
-echo "==> Building release APK"
-./gradlew --max-workers=4 :app:assembleRelease -Penable-updater
+shopt -s nullglob
+UNSIGNED=(app/build/outputs/apk/release/*-release-unsigned.apk)
+[ ${#UNSIGNED[@]} -gt 0 ] || { echo "No unsigned APK was produced" >&2; exit 1; }
 
-UNSIGNED="$(ls app/build/outputs/apk/release/*-release-unsigned.apk | head -1)"
-[ -f "$UNSIGNED" ] || { echo "No unsigned APK was produced" >&2; exit 1; }
-
-ABI="$(basename "$UNSIGNED" | sed -E 's/^app-(.*)-release-unsigned\.apk$/\1/')"
+rm -rf dist
 mkdir -p dist
-SIGNED="dist/Komikku-${ABI}-${TAG}.apk"
+SIGNED=()
+for apk in "${UNSIGNED[@]}"; do
+    abi="$(basename "$apk" | sed -E 's/^app-(.*)-release-unsigned\.apk$/\1/')"
+    # The in-app updater picks the asset naming the device's ABI and falls back to the one that
+    # names none, so the universal APK must not say "universal".
+    if [ "$abi" = universal ]; then
+        out="dist/Komikku-${TAG}.apk"
+    else
+        out="dist/Komikku-${abi}-${TAG}.apk"
+    fi
+    "$APKSIGNER" sign \
+        --ks "$KEYSTORE" \
+        --ks-pass "pass:$KEYSTORE_PASSWORD" \
+        --ks-key-alias "$KEY_ALIAS" \
+        --key-pass "pass:$KEY_PASSWORD" \
+        --out "$out" \
+        "$apk"
+    SIGNED+=("$out")
+done
 
-"$APKSIGNER" sign \
-    --ks "$KEYSTORE" \
-    --ks-pass "pass:$KEYSTORE_PASSWORD" \
-    --ks-key-alias "$KEY_ALIAS" \
-    --key-pass "pass:$KEY_PASSWORD" \
-    --out "$SIGNED" \
-    "$UNSIGNED"
+# --- verify the artifacts, not just the build ------------------------------
 
-# --- verify the artifact, not just the build -------------------------------
+echo "==> Verifying the signed APKs"
+for apk in "${SIGNED[@]}"; do
+    "$APKSIGNER" verify --verbose "$apk" | grep -qE "^Verified using v[23] scheme \(APK Signature Scheme v[23]\): true" || {
+        echo "Signature did not verify: $apk" >&2
+        exit 1
+    }
+done
 
-echo "==> Verifying the signed APK"
-"$APKSIGNER" verify --verbose "$SIGNED" | grep -E "^Verifies|^Verified using v[23]" || {
-    echo "Signature did not verify" >&2
-    exit 1
-}
-
-# Every bundled .so must be 16 KB aligned or the app will not load it on a 16 KB-page device,
-# which is a launch crash rather than a degraded mode. Cheap to check, expensive to miss.
+# A library that is not 16 KB aligned fails to load on a 16 KB-page device, which is a launch crash
+# rather than a degraded mode. Only 64-bit libraries can end up on such a device.
 echo "==> Checking native library alignment"
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
-unzip -oq "$SIGNED" 'lib/*' -d "$TMP"
+NOTES="$(mktemp)"
+trap 'rm -rf "$TMP" "$NOTES"' EXIT
 BAD=0
-for so in "$TMP"/lib/*/*.so; do
-    ALIGN="$(readelf -lW "$so" | awk '/LOAD/{print $NF}' | sort -u | tr -d '\n')"
-    if [ "$ALIGN" != "0x4000" ]; then
-        echo "   NOT 16 KB ALIGNED: $(basename "$so") ($ALIGN)" >&2
-        BAD=1
-    fi
+CHECKED=0
+for apk in "${SIGNED[@]}"; do
+    rm -rf "${TMP:?}"/*
+    unzip -oq "$apk" 'lib/arm64-v8a/*' 'lib/x86_64/*' -d "$TMP" 2>/dev/null || true
+    for so in "$TMP"/lib/*/*.so; do
+        ALIGN="$(readelf -lW "$so" | awk '/LOAD/{print $NF}' | sort -u | tr -d '\n')"
+        CHECKED=$((CHECKED + 1))
+        if [ "$ALIGN" != "0x4000" ]; then
+            echo "   NOT 16 KB ALIGNED: $(basename "$apk") $(basename "$so") ($ALIGN)" >&2
+            BAD=1
+        fi
+    done
 done
 [ "$BAD" -eq 0 ] || { echo "Refusing to publish: see above." >&2; exit 1; }
-echo "   all $(ls "$TMP"/lib/*/*.so | wc -l) libraries are 16 KB aligned"
+echo "   all $CHECKED 64-bit libraries are 16 KB aligned"
 
-VERSION="$("$BUILD_TOOLS/aapt2" dump badging "$SIGNED" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")"
-CODE="$("$BUILD_TOOLS/aapt2" dump badging "$SIGNED" | sed -n "s/.*versionCode='\([^']*\)'.*/\1/p")"
-echo "==> $SIGNED  ($(du -h "$SIGNED" | cut -f1))  versionName=$VERSION versionCode=$CODE"
+for apk in "${SIGNED[@]}"; do
+    VERSION="$("$BUILD_TOOLS/aapt2" dump badging "$apk" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")"
+    CODE="$("$BUILD_TOOLS/aapt2" dump badging "$apk" | sed -n "s/.*versionCode='\([^']*\)'.*/\1/p")"
+    echo "==> $apk  ($(du -h "$apk" | cut -f1))  versionName=$VERSION versionCode=$CODE"
+done
 
 if [ "$DRY" = "--dry" ]; then
     echo "==> Dry run, nothing published."
@@ -133,8 +151,6 @@ fi
 
 # Release notes come from CHANGELOG.md's section for this tag, so the release page reads like the
 # changelog rather than a dump of commit subjects.
-NOTES="$(mktemp)"
-trap 'rm -rf "$TMP" "$NOTES"' EXIT
 awk -v tag="$TAG" '
     $0 ~ "^## \\[" tag "\\]" { found = 1; next }
     found && /^## \[/ { exit }
@@ -142,14 +158,20 @@ awk -v tag="$TAG" '
 ' CHANGELOG.md | sed -e '/./,$!d' > "$NOTES"
 
 echo "==> Publishing $TAG to $REPO"
-if [ -s "$NOTES" ]; then
-    gh release create "$TAG" "$SIGNED" \
+if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+    echo "   $TAG already exists (CI got there first); uploading over its assets."
+    gh release upload "$TAG" "${SIGNED[@]}" --repo "$REPO" --clobber
+    if [ -s "$NOTES" ]; then
+        gh release edit "$TAG" --repo "$REPO" --notes-file "$NOTES"
+    fi
+elif [ -s "$NOTES" ]; then
+    gh release create "$TAG" "${SIGNED[@]}" \
         --repo "$REPO" \
         --title "Komikku $TAG" \
         --notes-file "$NOTES"
 else
     echo "   No '## [$TAG]' section in CHANGELOG.md; falling back to generated notes." >&2
-    gh release create "$TAG" "$SIGNED" \
+    gh release create "$TAG" "${SIGNED[@]}" \
         --repo "$REPO" \
         --title "Komikku $TAG" \
         --generate-notes

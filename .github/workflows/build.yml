@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build app
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # The version name and code come from tags and the commit count.
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Set up gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
+
+      # One invocation: every separate ./gradlew call configures the whole build again.
+      - name: Check format, run tests and build
+        run: ./gradlew spotlessCheck testDebugUnitTest :app:assemblePreview
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-reports-${{ github.sha }}
+          path: '**/build/reports/tests/testDebugUnitTest'
+          if-no-files-found: ignore
+
+      # Secrets are not available to pull requests from forks; those keep the debug signature.
+      - name: Sign APKs
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: r0adkll/sign-android-release@f30bdd30588842ac76044ecdbd4b6d0e3e813478
+        with:
+          releaseDirectory: app/build/outputs/apk/preview
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: '35.0.1'
+
+      - name: Name the APK
+        id: apk
+        run: |
+          set -euo pipefail
+          ref=$(echo "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" | sed -E 's/[-\/]+/_/g')
+          name="Komikku-${ref}-r$(git rev-list --count HEAD)"
+          dir=app/build/outputs/apk/preview
+          apk="$dir/app-universal-preview-signed.apk"
+          [ -f "$apk" ] || apk="$dir/app-universal-preview.apk"
+          mkdir -p dist
+          cp "$apk" "dist/$name.apk"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.apk.outputs.name }}
+          path: dist/*.apk
+
+      - name: Upload mapping
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mapping-${{ github.sha }}
+          path: app/build/outputs/mapping/preview
+          if-no-files-found: ignore

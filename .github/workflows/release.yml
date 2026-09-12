@@ -1,17 +1,19 @@
 name: Release
 
-# Manual only. Building a release here costs ~15 minutes of Actions time - a 2-core runner
-# compiling a 200k-line Compose app and running R8 - against roughly 2.5 minutes locally, so
-# releases are built and signed on a workstation and uploaded with `gh release create`.
-#
-# Re-enable by restoring the `push: tags: - v*` trigger below. If you do, merge the three Gradle
-# invocations into one: they each re-configure the whole build, which is several minutes of the
-# total on its own.
+# Builds, signs and publishes a release when a v* tag is pushed. scripts/release.sh does the same
+# from a workstation; whichever runs first creates the release and the other refreshes its assets.
 on:
+  push:
+    tags:
+      - v*
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build and publish
+        required: true
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ inputs.tag || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -20,36 +22,34 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-24.04
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_REPO: ${{ github.repository }}
+
     steps:
       - name: Clone repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          ref: ${{ env.TAG }}
+          # The version name and code come from tags and the commit count.
           fetch-depth: 0
 
       - name: Set up JDK
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
         with:
           java-version: 21
           distribution: temurin
 
       - name: Set up gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+        with:
+          cache-read-only: true
 
-      - name: Resolve version
-        id: version
-        run: echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-
-      - name: Check code format
-        run: ./gradlew spotlessCheck
-
-      - name: Run unit tests
-        run: ./gradlew testDebugUnitTest
-
-      - name: Build release APK
-        run: ./gradlew assembleRelease -Penable-updater
+      # One invocation: every separate ./gradlew call configures the whole build again.
+      - name: Check format, run tests and lint, build
+        run: ./gradlew spotlessCheck testDebugUnitTest :app:lintDebug :app:assembleRelease -Penable-updater
 
       - name: Sign APKs
-        id: sign
         uses: r0adkll/sign-android-release@f30bdd30588842ac76044ecdbd4b6d0e3e813478
         with:
           releaseDirectory: app/build/outputs/apk/release
@@ -60,34 +60,78 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: '35.0.1'
 
-      - name: Name the APK after the tag
-        id: rename
+      # The in-app updater picks the asset whose name carries the device's ABI, and falls back to
+      # the one that names none - so the universal APK must not carry "universal".
+      - name: Name the APKs after the tag
         run: |
           set -euo pipefail
-          mkdir -p dist
           shopt -s nullglob
           signed=(app/build/outputs/apk/release/*-signed.apk)
           if [ ${#signed[@]} -eq 0 ]; then
             echo "No signed APK was produced; check the signing secrets." >&2
             exit 1
           fi
+          mkdir -p dist
           for apk in "${signed[@]}"; do
             abi=$(basename "$apk" | sed -E 's/^app-(.*)-release-unsigned-signed\.apk$/\1/')
-            cp "$apk" "dist/Komikku-${abi}-${{ steps.version.outputs.tag }}.apk"
+            if [ "$abi" = universal ]; then
+              cp "$apk" "dist/Komikku-$TAG.apk"
+            else
+              cp "$apk" "dist/Komikku-$abi-$TAG.apk"
+            fi
           done
           ls -l dist
 
-      - name: Create release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: Komikku ${{ steps.version.outputs.tag }}
-          files: dist/*.apk
-          generate_release_notes: true
+      # A library that is not 16 KB aligned fails to load on a 16 KB-page device, which is a crash at
+      # launch. Only 64-bit libraries can end up on such a device.
+      - name: Check native library alignment
+        run: |
+          set -euo pipefail
+          bad=0
+          for apk in dist/*.apk; do
+            tmp=$(mktemp -d)
+            unzip -oq "$apk" 'lib/arm64-v8a/*' 'lib/x86_64/*' -d "$tmp" 2>/dev/null || true
+            for so in "$tmp"/lib/*/*.so; do
+              [ -e "$so" ] || continue
+              align=$(readelf -lW "$so" | awk '/LOAD/{print $NF}' | sort -u | tr -d '\n')
+              if [ "$align" != "0x4000" ]; then
+                echo "NOT 16 KB ALIGNED: $(basename "$apk") $(basename "$so") ($align)" >&2
+                bad=1
+              fi
+            done
+            rm -rf "$tmp"
+          done
+          exit "$bad"
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          set -euo pipefail
+          awk -v tag="$TAG" '
+              $0 ~ "^## \\[" tag "\\]" { found = 1; next }
+              found && /^## \[/ { exit }
+              found { print }
+          ' CHANGELOG.md | sed -e '/./,$!d' > notes.md
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/*.apk --clobber
+            if [ -s notes.md ]; then
+              gh release edit "$TAG" --notes-file notes.md
+            fi
+          elif [ -s notes.md ]; then
+            gh release create "$TAG" dist/*.apk --verify-tag --title "Komikku $TAG" --notes-file notes.md
+          else
+            echo "No '## [$TAG]' section in CHANGELOG.md; generating notes." >&2
+            gh release create "$TAG" dist/*.apk --verify-tag --title "Komikku $TAG" --generate-notes
+          fi
 
       - name: Upload mapping
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: mapping-${{ steps.version.outputs.tag }}
+          name: mapping-${{ env.TAG }}
           path: app/build/outputs/mapping/release
           if-no-files-found: ignore
