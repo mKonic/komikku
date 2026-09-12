@@ -98,13 +98,16 @@ class KomgaApi(
         return getTrackSearch(track.tracking_url)
     }
 
+    // A remote id left at 0 makes every Komga-tracked entry look like a duplicate of every other.
     private fun SeriesDto.toTrack(): TrackSearch = TrackSearch.create(trackId).also {
+        it.remote_id = id.hashCode().toLong()
         it.title = metadata.title
         it.summary = metadata.summary
         it.publishing_status = metadata.status
     }
 
     private fun ReadListDto.toTrack(): TrackSearch = TrackSearch.create(trackId).also {
+        it.remote_id = id.hashCode().toLong()
         it.title = name
     }
 }
