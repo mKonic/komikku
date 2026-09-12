@@ -97,7 +97,12 @@ class PagerViewerAdapter(
                     if (lastPage.index == key) {
                         insertPageLastPage = preprocessed[key]
                     }
-                    preprocessed[key]?.let { pages.add(key + 1, it) }
+                    // A split kept for an adjacent chapter can point past the end of a shorter one.
+                    preprocessed[key]?.let {
+                        if (key + 1 <= pages.size) {
+                            pages.add(key + 1, it)
+                        }
+                    }
                 }
 
             newItems.addAll(pages)
@@ -215,7 +220,7 @@ class PagerViewerAdapter(
         }
 
         // Same here it will enter a endless cycle of insert pages
-        if (joinedItems[placeAtIndex].first is InsertPage) {
+        if (placeAtIndex < joinedItems.size && joinedItems[placeAtIndex].first is InsertPage) {
             return
         }
 
