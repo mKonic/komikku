@@ -173,7 +173,7 @@ internal class ExtensionInstaller(
      */
     fun cancelInstall(pkgName: String) {
         activeJobs.remove(pkgName)?.cancel()
-        Installer.cancelInstallQueue(context, /* KMK --> */ pkgName.toDownloadId() /* KMK <-- */)
+        Installer.cancelInstallQueue(/* KMK --> */ pkgName.toDownloadId() /* KMK <-- */)
     }
 
     /**
