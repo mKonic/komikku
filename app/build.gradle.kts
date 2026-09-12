@@ -106,14 +106,12 @@ android {
         getByName("benchmark").res.srcDirs("src/debug/res")
     }
 
-    // KMK --> one ABI, one APK. Every device this fork is built for is arm64, and each dropped
-    // split cost a full R8 and packaging pass without ever being installed.
-    //
-    // Override for an emulator or a one-off, e.g. `-Pabis=x86_64` to run the macrobenchmarks.
+    // KMK --> every ABI plus a universal APK. Narrow it for a one-off with `-Pabis=x86_64` - an
+    // emulator or the macrobenchmarks - which also skips the universal APK.
     splits {
         abi {
             isEnable = true
-            isUniversalApk = false
+            isUniversalApk = !project.hasProperty("abis")
             reset()
             include(
                 *(project.findProperty("abis") as String?)
@@ -121,7 +119,7 @@ android {
                     ?.map(String::trim)
                     ?.filter(String::isNotEmpty)
                     ?.toTypedArray()
-                    ?: arrayOf("arm64-v8a"),
+                    ?: arrayOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"),
             )
         }
     }
