@@ -6,7 +6,10 @@ import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.viewpager.widget.DirectionalViewPager
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.viewer.GestureDetectorWithLongTap
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 /**
  * Pager implementation that listens for tap and long tap and allows temporarily disabling touch
@@ -17,6 +20,9 @@ open class Pager(
     context: Context,
     isHorizontal: Boolean = true,
 ) : DirectionalViewPager(context, isHorizontal) {
+
+    /** Taps still navigate; only dragging between pages is off. Read when the reader opens. */
+    private val disableSwipe = Injekt.get<ReaderPreferences>().disablePageSwipe().get()
 
     /**
      * Tap listener function to execute when a tap is detected.
@@ -83,6 +89,8 @@ open class Pager(
      * views manipulate [requestDisallowInterceptTouchEvent].
      */
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+        if (disableSwipe) return false
+
         return try {
             super.onInterceptTouchEvent(ev)
         } catch (e: IllegalArgumentException) {
@@ -95,6 +103,8 @@ open class Pager(
      * [requestDisallowInterceptTouchEvent].
      */
     override fun onTouchEvent(ev: MotionEvent): Boolean {
+        if (disableSwipe) return true
+
         return try {
             super.onTouchEvent(ev)
         } catch (e: NullPointerException) {

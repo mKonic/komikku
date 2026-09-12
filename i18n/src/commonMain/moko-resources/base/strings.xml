@@ -1054,6 +1054,8 @@
     <string name="webgpu_viewer">WebGPU</string>
     <string name="pref_continuous_minwidth">Min width</string>
     <string name="pref_continuous_gap">Gap</string>
+    <string name="pref_disable_page_swipe">Disable swiping between pages</string>
+    <string name="pref_history_resume_last_page">Open history entries at the last page read</string>
     <string name="pref_transition_animation">Transition animation</string>
     <string name="pref_cutout_mode">Display cutout mode</string>
     <string name="pref_dual_page_view">Dual page view</string>

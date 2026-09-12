@@ -20,6 +20,8 @@ class ReaderPreferences(
     // SY -->
     fun pageTransitionsPager() = preferenceStore.getBoolean("pref_enable_transitions_pager_key", true)
 
+    fun disablePageSwipe() = preferenceStore.getBoolean("pref_disable_page_swipe", false)
+
     fun pageTransitionsWebtoon() = preferenceStore.getBoolean("pref_enable_transitions_webtoon_key", true)
     // SY <--
 

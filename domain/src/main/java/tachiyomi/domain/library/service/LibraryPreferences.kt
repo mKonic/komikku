@@ -230,6 +230,8 @@ class LibraryPreferences(
 
     fun hideMissingChapters() = preferenceStore.getBoolean("pref_hide_missing_chapter_indicators", false)
 
+    fun historyResumeLastPage() = preferenceStore.getBoolean("pref_history_resume_last_page", true)
+
     // KMK -->
     fun showEmptyCategoriesSearch() = preferenceStore.getBoolean("show_empty_categories_search", false)
     // KMK <--

@@ -98,7 +98,7 @@ data object HistoryTab : Tab {
             snackbarHostState = snackbarHostState,
             onSearchQueryChange = screenModel::updateSearchQuery,
             onClickCover = { navigator.push(MangaScreen(it)) },
-            onClickResume = screenModel::getNextChapterForManga,
+            onClickResume = screenModel::resume,
             onDialogChange = screenModel::setDialog,
             onClickFavorite = screenModel::addFavorite,
             // KMK -->
@@ -197,7 +197,7 @@ data object HistoryTab : Tab {
                         snackbarHostState.showSnackbar(context.stringResource(MR.strings.internal_error))
                     HistoryScreenModel.Event.HistoryCleared ->
                         snackbarHostState.showSnackbar(context.stringResource(MR.strings.clear_history_completed))
-                    is HistoryScreenModel.Event.OpenChapter -> openChapter(context, e.chapter)
+                    is HistoryScreenModel.Event.OpenChapter -> openChapter(context, e.chapter, e.page)
                 }
             }
         }
@@ -209,9 +209,9 @@ data object HistoryTab : Tab {
         }
     }
 
-    private suspend fun openChapter(context: Context, chapter: Chapter?) {
+    private suspend fun openChapter(context: Context, chapter: Chapter?, page: Int? = null) {
         if (chapter != null) {
-            val intent = ReaderActivity.newIntent(context, chapter.mangaId, chapter.id)
+            val intent = ReaderActivity.newIntent(context, chapter.mangaId, chapter.id, page)
             context.startActivity(intent)
         } else {
             snackbarHostState.showSnackbar(context.stringResource(MR.strings.no_next_chapter))
