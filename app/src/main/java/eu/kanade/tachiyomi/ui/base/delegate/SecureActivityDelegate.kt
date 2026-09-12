@@ -134,8 +134,27 @@ class SecureActivityDelegateImpl : SecureActivityDelegate, DefaultLifecycleObser
         setSecureScreen()
     }
 
+    override fun onStart(owner: LifecycleOwner) {
+        updateProtectedContentVisibility()
+    }
+
     override fun onResume(owner: LifecycleOwner) {
         setAppLock()
+        updateProtectedContentVisibility()
+    }
+
+    /**
+     * Keeps the window invisible while an unlock is pending. The lock screen only launches from
+     * [onResume], by which time the last screen has already drawn and would flash up before it.
+     */
+    private fun updateProtectedContentVisibility() {
+        activity.window.decorView.alpha = if (shouldHideProtectedContent()) 0f else 1f
+    }
+
+    private fun shouldHideProtectedContent(): Boolean {
+        return securityPreferences.useAuthenticator().get() &&
+            activity.isAuthenticationSupported() &&
+            SecureActivityDelegate.requireUnlock
     }
 
     private fun setSecureScreen() {
