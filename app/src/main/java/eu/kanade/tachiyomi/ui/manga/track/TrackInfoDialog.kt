@@ -586,6 +586,12 @@ private data class TrackDateSelectorScreen(
     private val start: Boolean,
 ) : Screen() {
 
+    // Stored dates are local time, and the picker compares in UTC; without converting, a positive
+    // offset shifted the stored date a day and blocked valid picks.
+    private fun Long.storedDateInUtc(): LocalDate =
+        Instant.ofEpochMilli(convertEpochMillisZone(ZoneOffset.systemDefault(), ZoneOffset.UTC))
+            .toLocalDate(ZoneOffset.UTC)
+
     @Transient
     private val selectableDates = object : SelectableDates {
         override fun isSelectableDate(utcTimeMillis: Long): Boolean {
@@ -597,12 +603,12 @@ private data class TrackDateSelectorScreen(
             return when {
                 // Disallow setting start date after finish date
                 start && track.finishDate > 0 -> {
-                    val finishDate = Instant.ofEpochMilli(track.finishDate).toLocalDate(ZoneOffset.UTC)
+                    val finishDate = track.finishDate.storedDateInUtc()
                     targetDate <= finishDate
                 }
                 // Disallow setting finish date before start date
                 !start && track.startDate > 0 -> {
-                    val startDate = Instant.ofEpochMilli(track.startDate).toLocalDate(ZoneOffset.UTC)
+                    val startDate = track.startDate.storedDateInUtc()
                     startDate <= targetDate
                 }
                 else -> {
@@ -618,12 +624,12 @@ private data class TrackDateSelectorScreen(
             return when {
                 // Disallow setting start year after finish year
                 start && track.finishDate > 0 -> {
-                    val finishDate = Instant.ofEpochMilli(track.finishDate).toLocalDate(ZoneOffset.UTC)
+                    val finishDate = track.finishDate.storedDateInUtc()
                     year <= finishDate.year
                 }
                 // Disallow setting finish year before start year
                 !start && track.startDate > 0 -> {
-                    val startDate = Instant.ofEpochMilli(track.startDate).toLocalDate(ZoneOffset.UTC)
+                    val startDate = track.startDate.storedDateInUtc()
                     startDate.year <= year
                 }
                 else -> {
