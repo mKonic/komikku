@@ -16,6 +16,7 @@ import ca.mpreg.webgpuviewer.closeTo
 import ca.mpreg.webgpuviewer.draw.TextAlign
 import ca.mpreg.webgpuviewer.renderer.GainmapInput
 import ca.mpreg.webgpuviewer.renderer.Image
+import ca.mpreg.webgpuviewer.renderer.WebGpuRenderer
 import ca.mpreg.webgpuviewer.transition.TransitionBasic
 import ca.mpreg.webgpuviewer.transition.TransitionCube
 import ca.mpreg.webgpuviewer.transition.TransitionCubeOuter
@@ -964,9 +965,21 @@ open class WebGpuViewer(
             val showOnStart = config.navigationOverlayOnStart || config.forceNavigationOverlay
             activity.binding.navigationOverlay.setNavigation(config.navigator, showOnStart)
         }
+
+        // KMK --> nothing draws once the device is lost, so the activity swaps in a standard viewer
+        WebGpuRenderer.onDeviceLost = ::switchAwayFromWebGpu
+        // KMK <--
     }
 
+    // KMK -->
+    private fun switchAwayFromWebGpu() = activity.onWebGpuDeviceLost()
+    // KMK <--
+
     override fun destroy() {
+        // KMK --> a replacement viewer registers before this one is destroyed; leave its listener be.
+        // Bound references to the same function on the same viewer compare equal.
+        if (WebGpuRenderer.onDeviceLost == ::switchAwayFromWebGpu) WebGpuRenderer.onDeviceLost = null
+        // KMK <--
         // Before the interrupt: taken mid-decode, only the flag stops the worker parking.
         destroyed = true
         scope.cancel()

@@ -34,6 +34,21 @@ dependencyResolutionManagement {
     }
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        // KMK --> webgpuviewer carries fixes of this fork's own (mKonic/webgpuviewer, branch
+        // komikku), published as release assets there rather than to Maven Central.
+        exclusiveContent {
+            forRepository {
+                ivy("https://github.com/mKonic/webgpuviewer/releases/download") {
+                    patternLayout {
+                        ivy("[revision]/ivy-[revision].xml")
+                        artifact("[revision]/[artifact]-[revision].[ext]")
+                    }
+                    metadataSources { ivyDescriptor() }
+                }
+            }
+            filter { includeModule("ca.mpreg", "webgpuviewer") }
+        }
+        // KMK <--
         mavenCentral()
         google()
         maven(url = "https://www.jitpack.io")

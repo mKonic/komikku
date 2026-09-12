@@ -23,6 +23,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   (mihonapp/mihon#3933).
 
 ### Fixed
+- Losing the GPU device crashed the app from inside the WebGPU renderer's tile worker. The reader now
+  switches to the standard viewer and says so; WebGPU stays off until the app restarts.
 - The WebGPU reader's decode thread parked in `wait()` after the reader closed, keeping the activity
   alive (mihonapp/mihon#3933).
 - An image replaced mid page turn was freed while the turn was still drawing it; its cleanup now waits

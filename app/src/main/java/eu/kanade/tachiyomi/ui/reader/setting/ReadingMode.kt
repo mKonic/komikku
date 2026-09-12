@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.reader.setting
 
 import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
+import ca.mpreg.webgpuviewer.renderer.WebGpuRenderer
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.tachiyomi.R
@@ -80,7 +81,9 @@ enum class ReadingMode(
             // KMK <--
         ): Viewer {
             // KMK -->
-            if (Injekt.get<BasePreferences>().highQualityRenderer().get()) {
+            // Only while WebGPU can still draw: a failed init or a lost device is final for the
+            // process, and the standard viewers need nothing from it.
+            if (Injekt.get<BasePreferences>().highQualityRenderer().get() && WebGpuRenderer.isAvailable) {
                 return when (fromPreference(preference)) {
                     LEFT_TO_RIGHT -> WebGpuViewer(activity, isReversed = false, isVertical = false)
                     RIGHT_TO_LEFT -> WebGpuViewer(activity, isReversed = true, isVertical = false)

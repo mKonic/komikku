@@ -243,4 +243,5 @@
     <string name="pref_cutout_mode_dual">Display cutout mode (dual page)</string>
     <string name="pref_trust_all_extensions">Trust all extensions</string>
     <string name="pref_trust_all_extensions_summary">Load every extension without asking. Only turn this on if you decide what gets installed.</string>
+    <string name="webgpu_device_lost">The WebGPU renderer stopped, so the standard reader took over</string>
 </resources>

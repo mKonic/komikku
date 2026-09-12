@@ -937,6 +937,21 @@ class ReaderActivity : BaseActivity() {
         }
     }
 
+    // KMK -->
+    /**
+     * The WebGPU device is gone for the rest of the process, so the viewer drawing through it has
+     * nothing left to draw with. Swap in the standard viewer for the same reading mode and chapters;
+     * [ReadingMode.toViewer] stops choosing WebGPU once it is unavailable.
+     */
+    fun onWebGpuDeviceLost() {
+        lifecycleScope.launch {
+            toast(KMR.strings.webgpu_device_lost)
+            updateViewer()
+            viewModel.state.value.viewerChapters?.let(::setChapters)
+        }
+    }
+    // KMK <--
+
     /**
      * Called from the presenter when a manga is ready. Used to instantiate the appropriate viewer.
      */
