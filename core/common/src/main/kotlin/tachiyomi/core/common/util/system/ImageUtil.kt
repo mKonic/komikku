@@ -107,6 +107,19 @@ object ImageUtil {
      */
     fun isWideImage(imageSource: BufferedSource): Boolean {
         val options = extractImageOptions(imageSource)
+        // KMK --> the platform cannot read the bounds of a JXL (or an AVIF before Android 12), and
+        // the 0x0 it reports meant those pages were never split. The bundled decoder has no
+        // bounds-only mode, so it decodes; only formats the platform rejects ever get here.
+        if (options.outWidth <= 0 || options.outHeight <= 0) {
+            return try {
+                ImageDecoder.new(imageSource.peek().inputStream()).use { it.decode() }
+                    .let { it.width > it.height }
+            } catch (e: Exception) {
+                logcat(LogPriority.WARN, e) { "Failed to read image dimensions" }
+                false
+            }
+        }
+        // KMK <--
         return options.outWidth > options.outHeight
     }
 
@@ -114,7 +127,7 @@ object ImageUtil {
      * Extract the 'side' part from [BufferedSource] and return it as [BufferedSource].
      */
     fun splitInHalf(imageSource: BufferedSource, side: Side, sidePadding: Int): BufferedSource {
-        val imageBitmap = BitmapFactory.decodeStream(imageSource.inputStream())
+        val imageBitmap = decodeBitmap(imageSource) ?: error("Failed to decode image")
         val height = imageBitmap.height
         val width = imageBitmap.width
 
@@ -135,7 +148,7 @@ object ImageUtil {
     }
 
     fun rotateImage(imageSource: BufferedSource, degrees: Float): BufferedSource {
-        val imageBitmap = BitmapFactory.decodeStream(imageSource.inputStream())
+        val imageBitmap = decodeBitmap(imageSource) ?: error("Failed to decode image")
         val rotated = rotateBitMap(imageBitmap, degrees)
 
         val output = Buffer()
@@ -154,7 +167,7 @@ object ImageUtil {
      * new vertically-aligned image.
      */
     fun splitAndMerge(imageSource: BufferedSource, upperSide: Side): BufferedSource {
-        val imageBitmap = BitmapFactory.decodeStream(imageSource.inputStream())
+        val imageBitmap = decodeBitmap(imageSource) ?: error("Failed to decode image")
         val height = imageBitmap.height
         val width = imageBitmap.width
 
