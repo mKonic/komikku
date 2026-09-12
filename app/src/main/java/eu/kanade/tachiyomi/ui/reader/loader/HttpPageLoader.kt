@@ -170,9 +170,9 @@ internal class HttpPageLoader(
      * Retries a page. This method is only called from user interaction on the viewer.
      */
     override fun retryPage(page: ReaderPage) {
-        if (page.status is Page.State.Error) {
-            page.status = Page.State.Queue
-        }
+        // Whatever the state: a page that downloaded fine can still fail to decode, and only a page
+        // back in Queue gets loaded again.
+        page.status = Page.State.Queue
         // EXH -->
         // Grab a new image URL on EXH sources
         if (source.isEhBasedSource()) {
