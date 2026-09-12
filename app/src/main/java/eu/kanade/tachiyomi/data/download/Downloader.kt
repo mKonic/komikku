@@ -51,6 +51,7 @@ import nl.adaptivity.xmlutil.serialization.XML
 import okhttp3.Response
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.storage.extension
+import tachiyomi.core.common.storage.renameToOrCopy
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNow
 import tachiyomi.core.common.util.lang.withIOContext
@@ -443,11 +444,10 @@ class Downloader(
             if (downloadPreferences.saveChaptersAsCBZ().get()) {
                 archiveChapter(mangaDir, chapterDirname, tmpDir)
             } else {
-                tmpDir.renameTo(chapterDirname)
+                val chapterDir = tmpDir.renameToOrCopy(chapterDirname)
+                DiskUtil.createNoMediaFile(chapterDir, context)
             }
             cache.addChapter(chapterDirname, mangaDir, download.manga)
-
-            DiskUtil.createNoMediaFile(tmpDir, context)
 
             download.status = Download.State.DOWNLOADED
         } catch (error: Throwable) {
@@ -527,13 +527,13 @@ class Downloader(
             val file = tmpDir.findFile("$filename.tmp")
                 ?: tmpDir.createFile("$filename.tmp")!!
 
-            try {
+            val completedFile = try {
                 source.getImage(page, dataSaver, file.length()).use { response ->
                     // A 206 means the server honoured the range, so append to what is already
                     // there. Anything else is the whole file again, so overwrite.
                     response.body.source().saveTo(file.openOutputStream(response.code == HTTP_PARTIAL))
                     val extension = getImageExtension(response, file)
-                    file.renameTo("$filename.$extension")
+                    file.renameToOrCopy("$filename.$extension")
                 }
             } catch (e: HttpException) {
                 // 416 means what is on disk is already at or past the end of the file, so it is
@@ -579,9 +579,9 @@ class Downloader(
             }
         }
         val extension = ImageUtil.findImageType(cacheFile.inputStream()) ?: return tmpFile
-        tmpFile.renameTo("$filename.${extension.extension}")
+        val imageFile = tmpFile.renameToOrCopy("$filename.${extension.extension}")
         cacheFile.delete()
-        return tmpFile
+        return imageFile
     }
 
     // KMK -->
@@ -679,7 +679,7 @@ class Downloader(
                 writer.write(file)
             }
         }
-        zip.renameTo("$dirname.cbz")
+        zip.renameToOrCopy("$dirname.cbz")
         tmpDir.delete()
     }
 
