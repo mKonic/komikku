@@ -11,6 +11,39 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Added
+- WebGPU reader settings for the continuous modes: minimum page width, the gap between pages in
+  continuous vertical, and disabling zoom out (mihonapp/mihon#3933). The width preference already
+  existed but had no control.
+- The WebGPU reader and cover viewer show HDR images with their headroom, gain-map images included
+  (mihonapp/mihon#3933).
+
+### Fixed
+- The WebGPU reader's decode thread parked in `wait()` after the reader closed, keeping the activity
+  alive (mihonapp/mihon#3933).
+- An image replaced mid page turn was freed while the turn was still drawing it; its cleanup now waits
+  for the turn to finish (mihonapp/mihon#3933).
+- Every frame could start another 5 s poll for an adjacent chapter that was still loading
+  (mihonapp/mihon#3933).
+- Dual page mode reports the second page of a spread as the current page rather than the first, so
+  progress reaches a chapter's last page (mihonapp/mihon#3933).
+- Opening a chapter with an empty page list in the WebGPU reader indexed page -1
+  (mihonapp/mihon#3933).
+- Image decoders are closed as soon as their pixels are out instead of by the finalizer. Each holds
+  the encoded image in native memory the garbage collector cannot see, which the decoder library
+  warns turns a decode loop into an out-of-memory crash.
+
+### Improved
+- Cancelling an extension install takes effect before the call returns, instead of on a later
+  main-thread broadcast (mihonapp/mihon#3226).
+
+### Other
+- webgpuviewer 41, imagedecoder 13, Compose BOM 2026.09.00, material 1.14.0, markdown renderer 0.45.0,
+  kim 0.40.0, kotest 6.2.5, benchmark-macro 1.5.0.
+- imagedecoder 13 hands HDR sources back as half-floats; covers and fallback decodes outside the
+  WebGPU renderer clip them to 8 bits rather than copying the bytes as if they were 8-bit.
+- FlexibleAdapter resolves from Maven Central. The JitPack artifact was never built and only resolved
+  from a warm cache (mihonapp/mihon#3932).
 
 ## [v1.3.0] - 2026-09-11
 ### Added
