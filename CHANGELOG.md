@@ -15,6 +15,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - WebGPU reader settings for the continuous modes: minimum page width, the gap between pages in
   continuous vertical, and disabling zoom out (mihonapp/mihon#3933). The width preference already
   existed but had no control.
+- Settings -> Reader -> Paged: disable swiping between pages, for e-ink screens and edge gestures;
+  taps still navigate (mihonapp/mihon#3902).
+- Settings -> Library: open history entries at the last page read, on by default. Off restores
+  jumping to the next chapter (mihonapp/mihon#3807).
 - The WebGPU reader and cover viewer show HDR images with their headroom, gain-map images included
   (mihonapp/mihon#3933).
 
@@ -32,6 +36,35 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Image decoders are closed as soon as their pixels are out instead of by the finalizer. Each holds
   the encoded image in native memory the garbage collector cannot see, which the decoder library
   warns turns a decode loop into an out-of-memory crash.
+- Tap navigation stayed off after a reader button press ended by dragging off the button
+  (mihonapp/mihon#3655).
+- A page split kept for an adjacent chapter crashed the paged reader when that chapter was shorter
+  (mihonapp/mihon#3486).
+- Retry reloads a page that downloaded but failed to decode; it only re-queued pages already in an
+  error state (mihonapp/mihon#3770).
+- In long strip, an image request for a page a view had scrolled past could finish into the page now
+  using that view. It is cancelled when the view is reused (mihonapp/mihon#3769).
+- A page turn onto a chapter transition whose chapter had not loaded yet is carried out once it
+  loads, instead of being dropped (mihonapp/mihon#3656).
+- "Skip duplicate chapters" only treats adjacent chapters with the same number as duplicates, so
+  series numbered per season no longer jump back (mihonapp/mihon#3653).
+- Chapters hidden by a filter were counted as missing (mihonapp/mihon#3557).
+- Split wide pages works for JPEG XL, whose dimensions the platform cannot read
+  (mihonapp/mihon#3044).
+- With app lock on, the last screen flashed up before the lock screen (mihonapp/mihon#3043).
+- The tracker date picker blocked valid dates in timezones ahead of UTC (mihonapp/mihon#3129).
+- Moving a tracked entry from planning to reading sets its start date when it had none
+  (mihonapp/mihon#3930).
+- Komga-tracked entries all looked like duplicates of one another: their remote id was never set
+  (mihonapp/mihon#3031).
+- A chapter the source stops listing keeps its download, and a queued download for it is cancelled
+  instead of stalling the queue (mihonapp/mihon#3845).
+- Downloads work on storage providers that cannot rename files, by copying instead
+  (mihonapp/mihon#3446).
+- An extension install sat at "Installing" forever when Shizuku died or the installer service
+  stopped mid-install (mihonapp/mihon#3417).
+- Requests hung after returning from the background or changing networks, on pooled connections that
+  had died meanwhile. Idle connections are dropped on both (mihonapp/mihon#3733).
 
 ### Improved
 - Cancelling an extension install takes effect before the call returns, instead of on a later
@@ -39,11 +72,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 ### Other
 - webgpuviewer 41, imagedecoder 13, Compose BOM 2026.09.00, material 1.14.0, markdown renderer 0.45.0,
-  kim 0.40.0, kotest 6.2.5, benchmark-macro 1.5.0.
+  kim 0.40.0.
 - imagedecoder 13 hands HDR sources back as half-floats; covers and fallback decodes outside the
   WebGPU renderer clip them to 8 bits rather than copying the bytes as if they were 8-bit.
-- FlexibleAdapter resolves from Maven Central. The JitPack artifact was never built and only resolved
-  from a warm cache (mihonapp/mihon#3932).
 
 ## [v1.3.0] - 2026-09-11
 ### Added
