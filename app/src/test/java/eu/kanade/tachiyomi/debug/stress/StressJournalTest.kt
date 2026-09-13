@@ -34,15 +34,21 @@ class StressJournalTest {
     }
 
     @Test
-    fun `every record is on disk after a flush, across rotated segments`() {
+    fun `every record is on disk in order, and no segment runs far past its size`() {
+        val note = "line\nbreak " + "x".repeat(200)
         StressJournal(dir, session = 1, segmentBytes = 512).use { journal ->
-            repeat(200) { journal.record("step", mapOf("i" to it, "note" to "line\nbreak")) }
+            repeat(200) { journal.record("step", mapOf("i" to it, "note" to note)) }
+            // Whatever the writer has not taken yet goes out as one batch, like a writer that fell behind.
+            journal.writeNow("crash", mapOf("i" to 200))
             journal.flush()
 
             val (records, torn) = readAll()
             torn shouldBe 0
-            records.map { it["i"]!!.jsonPrimitive.long } shouldContainExactly (0L until 200L).toList()
-            dir.listFiles()!!.count { it.name.endsWith(".jsonl") } shouldNotBe 1
+            records.map { it["i"]!!.jsonPrimitive.long } shouldContainExactly (0L..200L).toList()
+            val segments = dir.listFiles { file -> file.name.endsWith(".jsonl") }!!
+            segments.size shouldNotBe 1
+            val longestLine = segments.maxOf { file -> file.readLines().maxOf { it.length } }
+            segments.filter { it.length() > 512 + longestLine + 1 }.map { it.name } shouldBe emptyList()
         }
     }
 

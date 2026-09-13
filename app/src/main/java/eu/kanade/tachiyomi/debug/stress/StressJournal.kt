@@ -11,6 +11,7 @@ import java.io.FileOutputStream
 import java.nio.channels.FileChannel
 import java.nio.file.StandardOpenOption
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
@@ -35,6 +36,9 @@ class StressJournal(
     private val seq = AtomicLong()
     private val unwritten = AtomicLong()
 
+    /** One permit per queued record; the writer wakes on it but takes records only under [lock]. */
+    private val work = Semaphore(0)
+
     private var segment = 0
     private var out: FileOutputStream? = null
     private var segmentWritten = 0L
@@ -53,6 +57,7 @@ class StressJournal(
         if (closed) return
         unwritten.incrementAndGet()
         queue.put(encode(kind, fields))
+        work.release()
     }
 
     /** Writes everything queued, then this record, and syncs before returning. For a process about to die. */
@@ -92,30 +97,41 @@ class StressJournal(
     private fun drain() {
         val batch = ArrayList<String>()
         while (true) {
-            val first = queue.poll(POLL_SECONDS, TimeUnit.SECONDS)
-            if (first == null) {
+            if (!work.tryAcquire(POLL_SECONDS, TimeUnit.SECONDS)) {
                 if (closed) return
                 continue
             }
-            batch += first
-            queue.drainTo(batch)
-            synchronized(lock) { writeLines(batch) }
+            work.drainPermits()
+            // Taken and written under the lock, so writeNow never passes a record that was taken but not yet written.
+            synchronized(lock) {
+                queue.drainTo(batch)
+                writeLines(batch)
+            }
             unwritten.addAndGet(-batch.size.toLong())
             batch.clear()
         }
     }
 
-    /** Callers hold [lock]. */
+    /** Callers hold [lock]. Rotates between lines, so a backlog written at once still leaves every segment near its size. */
     private fun writeLines(lines: List<String>) {
-        if (lines.isEmpty()) return
-        val stream = out ?: openSegment()
-        val bytes = buildString { lines.forEach { append(it).append('\n') } }.toByteArray()
-        stream.write(bytes)
-        stream.fd.sync()
-        segmentWritten += bytes.size
-        if (segmentWritten >= segmentBytes) {
-            stream.close()
-            out = null
+        var from = 0
+        while (from < lines.size) {
+            val stream = out ?: openSegment()
+            val chunk = StringBuilder()
+            var until = from
+            while (until < lines.size && (until == from || segmentWritten + chunk.length < segmentBytes)) {
+                chunk.append(lines[until]).append('\n')
+                until++
+            }
+            val bytes = chunk.toString().toByteArray()
+            stream.write(bytes)
+            stream.fd.sync()
+            segmentWritten += bytes.size
+            if (segmentWritten >= segmentBytes) {
+                stream.close()
+                out = null
+            }
+            from = until
         }
     }
 
