@@ -19,6 +19,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import logcat.LogPriority
@@ -49,6 +50,8 @@ class MetadataUpdateJob(private val context: Context, workerParams: WorkerParame
     private var mangaToUpdate: List<LibraryManga> = mutableListOf()
 
     override suspend fun doWork(): Result {
+        // KMK: a job started with the app would otherwise skip every entry whose source has not loaded yet
+        sourceManager.isInitialized.first { it }
         setForegroundSafely()
 
         addMangaToQueue()
