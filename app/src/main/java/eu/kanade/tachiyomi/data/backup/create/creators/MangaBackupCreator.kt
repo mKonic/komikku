@@ -12,6 +12,9 @@ import eu.kanade.tachiyomi.source.online.MetadataSource
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import exh.source.MERGED_SOURCE_ID
 import exh.source.getMainSource
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.map
 import tachiyomi.data.DatabaseHandler
 import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.domain.category.interactor.GetCategories
@@ -40,6 +43,12 @@ class MangaBackupCreator(
             backupManga(it, options)
         }
     }
+
+    // KMK --> an entry at a time, for a backup written as it is built (mihonapp/mihon#3850)
+    fun asFlow(mangas: List<Manga>, options: BackupOptions): Flow<BackupManga> {
+        return mangas.asFlow().map { backupManga(it, options) }
+    }
+    // KMK <--
 
     private suspend fun backupManga(manga: Manga, options: BackupOptions): BackupManga {
         // Entry for this manga

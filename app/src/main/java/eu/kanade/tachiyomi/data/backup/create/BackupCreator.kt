@@ -5,6 +5,7 @@ import android.net.Uri
 import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.backup.BackupFileValidator
+import eu.kanade.tachiyomi.data.backup.BackupStream
 import eu.kanade.tachiyomi.data.backup.create.creators.CategoriesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.ExtensionStoresBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.FeedBackupCreator
@@ -93,13 +94,15 @@ class BackupCreator(
             // SY -->
             val mergedManga = getMergedManga.await()
             // SY <--
-            val backupManga =
-                backupMangas(getFavorites.await() + nonFavoriteManga /* SY --> */ + mergedManga /* SY <-- */, options)
+            val mangas = getFavorites.await() + nonFavoriteManga /* SY --> */ + mergedManga /* SY <-- */
 
-            val backup = Backup(
-                backupManga = backupManga,
+            // KMK --> written an entry at a time, so a large library never sits in memory whole (mihonapp/mihon#3850)
+            val rest = Backup(
+                backupManga = emptyList(),
                 backupCategories = backupCategories(options),
-                backupSources = backupSources(backupManga),
+                backupSources = sourcesBackupCreator.fromSourceIds(
+                    if (options.libraryEntries) mangas.map { it.source } else emptyList(),
+                ),
                 backupPreferences = backupAppPreferences(options),
                 backupExtensionStores = backupExtensionStores(options),
                 backupSourcePreferences = backupSourcePreferences(options),
@@ -108,24 +111,29 @@ class BackupCreator(
                 backupSavedSearches = backupSavedSearches(options),
                 // SY <--
 
-                // KMK -->
                 backupFeeds = backupFeeds(options),
-                // KMK <--
             )
+            val restBytes = parser.encodeToByteArray(Backup.serializer(), rest)
 
-            val byteArray = parser.encodeToByteArray(Backup.serializer(), backup)
-            if (byteArray.isEmpty()) {
-                throw IllegalStateException(context.stringResource(MR.strings.empty_backup_error))
-            }
-
+            var entries = 0
             file.openOutputStream()
                 .also {
                     // Force overwrite old file
                     (it as? FileOutputStream)?.channel?.truncate(0)
                 }
-                .sink().gzip().buffer().use {
-                    it.write(byteArray)
+                .sink().gzip().buffer().use { sink ->
+                    if (options.libraryEntries) {
+                        mangaBackupCreator.asFlow(mangas, options).collect { manga ->
+                            BackupStream.writeManga(sink, parser.encodeToByteArray(BackupManga.serializer(), manga))
+                            entries++
+                        }
+                    }
+                    sink.write(restBytes)
                 }
+            if (entries == 0 && restBytes.isEmpty()) {
+                throw IllegalStateException(context.stringResource(MR.strings.empty_backup_error))
+            }
+            // KMK <--
             val fileUri = file.uri
 
             // Make sure it's a valid backup file

@@ -1,8 +1,12 @@
 package eu.kanade.tachiyomi.data.backup.restore
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.chunked
 
 /**
  * Restores [items] a chunk at a time, each chunk under one transaction, falling back to restoring
@@ -25,10 +29,22 @@ internal suspend fun <T> chunkedRestore(
     onError: suspend (T, Throwable) -> Unit,
     onChunkRestored: suspend (restored: Int, last: T) -> Unit,
     onChunkFailed: (Throwable) -> Unit = {},
+) = chunkedRestore(items.asFlow(), chunkSize, inTransaction, restore, onError, onChunkRestored, onChunkFailed)
+
+/** As above, over entries that are read while they are restored, so only one chunk is ever held. */
+@OptIn(ExperimentalCoroutinesApi::class)
+internal suspend fun <T> chunkedRestore(
+    items: Flow<T>,
+    chunkSize: Int,
+    inTransaction: suspend (suspend () -> Unit) -> Unit,
+    restore: suspend (T) -> Unit,
+    onError: suspend (T, Throwable) -> Unit,
+    onChunkRestored: suspend (restored: Int, last: T) -> Unit,
+    onChunkFailed: (Throwable) -> Unit = {},
 ) {
     var restored = 0
 
-    items.chunked(chunkSize).forEach { chunk ->
+    items.chunked(chunkSize).collect { chunk ->
         currentCoroutineContext().ensureActive()
 
         val restoredAsChunk = try {

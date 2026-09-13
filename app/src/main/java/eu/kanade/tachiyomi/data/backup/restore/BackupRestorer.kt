@@ -20,9 +20,11 @@ import eu.kanade.tachiyomi.data.backup.restore.restorers.SavedSearchRestorer
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.util.system.createFileInCacheDir
+import exh.source.MERGED_SOURCE_ID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
@@ -93,14 +95,17 @@ class BackupRestorer(
     }
 
     private suspend fun restoreFromFile(uri: Uri, options: RestoreOptions) {
-        val backup = BackupDecoder(context).decode(uri)
+        // KMK --> entries are read while they are restored rather than all at once (mihonapp/mihon#3850)
+        val decoder = BackupDecoder(context)
+        val (mangaCount, backup) = decoder.decodeMetadata(uri)
+        // KMK <--
 
         // Store source mapping for error messages
         val backupMaps = backup.backupSources
         sourceMapping = backupMaps.associate { it.sourceId to it.name }
 
         if (options.libraryEntries) {
-            restoreAmount += backup.backupManga.size
+            restoreAmount += mangaCount
         }
         if (options.categories) {
             restoreAmount += 1
@@ -141,7 +146,7 @@ class BackupRestorer(
                 restoreSourcePreferences(backup.backupSourcePreferences)
             }
             if (options.libraryEntries) {
-                restoreManga(backup.backupManga, if (options.categories) backup.backupCategories else emptyList())
+                restoreManga(decoder, uri, if (options.categories) backup.backupCategories else emptyList())
             }
             if (options.extensionStores) {
                 restoreExtensionStores(backup.backupExtensionStores)
@@ -199,33 +204,42 @@ class BackupRestorer(
     // SY <--
 
     private fun CoroutineScope.restoreManga(
-        backupMangas: List<BackupManga>,
+        decoder: BackupDecoder,
+        uri: Uri,
         backupCategories: List<BackupCategory>,
     ) = launch {
         // KMK --> One transaction per chunk instead of one per entry. Every restore() runs several
         // writes that each committed on their own; nesting them under one transaction is supported
         // by design (see withTransaction) and turns a large restore from thousands of commits into
         // a handful. Shape adapted from mihonapp/mihon#3667.
-        chunkedRestore(
-            items = mangaRestorer.sortByNew(backupMangas),
-            chunkSize = MANGA_RESTORE_CHUNK_SIZE,
-            inTransaction = { block -> handler.await(inTransaction = true) { block() } },
-            restore = { mangaRestorer.restore(it, backupCategories) },
-            onError = { manga, e ->
-                val sourceName = sourceMapping[manga.source] ?: manga.source.toString()
-                errors.add(Date() to "${manga.title} [$sourceName]: ${e.message}")
-            },
-            onChunkFailed = { e ->
-                logcat(LogPriority.WARN, e) { "Restoring a chunk failed, retrying entry by entry" }
-            },
-            onChunkRestored = { restored, last ->
-                restoreProgress = restored
-                with(notifier) {
-                    showRestoreProgress(last.title, restoreProgress, restoreAmount, isSync)
-                        .show(Notifications.ID_RESTORE_PROGRESS)
-                }
-            },
-        )
+        // The entries stream from the file, so they cannot be sorted; merged entries point at the entries they merge,
+        // so they get a second pass once those exist.
+        var restoredBefore = 0
+        for (merged in listOf(false, true)) {
+            var restoredInPass = 0
+            chunkedRestore(
+                items = decoder.decodeManga(uri).filter { (it.source == MERGED_SOURCE_ID) == merged },
+                chunkSize = MANGA_RESTORE_CHUNK_SIZE,
+                inTransaction = { block -> handler.await(inTransaction = true) { block() } },
+                restore = { mangaRestorer.restore(it, backupCategories) },
+                onError = { manga, e ->
+                    val sourceName = sourceMapping[manga.source] ?: manga.source.toString()
+                    errors.add(Date() to "${manga.title} [$sourceName]: ${e.message}")
+                },
+                onChunkFailed = { e ->
+                    logcat(LogPriority.WARN, e) { "Restoring a chunk failed, retrying entry by entry" }
+                },
+                onChunkRestored = { restored, last ->
+                    restoredInPass = restored
+                    restoreProgress = restoredBefore + restored
+                    with(notifier) {
+                        showRestoreProgress(last.title, restoreProgress, restoreAmount, isSync)
+                            .show(Notifications.ID_RESTORE_PROGRESS)
+                    }
+                },
+            )
+            restoredBefore += restoredInPass
+        }
         // KMK <--
     }
 

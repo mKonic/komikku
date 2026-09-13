@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.data.backup
 import android.content.Context
 import android.net.Uri
 import eu.kanade.tachiyomi.data.track.TrackerManager
+import kotlinx.coroutines.CancellationException
 import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -20,11 +21,14 @@ class BackupFileValidator(
      * @return List of missing sources or missing trackers.
      */
     suspend fun validate(uri: Uri): Results {
+        // KMK --> the entries are read one at a time rather than the whole backup at once (mihonapp/mihon#3850)
+        val decoder = BackupDecoder(context)
         val backup = try {
-            BackupDecoder(context).decode(uri)
+            decoder.decodeMetadata(uri).second
         } catch (e: Exception) {
             throw IllegalStateException(e)
         }
+        // KMK <--
 
         val sources = backup.backupSources.associate { it.sourceId to it.name }
         val missingSources = sources
@@ -40,12 +44,19 @@ class BackupFileValidator(
             .distinct()
             .sorted()
 
-        val trackers = backup.backupManga
-            .flatMap { it.tracking }
-            .map { it.syncId }
-            .distinct()
+        // KMK -->
+        val trackers = mutableSetOf<Long>()
+        try {
+            decoder.decodeManga(uri).collect { manga ->
+                manga.tracking.forEach { trackers += it.syncId.toLong() }
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            throw IllegalStateException(e)
+        }
         val missingTrackers = trackers
-            .mapNotNull { trackerManager.get(it.toLong()) }
+            .mapNotNull { trackerManager.get(it) }
+            // KMK <--
             .filter { !it.isLoggedIn }
             .map { it.name }
             .sorted()

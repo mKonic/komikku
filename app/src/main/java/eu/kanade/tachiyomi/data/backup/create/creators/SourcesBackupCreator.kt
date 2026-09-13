@@ -19,6 +19,12 @@ class SourcesBackupCreator(
             .map { sourceManager.getOrStub(it).toBackupSource() }
         // KMK <--
     }
+
+    // KMK --> from the entries' source ids, for a backup whose entries are never all in memory
+    suspend fun fromSourceIds(sourceIds: Collection<Long>): List<BackupSource> {
+        return sourceIds.distinct().map { sourceManager.getOrStub(it).toBackupSource() }
+    }
+    // KMK <--
 }
 
 private fun Source.toBackupSource() =
