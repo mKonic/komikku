@@ -6,6 +6,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
@@ -29,6 +30,7 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.i18n.MR
 import java.io.File
+import java.util.UUID
 
 class StorageManager(
     private val context: Context,
@@ -90,6 +92,27 @@ class StorageManager(
 
     companion object {
         // KMK -->
+        /**
+         * Whether a file can be created, written, read back and deleted in [uri]. canWrite() alone is not proof on
+         * every storage provider (mihonapp/mihon#3510).
+         */
+        fun canWriteTo(context: Context, uri: Uri): Boolean {
+            var probe: UniFile? = null
+            return try {
+                val dir = UniFile.fromUri(context, uri)?.takeIf { it.exists() && it.isDirectory } ?: return false
+                probe = dir.createDirectory("komikku_storage_probe_${UUID.randomUUID()}") ?: return false
+                val file = probe.createFile("probe.tmp") ?: return false
+                file.openOutputStream().use { it.write(PROBE_CONTENT) }
+                file.openInputStream().use { it.read() == PROBE_CONTENT }
+            } catch (_: Exception) {
+                false
+            } finally {
+                probe?.delete()
+            }
+        }
+
+        private const val PROBE_CONTENT = 0x4B
+
         /**
          * Extension property to check if a UniFile is an accessible directory
          */

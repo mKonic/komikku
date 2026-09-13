@@ -143,6 +143,10 @@
     <string name="onboarding_permission_external_storage_description">Allow using custom covers in entry's Edit Info</string>
     <string name="onboarding_permission_writing_external_storage_description">Allow saving covers &amp; using custom covers in entry's Edit Info</string>
     <string name="permission_writing_external_storage_succeed">Permission granted. Try action again.</string>
+    <string name="onboarding_storage_all_files_info">If your device won\'t let you select a folder, you can grant %1$s all-files access instead. It will then keep its data in a folder in your shared storage.</string>
+    <string name="onboarding_storage_action_all_files">Grant all-files access</string>
+    <string name="storage_location_unavailable">Storage location unavailable</string>
+    <string name="storage_location_unavailable_message">A file could not be written to that folder and read back. Choose a different storage location.</string>
     <!-- About section -->
     <string name="whats_coming">What\'s coming (soon)</string>
     <!-- Manga info -->

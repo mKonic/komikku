@@ -80,6 +80,7 @@ import mihon.icons.materialsymbols.rounded.QrCodeScanner
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.storage.displayablePath
 import tachiyomi.core.common.util.lang.launchNonCancellable
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.backup.service.BackupPreferences
@@ -87,6 +88,7 @@ import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetFavorites
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.storage.service.StorageManager.Companion.allowAccessStorage
+import tachiyomi.domain.storage.service.StorageManager.Companion.canWriteTo
 import tachiyomi.domain.storage.service.StorageManager.Companion.directoryAccessible
 import tachiyomi.domain.storage.service.StoragePreferences
 import tachiyomi.i18n.MR
@@ -145,29 +147,55 @@ object SettingsDataScreen : SearchableSettings {
         storageDirPref: tachiyomi.core.common.preference.Preference<String>,
     ): ManagedActivityResultLauncher<Uri?, Uri?> {
         val context = LocalContext.current
+        // KMK --> a folder the app cannot write to would break downloads, backups and the local source, so it is
+        // tried before it replaces the current one (mihonapp/mihon#3510)
+        val scope = rememberCoroutineScope()
+        var showUnusable by remember { mutableStateOf(false) }
+        if (showUnusable) {
+            AlertDialog(
+                onDismissRequest = { showUnusable = false },
+                title = { Text(text = stringResource(KMR.strings.storage_location_unavailable)) },
+                text = { Text(text = stringResource(KMR.strings.storage_location_unavailable_message)) },
+                confirmButton = {
+                    TextButton(onClick = { showUnusable = false }) {
+                        Text(text = stringResource(MR.strings.action_ok))
+                    }
+                },
+            )
+        }
+        // KMK <--
 
         return rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocumentTree(),
         ) { uri ->
             if (uri != null) {
-                val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                scope.launch {
+                    // KMK -->
+                    if (!withIOContext { canWriteTo(context, uri) }) {
+                        showUnusable = true
+                        return@launch
+                    }
+                    // KMK <--
 
-                // For some reason InkBook devices do not implement the SAF properly. Persistable URI grants do not
-                // work. However, simply retrieving the URI and using it works fine for these devices. Access is not
-                // revoked after the app is closed or the device is restarted.
-                // This also holds for some Samsung devices. Thus, we simply execute inside of a try-catch block and
-                // ignore the exception if it is thrown.
-                try {
-                    context.contentResolver.takePersistableUriPermission(uri, flags)
-                } catch (e: SecurityException) {
-                    logcat(LogPriority.ERROR, e)
-                    context.toast(MR.strings.file_picker_uri_permission_unsupported)
-                }
+                    val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
 
-                UniFile.fromUri(context, uri)?.let {
-                    storageDirPref.set("") // Trigger recompose
-                    storageDirPref.set(it.uri.toString())
+                    // For some reason InkBook devices do not implement the SAF properly. Persistable URI grants do not
+                    // work. However, simply retrieving the URI and using it works fine for these devices. Access is not
+                    // revoked after the app is closed or the device is restarted.
+                    // This also holds for some Samsung devices. Thus, we simply execute inside of a try-catch block and
+                    // ignore the exception if it is thrown.
+                    try {
+                        context.contentResolver.takePersistableUriPermission(uri, flags)
+                    } catch (e: SecurityException) {
+                        logcat(LogPriority.ERROR, e)
+                        context.toast(MR.strings.file_picker_uri_permission_unsupported)
+                    }
+
+                    UniFile.fromUri(context, uri)?.let {
+                        storageDirPref.set("") // Trigger recompose
+                        storageDirPref.set(it.uri.toString())
+                    }
                 }
             }
         }
