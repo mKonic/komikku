@@ -20,6 +20,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Work that was running when Android killed the app, such as a library update, a download or a
   backup restore, failed when the system restarted it. WorkManager started before the app had set
   up its dependencies and could not build the job.
+- The app could crash when brought back to the foreground (NetworkOnMainThreadException). Since
+  v1.4.0 it drops idle connections at that moment, and closing a secure connection sends data,
+  which Android does not allow on the main thread.
 
 ## [v1.5.0] - 2026-09-13
 ### Added
