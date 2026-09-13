@@ -32,6 +32,7 @@ import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.util.concurrent.Executors
@@ -94,7 +95,7 @@ abstract class SearchScreenModel(
 
     open fun getEnabledSources(): List<Source> {
         return sourceManager.peekVisibleSources()
-            .filter { it.lang in enabledLanguages && "${it.id}" !in disabledSources }
+            .filter { (it.lang in enabledLanguages || it.isLocal()) && "${it.id}" !in disabledSources }
             .sortedWith(
                 compareBy(
                     { "${it.id}" !in pinnedSources },
