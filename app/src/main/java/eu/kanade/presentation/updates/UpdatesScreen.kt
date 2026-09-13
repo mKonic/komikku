@@ -1,6 +1,8 @@
 package eu.kanade.presentation.updates
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LocalContentColor
@@ -105,10 +107,19 @@ fun UpdateScreen(
     ) { contentPadding ->
         when {
             state.isLoading -> LoadingScreen(Modifier.padding(contentPadding))
-            state.items.isEmpty() -> EmptyScreen(
-                stringRes = MR.strings.information_no_recent,
-                modifier = Modifier.padding(contentPadding),
-            )
+            // KMK --> when the last update was still matters with nothing new to show (mihonapp/mihon#3790)
+            state.items.isEmpty() -> Column(
+                modifier = Modifier
+                    .padding(contentPadding)
+                    .fillMaxSize(),
+            ) {
+                UpdatesLastUpdatedHeader(lastUpdated = lastUpdated)
+                EmptyScreen(
+                    stringRes = if (hasActiveFilters) MR.strings.no_results_found else MR.strings.information_no_recent,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            // KMK <--
             else -> {
                 val scope = rememberCoroutineScope()
                 var isRefreshing by remember { mutableStateOf(false) }

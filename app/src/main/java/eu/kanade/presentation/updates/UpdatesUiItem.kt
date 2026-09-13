@@ -75,18 +75,30 @@ internal fun LazyListScope.updatesLastUpdatedItem(
     lastUpdated: Long,
 ) {
     item(key = "updates-lastUpdated") {
-        Box(
-            modifier = Modifier
-                .animateItemFastScroll()
-                .padding(horizontal = MaterialTheme.padding.medium, vertical = MaterialTheme.padding.small),
-        ) {
-            Text(
-                text = stringResource(MR.strings.updates_last_update_info, relativeTimeSpanString(lastUpdated)),
-                fontStyle = FontStyle.Italic,
-            )
-        }
+        UpdatesLastUpdatedHeader(
+            lastUpdated = lastUpdated,
+            modifier = Modifier.animateItemFastScroll(),
+        )
     }
 }
+
+// KMK --> shared with the empty state, which shows it too (mihonapp/mihon#3790)
+@Composable
+internal fun UpdatesLastUpdatedHeader(
+    lastUpdated: Long,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .padding(horizontal = MaterialTheme.padding.medium, vertical = MaterialTheme.padding.small),
+    ) {
+        Text(
+            text = stringResource(MR.strings.updates_last_update_info, relativeTimeSpanString(lastUpdated)),
+            fontStyle = FontStyle.Italic,
+        )
+    }
+}
+// KMK <--
 
 internal fun LazyListScope.updatesUiItems(
     uiModels: List<UpdatesUiModel>,
