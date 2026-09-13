@@ -106,8 +106,9 @@ jobs:
       - name: Release notes from CHANGELOG.md
         run: |
           set -euo pipefail
-          awk -v tag="$TAG" '
-              $0 ~ "^## \\[" tag "\\]" { found = 1; next }
+          # Matched literally: a tag's dots and any +build suffix are not regex.
+          awk -v heading="## [$TAG]" '
+              index($0, heading) == 1 { found = 1; next }
               found && /^## \[/ { exit }
               found { print }
           ' CHANGELOG.md | sed -e '/./,$!d' > notes.md
@@ -117,16 +118,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # A semver pre-release (a -suffix ahead of any +build) is published as one, which also keeps
+          # it out of the in-app update check.
+          prerelease=()
+          case "${TAG%%+*}" in *-*) prerelease=(--prerelease) ;; esac
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/*.apk --clobber
             if [ -s notes.md ]; then
               gh release edit "$TAG" --notes-file notes.md
             fi
           elif [ -s notes.md ]; then
-            gh release create "$TAG" dist/*.apk --verify-tag --title "Komikku $TAG" --notes-file notes.md
+            gh release create "$TAG" dist/*.apk --verify-tag "${prerelease[@]}" --title "Komikku $TAG" --notes-file notes.md
           else
             echo "No '## [$TAG]' section in CHANGELOG.md; generating notes." >&2
-            gh release create "$TAG" dist/*.apk --verify-tag --title "Komikku $TAG" --generate-notes
+            gh release create "$TAG" dist/*.apk --verify-tag "${prerelease[@]}" --title "Komikku $TAG" --generate-notes
           fi
 
       - name: Upload mapping

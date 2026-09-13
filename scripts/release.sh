@@ -151,11 +151,17 @@ fi
 
 # Release notes come from CHANGELOG.md's section for this tag, so the release page reads like the
 # changelog rather than a dump of commit subjects.
-awk -v tag="$TAG" '
-    $0 ~ "^## \\[" tag "\\]" { found = 1; next }
+# Matched literally: a tag's dots and any +build suffix are not regex.
+awk -v heading="## [$TAG]" '
+    index($0, heading) == 1 { found = 1; next }
     found && /^## \[/ { exit }
     found { print }
 ' CHANGELOG.md | sed -e '/./,$!d' > "$NOTES"
+
+# A semver pre-release (a -suffix ahead of any +build) is published as one, which also keeps it out of
+# the in-app update check.
+PRERELEASE=()
+case "${TAG%%+*}" in *-*) PRERELEASE=(--prerelease) ;; esac
 
 echo "==> Publishing $TAG to $REPO"
 if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
@@ -165,13 +171,13 @@ if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
         gh release edit "$TAG" --repo "$REPO" --notes-file "$NOTES"
     fi
 elif [ -s "$NOTES" ]; then
-    gh release create "$TAG" "${SIGNED[@]}" \
+    gh release create "$TAG" "${SIGNED[@]}" "${PRERELEASE[@]}" \
         --repo "$REPO" \
         --title "Komikku $TAG" \
         --notes-file "$NOTES"
 else
     echo "   No '## [$TAG]' section in CHANGELOG.md; falling back to generated notes." >&2
-    gh release create "$TAG" "${SIGNED[@]}" \
+    gh release create "$TAG" "${SIGNED[@]}" "${PRERELEASE[@]}" \
         --repo "$REPO" \
         --title "Komikku $TAG" \
         --generate-notes
