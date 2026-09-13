@@ -35,13 +35,14 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         // KMK --> webgpuviewer carries fixes of this fork's own (mKonic/webgpuviewer, branch
-        // komikku), published as release assets there rather than to Maven Central.
+        // komikku). Each v<version> tag there releases the AAR and its ivy descriptor as assets,
+        // rather than to Maven Central.
         exclusiveContent {
             forRepository {
                 ivy("https://github.com/mKonic/webgpuviewer/releases/download") {
                     patternLayout {
-                        ivy("[revision]/ivy-[revision].xml")
-                        artifact("[revision]/[artifact]-[revision].[ext]")
+                        ivy("v[revision]/ivy-[revision].xml")
+                        artifact("v[revision]/[artifact]-[revision].[ext]")
                     }
                     metadataSources { ivyDescriptor() }
                 }
