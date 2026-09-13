@@ -15,6 +15,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Every entry whose related titles failed to load after its screen was closed, as they do offline,
   stayed in memory until the app was closed. Browsing many entries in one session grew memory
   until the app ran out of it.
+- Searching the local source, or opening a local entry with related titles on, could take over a
+  minute with a large local library: since v1.5.0 every search read every entry's details at once.
+  It now reads a few at a time and skips the read when the folder name already matches.
 
 ## [v1.5.1] - 2026-09-14
 ### Fixed

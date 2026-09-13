@@ -137,25 +137,30 @@ class LocalSource(
 
         // KMK -->
         if (needsMetadata) {
-            val metadataByDir = mangaDirs
-                .map { mangaDir -> async { mangaDir to getMetadataForFiltering(mangaDir) } }
-                .awaitAll()
-                .toMap()
-
-            mangaDirs = mangaDirs.filter { mangaDir ->
-                val metadata = metadataByDir[mangaDir]
-                val matchesQuery = query.isBlank() ||
-                    mangaDir.name.orEmpty().contains(query, ignoreCase = true) ||
-                    metadata.matchesText(query)
-                val matchesAuthor = authorFilter.isBlank() ||
-                    metadata?.author.orEmpty().contains(authorFilter, ignoreCase = true)
-                val matchesArtist = artistFilter.isBlank() ||
-                    metadata?.artist.orEmpty().contains(artistFilter, ignoreCase = true)
-                val matchesGenre = genreTerms.all { term ->
-                    metadata?.genres.orEmpty().any { it.contains(term, ignoreCase = true) }
-                }
-                val matchesStatus = statusFilter == StatusFilter.ANY || metadata?.status == statusFilter
-                matchesQuery && matchesAuthor && matchesArtist && matchesGenre && matchesStatus
+            // Opening an entry searches every keyword of its title at once, so a search that read every folder in
+            // parallel ran several full scans together. Folders are read a few at a time, sized to the device, a name
+            // match needs no read when the query is all there is, and only matches are kept.
+            val queryOnly = authorFilter.isBlank() && artistFilter.isBlank() && genreTerms.isEmpty() &&
+                statusFilter == StatusFilter.ANY
+            val readsAtOnce = Runtime.getRuntime().availableProcessors() * 2
+            mangaDirs = mangaDirs.chunked(readsAtOnce).flatMap { chunk ->
+                chunk.map { mangaDir ->
+                    async {
+                        val nameMatches = mangaDir.name.orEmpty().contains(query, ignoreCase = true)
+                        if (queryOnly && nameMatches) return@async mangaDir
+                        val metadata = getMetadataForFiltering(mangaDir)
+                        val matchesQuery = query.isBlank() || nameMatches || metadata.matchesText(query)
+                        val matchesAuthor = authorFilter.isBlank() ||
+                            metadata?.author.orEmpty().contains(authorFilter, ignoreCase = true)
+                        val matchesArtist = artistFilter.isBlank() ||
+                            metadata?.artist.orEmpty().contains(artistFilter, ignoreCase = true)
+                        val matchesGenre = genreTerms.all { term ->
+                            metadata?.genres.orEmpty().any { it.contains(term, ignoreCase = true) }
+                        }
+                        val matchesStatus = statusFilter == StatusFilter.ANY || metadata?.status == statusFilter
+                        mangaDir.takeIf { matchesQuery && matchesAuthor && matchesArtist && matchesGenre && matchesStatus }
+                    }
+                }.awaitAll().filterNotNull()
             }
         }
         // KMK <--
