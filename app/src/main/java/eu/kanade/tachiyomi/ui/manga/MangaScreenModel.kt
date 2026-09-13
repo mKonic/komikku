@@ -306,6 +306,15 @@ class MangaScreenModel(
         }
     }
 
+    // KMK -->
+    /**
+     * Taken while this model is being created. Once it is disposed, screenModelScope resolves to whichever screen
+     * model registered last, so a related-manga error arriving after the screen closed launched a snackbar into a
+     * scope that never ends, and the wait for a host that was gone kept this model in memory for good.
+     */
+    private val relatedMangasScope = screenModelScope
+    // KMK <--
+
     init {
         screenModelScope.launchIO {
             getMangaAndChapters.subscribe(mangaId, applyFilter = true).distinctUntilChanged()
@@ -1163,7 +1172,7 @@ class MangaScreenModel(
             logcat(LogPriority.ERROR, e)
             val message = with(context) { e.formattedMessage }
 
-            screenModelScope.launch {
+            relatedMangasScope.launch {
                 snackbarHostState.showSnackbar(message = message)
             }
         }
