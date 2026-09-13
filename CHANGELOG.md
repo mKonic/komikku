@@ -23,6 +23,11 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   (mihonapp/mihon#3933).
 
 ### Fixed
+- Long reading sessions in the WebGPU reader grew memory until the GPU gave out and the app crashed.
+  Every frame leaked the GPU objects it was drawn with, and every closed reader stayed in memory; both
+  are released now. A 14-chapter test run ends at about 60 MB of native memory instead of 580 MB.
+- Blank space in the WebGPU long strip modes shows the reader background instead of black
+  (mpreg-ca/webgpuviewer).
 - Losing the GPU device crashed the app from inside the WebGPU renderer's tile worker. The reader now
   switches to the standard viewer and says so; WebGPU stays off until the app restarts.
 - The WebGPU reader's decode thread parked in `wait()` after the reader closed, keeping the activity

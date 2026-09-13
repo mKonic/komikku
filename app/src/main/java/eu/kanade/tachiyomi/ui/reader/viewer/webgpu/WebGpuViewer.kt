@@ -894,10 +894,17 @@ open class WebGpuViewer(
             }
         }
 
+        // KMK --> blank space in the long strip clears to the reader background rather than black
+        (pager.state as? ImageViewerContinuousState)?.backgroundColor = readerBackgroundColor()
+        // KMK <--
+
         config.imagePropertyChangedListener = {
             // A theme change comes through here.
             cachedBackgroundColor = null
             cachedOnBackgroundColor = null
+            // KMK -->
+            (pager.state as? ImageViewerContinuousState)?.backgroundColor = readerBackgroundColor()
+            // KMK <--
 
             val isDual = isDualPageMode()
             pager.state.apply {
