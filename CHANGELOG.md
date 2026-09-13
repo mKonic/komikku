@@ -17,6 +17,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   streaming backups in v1.5.0 made possible.
 - Refreshing a library selection of more than about 1,270 entries crashed the app, because the
   selection did not fit in the update job's input data.
+- Work that was running when Android killed the app, such as a library update, a download or a
+  backup restore, failed when the system restarted it. WorkManager started before the app had set
+  up its dependencies and could not build the job.
 
 ## [v1.5.0] - 2026-09-13
 ### Added
