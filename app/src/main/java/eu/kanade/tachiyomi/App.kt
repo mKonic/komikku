@@ -103,12 +103,24 @@ import java.security.Security
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factory {
+class App :
+    Application(),
+    DefaultLifecycleObserver,
+    SingletonImageLoader.Factory,
+    // KMK -->
+    Configuration.Provider {
+    // KMK <--
 
     private val basePreferences: BasePreferences by injectLazy()
     private val privacyPreferences: PrivacyPreferences by injectLazy()
 
     private val disableIncognitoReceiver = DisableIncognitoReceiver()
+
+    // KMK --> WorkManager starts on demand instead of from the startup provider, which ran before onCreate: work
+    // left unfinished by a killed process was then built before Injekt had its modules, and failed for good
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder().build()
+    // KMK <--
 
     @SuppressLint("LaunchActivityFromNotification")
     override fun onCreate() {

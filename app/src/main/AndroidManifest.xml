@@ -397,6 +397,17 @@
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
             tools:remove="screenOrientation" />
+        <!-- KMK: WorkManager is started by App (Configuration.Provider), after dependency injection is set up -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
     </application>
 
 </manifest>
