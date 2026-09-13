@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.reader.viewer.pager
 
 import android.graphics.PointF
+import android.graphics.drawable.Drawable
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -81,6 +82,12 @@ abstract class PagerViewer(
      * chapter arrives; landing back on a page clears it.
      */
     private var pendingChapterCross: ChapterTransition? = null
+
+    // KMK -->
+    /** The last automatic background a page picked; a new page shows it until its own is ready. */
+    @Volatile
+    var lastAutomaticBackground: Drawable? = null
+    // KMK <--
 
     /**
      * Whether the view pager is currently in idle mode. It sets the awaiting chapters if setting

@@ -76,6 +76,11 @@ class PagerPageHolder(
     private var extraLoadJob: Job? = null
 
     init {
+        // KMK --> start from the last page's automatic background so a fast page turn doesn't flash the theme's
+        if (viewer.config.automaticBackground) {
+            viewer.lastAutomaticBackground?.let { background = it.constantState?.newDrawable() ?: it }
+        }
+        // KMK <--
         loadJob = scope.launch { loadPageAndProcessStatus(1) }
         // SY -->
         extraLoadJob = scope.launch { loadPageAndProcessStatus(2) }
@@ -201,6 +206,9 @@ class PagerPageHolder(
                         } else {
                             null
                         }
+                        // KMK -->
+                        background?.let { viewer.lastAutomaticBackground = it }
+                        // KMK <--
                         Triple(itemSource, isAnimated, background)
                     }
                 }
