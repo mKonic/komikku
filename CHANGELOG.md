@@ -11,7 +11,29 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Added
+- Local source filters for author, artist, genre and publishing status, read from each entry's
+  ComicInfo.xml or details.json. Genres take a comma-separated list that all have to match, and a
+  search also matches those fields instead of only the folder name (mihonapp/mihon#3782).
+- Onboarding offers all-files access for devices whose folder picker refuses every folder, and uses
+  the default folder in shared storage once it is granted (mihonapp/mihon#3461).
+
 ### Fixed
+- Losing the network during downloads failed the chapters in progress, and nothing started them
+  again. They are paused instead and carry on once the connection is back; downloads set to Wi-Fi
+  only wait for Wi-Fi the same way (mihonapp/mihon#3500).
+- The saved download queue was read before extensions finished loading, which dropped every
+  download from an extension that had not loaded yet. The queue, library updates and metadata
+  updates now wait for sources to load (mihonapp/mihon#2984).
+- Several requests to a Cloudflare-protected site that hit a challenge at once each opened a WebView
+  to solve it. They now wait for the first and use its result. A failed challenge no longer leaves
+  its cookie behind, a crashed WebView renderer no longer takes the app down with it, and the page
+  can no longer see the app's script bridge (mihonapp/mihon#3858).
+- Picking a storage folder the app could not write to replaced a working one. A file is written to
+  the folder and read back first, and a folder that fails is refused with a message
+  (mihonapp/mihon#3510).
+- The Updates tab hid the last update time whenever its list was empty, and said nothing was recent
+  when filters were hiding everything (mihonapp/mihon#3790).
 - Leaving a CBZ or EPUB chapter while its pages were still loading could crash the app: pages went on
   reading the archive after it was unmapped, and a page load starting as the chapter closed threw. The
   archive now stays mapped until its last open page is done (mihonapp/mihon#3092).
@@ -29,6 +51,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 ### Improved
 - Entries outside the library open faster: their details show before the default chapter flags are
   written, and the write is skipped when the flags already match (mihonapp/mihon#3055).
+- The downloader no longer keeps a CPU core busy for as long as downloads run (mihonapp/mihon#3500).
+- Creating, checking and restoring a backup go through it one entry at a time instead of holding
+  the whole library in memory, which large libraries could run out of (mihonapp/mihon#3850).
 
 ## [v1.4.0] - 2026-09-13
 ### Added
