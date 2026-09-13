@@ -18,6 +18,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Searching the local source, or opening a local entry with related titles on, could take over a
   minute with a large local library: since v1.5.0 every search read every entry's details at once.
   It now reads a few at a time and skips the read when the folder name already matches.
+- Every time the WebGPU reader opened, it kept the Android window it drew into, so that window's
+  buffers stayed allocated until the app closed (webgpuviewer 1.0.1).
 
 ## [v1.5.1] - 2026-09-14
 ### Fixed
