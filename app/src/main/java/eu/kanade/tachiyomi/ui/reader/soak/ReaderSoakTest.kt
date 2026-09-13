@@ -37,7 +37,6 @@ import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.Executors
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * Debug stress test for the reader. Opens a list of chapters one after another, each in a fresh
@@ -174,7 +173,7 @@ object ReaderSoakTest {
         val s = session ?: return
         val target = s.targets.getOrNull(s.next - 1)
         record(s, "reader", target)
-        val ready = withTimeoutOrNull(LOAD_TIMEOUT) {
+        val ready = withTimeoutOrNull(LOAD_TIMEOUT_MILLIS) {
             val chapter = activity.viewModel.state.mapNotNull { it.viewerChapters?.currChapter }.first()
             record(s, "loaded", target, PageCounts(chapter.pages.orEmpty().size))
             chapter to activity.viewModel.state.mapNotNull { it.viewer }.first()
@@ -194,7 +193,7 @@ object ReaderSoakTest {
         for (page in pages) {
             viewer.moveToPage(page)
             // Never onto a blank: wait until the viewer has the page on screen or gave up on it.
-            val outcome = withTimeoutOrNull(PAGE_TIMEOUT) {
+            val outcome = withTimeoutOrNull(PAGE_TIMEOUT_MILLIS) {
                 combine(page.statusFlow, page.displayState) { status, display ->
                     when {
                         display == ReaderPage.DisplayState.Displayed -> display
@@ -261,9 +260,13 @@ object ReaderSoakTest {
     private fun stop(context: Context, event: String) {
         val s = session ?: return
         record(s, event, null, sampleMemory = true)
-        // Every reader is gone by now, so any reader still in this dump is a leak.
+        // Every reader is gone by now, so any reader still in this dump is a leak - once decodes the
+        // last one started have finished. Image preparation runs on CPU that cancelling does not
+        // interrupt, and holds its viewer until it returns.
         val heapDump = s.output.path.removeSuffix(".csv") + ".hprof"
         writer.execute {
+            Thread.sleep(HEAP_DUMP_SETTLE_MILLIS)
+            Runtime.getRuntime().gc()
             runCatching { Debug.dumpHprofData(heapDump) }
                 .onFailure { logcat(LogPriority.ERROR, it) { "Soak test could not dump the heap" } }
         }
@@ -328,7 +331,11 @@ object ReaderSoakTest {
 
     private const val FINALIZE_WAIT_MILLIS = 5_000L
 
-    private val PAGE_TIMEOUT = 30.seconds
+    private const val HEAP_DUMP_SETTLE_MILLIS = 15_000L
 
-    private val LOAD_TIMEOUT = 60.seconds
+    // Millisecond constants, not Duration properties: lint's ExperimentalDetector crashes resolving a
+    // value-class property on this object ("No fir element was found for KtProperty").
+    private const val PAGE_TIMEOUT_MILLIS = 30_000L
+
+    private const val LOAD_TIMEOUT_MILLIS = 60_000L
 }
