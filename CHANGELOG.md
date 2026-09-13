@@ -19,6 +19,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   the default folder in shared storage once it is granted (mihonapp/mihon#3461).
 
 ### Fixed
+- An app update could not install when an earlier update's download was still in the cache: the
+  new release was resumed onto the old file, which came out the right size but was not a valid APK.
+  A download now only resumes an unfinished download of the same release.
 - Losing the network during downloads failed the chapters in progress, and nothing started them
   again. They are paused instead and carry on once the connection is back; downloads set to Wi-Fi
   only wait for Wi-Fi the same way (mihonapp/mihon#3500).

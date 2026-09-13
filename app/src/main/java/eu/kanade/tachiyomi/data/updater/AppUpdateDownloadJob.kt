@@ -168,15 +168,21 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
         }
 
         try {
-            // File where the apk will be saved.
-            val apkFile = File(context.externalCacheDir, "update.apk")
-
-            // KMK -->
-            network.downloadFileWithResume(url, apkFile, progressListener)
+            // KMK --> resume only a partial download of this same url: a leftover of an earlier release resumed by a
+            // newer one came out the right size with the old release's head, and would not install
+            val cacheDir = context.externalCacheDir ?: error("No external cache directory to download the update to")
+            AppUpdateFiles.clearOthers(cacheDir, url)
+            val partialFile = AppUpdateFiles.partial(cacheDir, url)
+            network.downloadFileWithResume(url, partialFile, progressListener)
             if (isStopped) {
                 cancel()
                 return@coroutineScope
             }
+
+            // File where the apk will be saved.
+            val apkFile = AppUpdateFiles.apk(cacheDir)
+            apkFile.delete()
+            check(partialFile.renameTo(apkFile)) { "Could not move the downloaded update into place" }
             // KMK <--
 
             notifier.cancel()
@@ -216,11 +222,15 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                 PackageInstaller.SessionParams.MODE_FULL_INSTALL,
             )
             installParams.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
+            // KMK --> the size up front and a synced write before the commit, as the extension installer does
+            installParams.setSize(file.length())
             val sessionId = packageInstaller.createSession(installParams)
             val session = packageInstaller.openSession(sessionId)
-            session.openWrite("package", 0, -1).use { packageInSession ->
+            session.openWrite("komikku.apk", 0, file.length()).use { packageInSession ->
                 data.copyTo(packageInSession)
+                session.fsync(packageInSession)
             }
+            // KMK <--
 
             val newIntent = Intent(context, AppUpdateBroadcast::class.java)
                 .setAction(PACKAGE_INSTALLED_ACTION)
