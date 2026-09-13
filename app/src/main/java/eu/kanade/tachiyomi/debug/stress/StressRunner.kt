@@ -87,7 +87,6 @@ object StressRunner {
     private var manifestFile: File? = null
     private val wedgedScenarios = ConcurrentHashMap.newKeySet<String>()
     private var crashRecorderInstalled = false
-    private var leakBridgeInstalled = false
 
     fun defaultScenarios(network: Boolean): List<String> =
         scenarios.filter { network || !it.needsNetwork }.map { it.name }
@@ -187,7 +186,7 @@ object StressRunner {
 
     private fun launchLocked(app: Application, manifest: StressManifest, dir: File, journal: StressJournal) {
         val selected = scenarios.filter { it.name in manifest.scenarios && (manifest.network || !it.needsNetwork) }
-        installLeakBridge()
+        installLeakBridge(dumpHeap = manifest.mode == StressMode.ONCE)
         _status.value = Status(manifest, dir, running = true, scenarios = selected.associate { it.name to ScenarioStatus() })
 
         runJob = scope.launch {
@@ -332,7 +331,8 @@ object StressRunner {
     private suspend fun heartbeat(journal: StressJournal, intervalMillis: Long) {
         while (true) {
             val lag = StressProbes.mainThreadLagMillis(intervalMillis)
-            journal.record("heartbeat", StressProbes.memory() + mapOf("mainLagMs" to lag, "mainBlocked" to (lag == null)))
+            val fields = mapOf("mainLagMs" to lag, "mainBlocked" to (lag == null), "retainedObjects" to retainedObjects())
+            journal.record("heartbeat", StressProbes.memory() + fields)
             delay(intervalMillis)
         }
     }
@@ -362,18 +362,27 @@ object StressRunner {
     }
 
     /** LeakCanary only exists in debug builds, so its bridge is found by name and simply absent elsewhere. */
-    private fun installLeakBridge() {
-        if (leakBridgeInstalled) return
-        leakBridgeInstalled = true
+    private val leakBridge: Class<*>? by lazy {
+        runCatching { Class.forName("eu.kanade.tachiyomi.debug.stress.LeakCanaryStressBridge") }.getOrNull()
+    }
+
+    /**
+     * Long runs skip LeakCanary's heap dumps: each is analysed inside the app, which took hundreds of megabytes every
+     * few minutes and buried what the app itself holds. Retained objects are still counted in every heartbeat.
+     */
+    private fun installLeakBridge(dumpHeap: Boolean) {
         val onRecord: (Map<String, Any?>) -> Unit = { record ->
             journal?.record(record["kind"] as String, record - "kind")
         }
         runCatching {
-            Class.forName("eu.kanade.tachiyomi.debug.stress.LeakCanaryStressBridge")
-                .getMethod("install", Function1::class.java)
-                .invoke(null, onRecord)
+            leakBridge?.getMethod("install", Function1::class.java, Boolean::class.javaPrimitiveType)
+                ?.invoke(null, onRecord, dumpHeap)
         }
     }
+
+    /** Objects LeakCanary watches that should have been collected by now; null without LeakCanary. */
+    private fun retainedObjects(): Int? =
+        runCatching { leakBridge?.getMethod("retainedObjects")?.invoke(null) as Int? }.getOrNull()
 
     /** Journals every exit the system recorded for the app since the run's last check. Returns the newest one's time. */
     private fun recordExits(app: Application, journal: StressJournal, manifest: StressManifest): Long {
