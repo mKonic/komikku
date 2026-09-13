@@ -232,7 +232,9 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
 
         // KMK -->
         // Check if specific manga IDs are provided for targeted update
-        val targetMangaIds = inputData.getLongArray(KEY_MANGA_IDS)?.toSet()
+        val targetMangaIds = LibraryUpdateSelection.nameIn(tags)?.let {
+            LibraryUpdateSelection.read(LibraryUpdateSelection.dir(context), it)
+        }
         if (targetMangaIds != null) {
             // Filter to only the specified manga IDs
             mangaToUpdate = libraryManga
@@ -740,13 +742,6 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
         const val KEY_GROUP_EXTRA = "group_extra"
         // SY <--
 
-        // KMK -->
-        /**
-         * Key for specific manga IDs to update.
-         */
-        private const val KEY_MANGA_IDS = "manga_ids"
-        // KMK <--
-
         fun setupTask(
             context: Context,
             prefInterval: Int? = null,
@@ -799,6 +794,8 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
             }
         }
 
+        // KMK: one start at a time, so none prunes the selection of another that is not queued yet
+        @Synchronized
         fun startNow(
             context: Context,
             category: Category? = null,
@@ -825,10 +822,16 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                 KEY_GROUP to group,
                 KEY_GROUP_EXTRA to groupExtra,
                 // SY <--
-                // KMK -->
-                KEY_MANGA_IDS to mangaIds?.toLongArray(),
-                // KMK <--
             )
+
+            // KMK --> a selection goes in a file named by a tag, since work input data holds only about 1,270 ids
+            val selectionTag = mangaIds?.let { ids ->
+                val dir = LibraryUpdateSelection.dir(context)
+                val pending = wm.getWorkInfosByTag(TAG).get().filterNot { it.state.isFinished }
+                LibraryUpdateSelection.prune(dir, pending.flatMap { it.tags })
+                LibraryUpdateSelection.tag(LibraryUpdateSelection.write(dir, ids))
+            }
+            // KMK <--
 
             val syncPreferences: SyncPreferences = Injekt.get()
 
@@ -849,20 +852,30 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                 val libraryUpdateJob = OneTimeWorkRequestBuilder<LibraryUpdateJob>()
                     .addTag(TAG)
                     .addTag(WORK_NAME_MANUAL)
+                    // KMK -->
+                    .apply { selectionTag?.let { addTag(it) } }
+                    // KMK <--
                     .setInputData(inputData)
                     .build()
 
                 wm.beginUniqueWork(WORK_NAME_MANUAL, ExistingWorkPolicy.KEEP, syncDataJob)
                     .then(libraryUpdateJob)
                     .enqueue()
+                    // KMK: waited on, so the next start sees this selection as queued
+                    .result.get()
             } else {
                 val request = OneTimeWorkRequestBuilder<LibraryUpdateJob>()
                     .addTag(TAG)
                     .addTag(WORK_NAME_MANUAL)
+                    // KMK -->
+                    .apply { selectionTag?.let { addTag(it) } }
+                    // KMK <--
                     .setInputData(inputData)
                     .build()
 
                 wm.enqueueUniqueWork(WORK_NAME_MANUAL, ExistingWorkPolicy.KEEP, request)
+                    // KMK: waited on, so the next start sees this selection as queued
+                    .result.get()
             }
 
             return true
