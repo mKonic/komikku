@@ -80,28 +80,17 @@ class GetApplicationRelease(
         versionName: String,
         versionTag: String,
     ): Boolean {
-        // Removes prefixes like "r" or "v"
-        val newVersion = versionTag.replace("[^\\d.]".toRegex(), "")
         return if (isPreview) {
             // Preview builds: based on releases in "komikku-app/komikku-preview" repo
             // tagged as something like "r1234"
-            newVersion.toInt() > commitCount
+            versionTag.replace("[^\\d.]".toRegex(), "").toInt() > commitCount
         } else {
-            // Release builds: based on releases in "komikku-app/komikku" repo
-            // tagged as something like "v0.1.2"
-            val oldVersion = versionName.replace("[^\\d.]".toRegex(), "")
-
-            val newSemVer = newVersion.split(".").map { it.toInt() }
-            val oldSemVer = oldVersion.split(".").map { it.toInt() }
-
-            oldSemVer.mapIndexed { index, i ->
-                if (newSemVer[index] > i) {
-                    return true
-                }
-                if (newSemVer[index] < i) return false
-            }
-
-            false
+            // Release builds: tagged as semver, "v1.4.0" or "v1.5.0-rc.1".
+            // KMK --> semver order, so a pre-release ranks below its release and a number can be any size
+            val new = SemVer.parse(versionTag) ?: return false
+            val current = SemVer.parse(versionName) ?: return false
+            new > current
+            // KMK <--
         }
     }
 
