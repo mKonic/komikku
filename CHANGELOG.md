@@ -11,6 +11,12 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Fixed
+- Creating or restoring a backup could fail at random with "Unsupported protobuf wire type". Reading
+  a backup's categories and settings stopped short whenever they crossed a read buffer, which the
+  streaming backups in v1.5.0 made possible.
+- Refreshing a library selection of more than about 1,270 entries crashed the app, because the
+  selection did not fit in the update job's input data.
 
 ## [v1.5.0] - 2026-09-13
 ### Added
