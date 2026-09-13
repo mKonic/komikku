@@ -24,3 +24,6 @@ app/standard/preview/*
 
 # Locally built release artifacts (scripts/release.sh)
 /dist/
+
+# Local AVD checks, run by hand and kept out of the repo for now
+/local-tests/
