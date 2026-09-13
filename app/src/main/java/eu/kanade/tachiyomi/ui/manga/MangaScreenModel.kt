@@ -449,10 +449,6 @@ class MangaScreenModel(
             val meta = getFlatMetadata.await(mangaId)
             // SY <--
 
-            if (!manga.favorite) {
-                setMangaDefaultChapterFlags.await(manga)
-            }
-
             val needRefreshInfo = !manga.initialized
             val needRefreshChapter = chapters.isEmpty()
 
@@ -498,6 +494,11 @@ class MangaScreenModel(
 
             // Start observe tracking since it only needs mangaId
             observeTrackers()
+
+            if (!manga.favorite) {
+                // After the first state: the write re-emits the manga and would hold up showing it
+                setMangaDefaultChapterFlags.await(manga)
+            }
 
             // Fetch info-chapters when needed
             if (screenModelScope.isActive) {
