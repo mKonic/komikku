@@ -30,6 +30,7 @@ import tachiyomi.core.common.util.system.logcat
 import java.io.File
 import java.io.RandomAccessFile
 import java.net.HttpURLConnection.HTTP_PARTIAL
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.math.pow
 import kotlin.random.Random
@@ -95,6 +96,14 @@ import kotlin.random.Random
         private var registered = false
 
         /**
+         * Closing a secure connection sends its close alert, which Android refuses on the main thread
+         * (NetworkOnMainThreadException), and the process lifecycle calls back on it.
+         */
+        private val evictor = Executors.newSingleThreadExecutor { Thread(it, "ConnectionPoolEvictor").apply { isDaemon = true } }
+
+        private fun evictAll() = evictor.execute { pool.evictAll() }
+
+        /**
          * Idle keep-alive connections die while the app is backgrounded or the network changes, and
          * a request handed one hangs until the 5-minute idle reap. Drop them whenever either happens.
          * Every client shares [pool], the DNS-over-HTTPS resolvers included.
@@ -108,26 +117,26 @@ import kotlin.random.Random
                 object : ConnectivityManager.NetworkCallback() {
                     private var wasOnline = false
 
-                    override fun onAvailable(network: Network) = pool.evictAll()
+                    override fun onAvailable(network: Network) = evictAll()
 
                     override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
                         val isOnline = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                         if (isOnline != wasOnline) {
                             wasOnline = isOnline
-                            pool.evictAll()
+                            evictAll()
                         }
                     }
 
-                    override fun onLost(network: Network) = pool.evictAll()
+                    override fun onLost(network: Network) = evictAll()
 
-                    override fun onUnavailable() = pool.evictAll()
+                    override fun onUnavailable() = evictAll()
                 },
             )
             // Lifecycle observers may only be added on the main thread, and this can be built off it.
             Handler(Looper.getMainLooper()).post {
                 ProcessLifecycleOwner.get().lifecycle.addObserver(
                     LifecycleEventObserver { _, event ->
-                        if (event == Lifecycle.Event.ON_START) pool.evictAll()
+                        if (event == Lifecycle.Event.ON_START) evictAll()
                     },
                 )
             }
