@@ -11,6 +11,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+
+## [v1.4.0] - 2026-09-13
 ### Added
 - WebGPU reader settings for the continuous modes: minimum page width, the gap between pages in
   continuous vertical, and disabling zoom out (mihonapp/mihon#3933). The width preference already
@@ -72,13 +74,18 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   stopped mid-install (mihonapp/mihon#3417).
 - Requests hung after returning from the background or changing networks, on pooled connections that
   had died meanwhile. Idle connections are dropped on both (mihonapp/mihon#3733).
+- The update check orders versions as semver: a pre-release no longer counts as newer than its release,
+  and a version number of any size compares correctly.
 
 ### Improved
 - Cancelling an extension install takes effect before the call returns, instead of on a later
   main-thread broadcast (mihonapp/mihon#3226).
+- In dual page view the WebGPU reader scales the shorter page up to the taller one's height
+  (mpreg-ca/webgpuviewer).
+- Crash logs name the WebGPU viewer build next to the app version.
 
 ### Other
-- webgpuviewer 41, imagedecoder 13, Compose BOM 2026.09.00, material 1.14.0, markdown renderer 0.45.0,
+- webgpuviewer 1.0.0 (this fork's own release line), imagedecoder 13, Compose BOM 2026.09.00, material 1.14.0, markdown renderer 0.45.0,
   kim 0.40.0.
 - imagedecoder 13 hands HDR sources back as half-floats; covers and fallback decodes outside the
   WebGPU renderer clip them to 8 bits rather than copying the bytes as if they were 8-bit.
