@@ -11,6 +11,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+
+## [v1.5.0] - 2026-09-13
 ### Added
 - Local source filters for author, artist, genre and publishing status, read from each entry's
   ComicInfo.xml or details.json. Genres take a comma-separated list that all have to match, and a
