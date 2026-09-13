@@ -9,6 +9,10 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.protobuf.ProtoBuf
 import okio.Buffer
+import okio.BufferedSource
+import okio.Source
+import okio.Timeout
+import okio.buffer
 import org.junit.jupiter.api.Test
 
 /**
@@ -37,16 +41,33 @@ class BackupStreamTest {
 
     private fun Buffer.writeRest() = apply { write(parser.encodeToByteArray(Backup.serializer(), rest)) }
 
-    private fun titlesIn(bytes: ByteArray): List<String> {
+    /** Hands over a few bytes per read, the way a gzip or file stream does, instead of everything at once. */
+    private fun trickle(bytes: ByteArray): BufferedSource {
+        val data = Buffer().write(bytes)
+        return object : Source {
+            override fun read(sink: Buffer, byteCount: Long) =
+                if (data.exhausted()) -1L else data.read(sink, minOf(byteCount, 3L))
+
+            override fun timeout() = Timeout.NONE
+
+            override fun close() = Unit
+        }.buffer()
+    }
+
+    private fun titlesIn(bytes: ByteArray) = titlesIn(Buffer().write(bytes))
+
+    private fun titlesIn(source: BufferedSource): List<String> {
         val titles = mutableListOf<String>()
-        BackupStream.forEachManga(Buffer().write(bytes)) {
+        BackupStream.forEachManga(source) {
             titles += parser.decodeFromByteArray(BackupManga.serializer(), it).title
         }
         return titles
     }
 
-    private fun checkMetadata(bytes: ByteArray) {
-        val (count, backup) = BackupStream.readMetadata(Buffer().write(bytes), parser)
+    private fun checkMetadata(bytes: ByteArray) = checkMetadata(Buffer().write(bytes))
+
+    private fun checkMetadata(source: BufferedSource) {
+        val (count, backup) = BackupStream.readMetadata(source, parser)
         count shouldBe entries.size
         backup.backupManga.shouldBeEmpty()
         backup.backupCategories.map { it.name } shouldContainExactly listOf("Reading")
@@ -84,6 +105,14 @@ class BackupStreamTest {
         val (count, backup) = BackupStream.readMetadata(Buffer().write(bytes), parser)
         count shouldBe entries.size
         backup.backupCategories.shouldBeEmpty()
+    }
+
+    @Test
+    fun `reads a stream that hands over a few bytes at a time`() {
+        val bytes = Buffer().writeEntries().writeRest().readByteArray()
+
+        titlesIn(trickle(bytes)) shouldContainExactly listOf("Alpha", "Beta", "Gamma")
+        checkMetadata(trickle(bytes))
     }
 
     private fun Backup.copyWith(manga: List<BackupManga>) = Backup(

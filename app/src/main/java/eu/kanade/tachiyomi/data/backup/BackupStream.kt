@@ -80,8 +80,9 @@ internal object BackupStream {
         }
     }
 
+    /** [BufferedSource.read] stops at what is buffered, so a field crossing a buffer boundary needs readFully. */
     private fun copyOrSkip(source: BufferedSource, length: Long, sink: BufferedSink?) {
-        if (sink == null) source.skip(length) else source.read(sink.buffer, length).also { sink.emit() }
+        if (sink == null) source.skip(length) else source.readFully(sink.buffer, length).also { sink.emit() }
     }
 
     @PublishedApi
