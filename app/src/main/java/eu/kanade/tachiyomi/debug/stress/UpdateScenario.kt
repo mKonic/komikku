@@ -1,8 +1,10 @@
 package eu.kanade.tachiyomi.debug.stress
 
+import androidx.work.WorkInfo
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.manga.interactor.GetLibraryManga
 import tachiyomi.source.local.LocalSource
 import uy.kohesive.injekt.Injekt
@@ -11,7 +13,8 @@ import kotlin.system.measureTimeMillis
 
 /**
  * A library update over every entry it may reach: the local ones, or the whole library when the run allows the
- * network. It goes through the same job the app schedules, and waits for any update already going first.
+ * network. It goes through the same job the app schedules, waits for any update already going first, and passes only
+ * if the update it started succeeded: a job WorkManager could not build or that failed also just stops running.
  */
 object UpdateScenario : StressScenario {
     override val name = "update"
@@ -27,6 +30,7 @@ object UpdateScenario : StressScenario {
         if (entries.isEmpty()) throw StressSkip("no library entries it may update")
 
         LibraryUpdateJob.isActiveFlow(app).first { !it }
+        val earlier = withIOContext { LibraryUpdateJob.manualUpdates(app).map { it.id }.toSet() }
         check(LibraryUpdateJob.startNow(app, mangaIds = entries.map { it.id })) { "the library update did not start" }
         context.step("started", mapOf("entries" to entries.size))
 
@@ -43,6 +47,12 @@ object UpdateScenario : StressScenario {
         if (!finished) {
             LibraryUpdateJob.stop(app)
             error("the library update of ${entries.size} entries was still going after ${limit / 1000} s")
+        }
+
+        val started = withIOContext { LibraryUpdateJob.manualUpdates(app).filterNot { it.id in earlier } }
+        check(started.isNotEmpty()) { "the library update it started left no record in WorkManager" }
+        started.firstOrNull { it.state != WorkInfo.State.SUCCEEDED }?.let {
+            error("the library update of ${entries.size} entries ended ${it.state} after $ms ms")
         }
         context.step("updated", mapOf("entries" to entries.size, "ms" to ms))
     }

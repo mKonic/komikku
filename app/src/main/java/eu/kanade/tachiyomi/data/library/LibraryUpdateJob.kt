@@ -888,6 +888,11 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
         fun isActiveFlow(context: Context): Flow<Boolean> {
             return context.workManager.getWorkInfosByTagFlow(TAG).map { infos -> infos.any { !it.state.isFinished } }
         }
+
+        /** Every manual library update WorkManager still remembers, with how it ended if it has. */
+        fun manualUpdates(context: Context): List<WorkInfo> {
+            return context.workManager.getWorkInfosByTag(WORK_NAME_MANUAL).get()
+        }
         // KMK <--
 
         fun stop(context: Context) {
