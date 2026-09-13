@@ -48,7 +48,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Semaphore
@@ -880,6 +882,13 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
 
             return true
         }
+
+        // KMK --> for the debug stress run, which waits for the update it started to end
+        /** Whether a library update, automatic or not, is queued or running. */
+        fun isActiveFlow(context: Context): Flow<Boolean> {
+            return context.workManager.getWorkInfosByTagFlow(TAG).map { infos -> infos.any { !it.state.isFinished } }
+        }
+        // KMK <--
 
         fun stop(context: Context) {
             val wm = context.workManager

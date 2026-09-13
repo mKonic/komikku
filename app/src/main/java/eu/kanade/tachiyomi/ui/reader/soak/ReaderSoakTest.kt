@@ -16,6 +16,9 @@ import eu.kanade.tachiyomi.util.system.toast
 import exh.util.defaultReaderType
 import exh.util.mangaType
 import kotlinx.coroutines.android.awaitFrame
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -63,7 +66,7 @@ object ReaderSoakTest {
 
     data class Target(val mangaId: Long, val chapterId: Long)
 
-    private class Session(val targets: List<Target>, val output: File) {
+    private class Session(val targets: List<Target>, val output: File, val heapDump: Boolean) {
         var next = 0
         var reading = false
         var advancing = false
@@ -82,6 +85,21 @@ object ReaderSoakTest {
     }
 
     val isActive: Boolean get() = session != null
+
+    private val _ends = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
+    /** How each session ended: "done", "stopped", "launch_failed", or "empty" and "busy" when it never began. */
+    val ends: SharedFlow<String> = _ends.asSharedFlow()
+
+    /** When the running session last recorded a step, for a caller watching that it still moves. */
+    @Volatile
+    var lastStepAt: Long = 0
+        private set
+
+    /** The CSV of the newest session. */
+    @Volatile
+    var lastOutput: File? = null
+        private set
 
     /**
      * One series for every reading mode the library uses, from installed sources, taking the most
@@ -138,8 +156,11 @@ object ReaderSoakTest {
         withUIContext { context.toast("Soak test: added $added local series") }
     }
 
-    /** Reads the first [chaptersPerSeries] chapters of each series in turn, [rounds] times over. */
-    suspend fun start(context: Context, mangaIds: List<Long>, chaptersPerSeries: Int, rounds: Int) {
+    /**
+     * Reads the first [chaptersPerSeries] chapters of each series in turn, [rounds] times over. [heapDump] dumps the
+     * heap once the readers are gone, for a leak check.
+     */
+    suspend fun start(context: Context, mangaIds: List<Long>, chaptersPerSeries: Int, rounds: Int, heapDump: Boolean = true) {
         val library = Injekt.get<GetLibraryManga>().await().associate { it.id to it.manga }
         val getChapters = Injekt.get<GetChaptersByMangaId>()
         val round = mangaIds.flatMap { id ->
@@ -149,20 +170,25 @@ object ReaderSoakTest {
                 .take(chaptersPerSeries)
                 .map { Target(id, it.id) }
         }
-        withUIContext { begin(context, List(rounds) { round }.flatten()) }
+        withUIContext { begin(context, List(rounds) { round }.flatten(), heapDump) }
     }
 
-    private fun begin(context: Context, targets: List<Target>) {
+    private fun begin(context: Context, targets: List<Target>, heapDump: Boolean) {
         if (targets.isEmpty()) {
             context.toast("Soak test: no chapters to read")
+            _ends.tryEmit("empty")
             return
         }
-        if (session != null) return
+        if (session != null) {
+            _ends.tryEmit("busy")
+            return
+        }
         val dir = context.getExternalFilesDir(null) ?: context.filesDir
         val stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
         val output = File(dir, "soak-$stamp.csv")
-        val s = Session(targets, output)
+        val s = Session(targets, output, heapDump)
         session = s
+        lastOutput = output
         writer.execute { runCatching { output.writeText(HEADER) } }
         record(s, "start", null, sampleMemory = true)
         openNext(context.applicationContext)
@@ -260,17 +286,20 @@ object ReaderSoakTest {
     private fun stop(context: Context, event: String) {
         val s = session ?: return
         record(s, event, null, sampleMemory = true)
-        // Every reader is gone by now, so any reader still in this dump is a leak - once decodes the
-        // last one started have finished. Image preparation runs on CPU that cancelling does not
-        // interrupt, and holds its viewer until it returns.
-        val heapDump = s.output.path.removeSuffix(".csv") + ".hprof"
-        writer.execute {
-            Thread.sleep(HEAP_DUMP_SETTLE_MILLIS)
-            Runtime.getRuntime().gc()
-            runCatching { Debug.dumpHprofData(heapDump) }
-                .onFailure { logcat(LogPriority.ERROR, it) { "Soak test could not dump the heap" } }
+        if (s.heapDump) {
+            // Every reader is gone by now, so any reader still in this dump is a leak - once decodes the
+            // last one started have finished. Image preparation runs on CPU that cancelling does not
+            // interrupt, and holds its viewer until it returns.
+            val heapDump = s.output.path.removeSuffix(".csv") + ".hprof"
+            writer.execute {
+                Thread.sleep(HEAP_DUMP_SETTLE_MILLIS)
+                Runtime.getRuntime().gc()
+                runCatching { Debug.dumpHprofData(heapDump) }
+                    .onFailure { logcat(LogPriority.ERROR, it) { "Soak test could not dump the heap" } }
+            }
         }
         session = null
+        _ends.tryEmit(event)
         context.toast("Soak test $event: ${s.output.absolutePath}")
     }
 
@@ -283,6 +312,7 @@ object ReaderSoakTest {
         sampleMemory: Boolean = false,
     ) {
         val time = LocalDateTime.now()
+        lastStepAt = System.currentTimeMillis()
         val chapter = s.next
         writer.execute {
             val memory = if (sampleMemory) sampleMemory() else List(MEMORY_COLUMNS) { "" }

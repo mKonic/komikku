@@ -83,6 +83,9 @@ import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.updater.AppUpdateChecker
 import eu.kanade.tachiyomi.data.updater.AppUpdateJob
+import eu.kanade.tachiyomi.debug.stress.StressHooks
+import eu.kanade.tachiyomi.debug.stress.StressMode
+import eu.kanade.tachiyomi.debug.stress.StressRunner
 import eu.kanade.tachiyomi.extension.api.ExtensionApi
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
@@ -267,6 +270,12 @@ class MainActivity : BaseActivity() {
             ) { navigator ->
                 LaunchedEffect(navigator) {
                     this@MainActivity.navigator = navigator
+                    // KMK --> an active stress run drives this screen stack, and carries on after the app restarts
+                    if (isDebugBuildType || isPreviewBuildType) {
+                        StressHooks.attach(this@MainActivity, navigator)
+                        StressRunner.resume(this@MainActivity)
+                    }
+                    // KMK <--
 
                     if (isLaunch) {
                         // Set start screen
@@ -682,6 +691,29 @@ class MainActivity : BaseActivity() {
                 if (isDebugBuildType || isPreviewBuildType) {
                     lifecycleScope.launch { ReaderSoakTest.seedLocalSource(this@MainActivity) }
                 }
+                null
+            }
+            StressRunner.ACTION_START -> {
+                if (isDebugBuildType || isPreviewBuildType) {
+                    val network = intent.getBooleanExtra(StressRunner.EXTRA_NETWORK, false)
+                    val scenarios = intent.getStringExtra(StressRunner.EXTRA_SCENARIOS)
+                        ?.split(',')
+                        ?.map { it.trim() }
+                        ?.filter { it.isNotEmpty() }
+                        ?: StressRunner.defaultScenarios(network)
+                    val mode = intent.getStringExtra(StressRunner.EXTRA_MODE)
+                        ?.let { name -> StressMode.entries.firstOrNull { it.name.equals(name, ignoreCase = true) } }
+                        ?: StressMode.ONCE
+                    StressRunner.start(this, scenarios, mode, network, intent.getIntExtra(StressRunner.EXTRA_ROUNDS, 1))
+                }
+                null
+            }
+            StressRunner.ACTION_RESUME -> {
+                if (isDebugBuildType || isPreviewBuildType) StressRunner.resume(this)
+                null
+            }
+            StressRunner.ACTION_STOP -> {
+                if (isDebugBuildType || isPreviewBuildType) StressRunner.stop("stopped from an intent")
                 null
             }
             // KMK <--

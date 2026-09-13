@@ -45,6 +45,10 @@ class DebugInfoScreen : Screen() {
                         title = ReaderSoakTestScreen.TITLE,
                         onClick = { navigator.push(ReaderSoakTestScreen()) },
                     ).takeIf { BuildConfig.DEBUG || isPreviewBuildType },
+                    Preference.PreferenceItem.TextPreference(
+                        title = StressTestScreen.TITLE,
+                        onClick = { navigator.push(StressTestScreen()) },
+                    ).takeIf { BuildConfig.DEBUG || isPreviewBuildType },
                     // KMK <--
                     getAppInfoGroup(),
                     getDeviceInfoGroup(),

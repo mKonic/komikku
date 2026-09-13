@@ -55,6 +55,7 @@ import eu.kanade.tachiyomi.data.coil.TachiyomiImageDecoder
 import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
+import eu.kanade.tachiyomi.debug.stress.StressRunner
 import eu.kanade.tachiyomi.di.AppModule
 import eu.kanade.tachiyomi.di.PreferenceModule
 import eu.kanade.tachiyomi.di.SYPreferenceModule
@@ -124,6 +125,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         // KMK <--
 
         GlobalExceptionHandler.initialize(applicationContext, CrashActivity::class.java)
+
+        // KMK --> an active stress run takes this process as its next lifetime (debug and preview builds only)
+        if (isDebugBuildType || isPreviewBuildType) StressRunner.onProcessStart(this)
+        // KMK <--
 
         // TLS 1.3 support for Android < 10
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
