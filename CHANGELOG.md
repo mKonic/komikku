@@ -11,6 +11,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+
+## [v1.5.1] - 2026-09-14
 ### Fixed
 - Creating or restoring a backup could fail at random with "Unsupported protobuf wire type". Reading
   a backup's categories and settings stopped short whenever they crossed a read buffer, which the
@@ -23,6 +25,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - The app could crash when brought back to the foreground (NetworkOnMainThreadException). Since
   v1.4.0 it drops idle connections at that moment, and closing a secure connection sends data,
   which Android does not allow on the main thread.
+- Coming back to the app after Android had closed it in the background crashed it if the About
+  screen was open.
 
 ## [v1.5.0] - 2026-09-13
 ### Added
