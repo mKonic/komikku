@@ -200,7 +200,7 @@ object CbzCrypto {
     }
 
     fun ArchiveReader.getCoverStream(): BufferedInputStream? {
-        this.getInputStream(DEFAULT_COVER_NAME)?.let { stream ->
+        this.getInputStream(DEFAULT_COVER_NAME)?.use { stream ->
             if (ImageUtil.isImage(DEFAULT_COVER_NAME) { stream }) {
                 return this.getInputStream(DEFAULT_COVER_NAME)?.buffered()
             }

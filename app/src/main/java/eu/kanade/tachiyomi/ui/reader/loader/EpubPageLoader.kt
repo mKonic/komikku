@@ -21,7 +21,8 @@ internal class EpubPageLoader(private val reader: EpubReader) : PageLoader() {
     }
 
     override suspend fun loadPage(page: ReaderPage) {
-        check(!isRecycled)
+        // KMK: callers launch this without a handler, so throwing on a recycled loader crashes the app
+        if (isRecycled) return
     }
 
     override fun recycle() {

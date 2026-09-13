@@ -11,6 +11,14 @@ class ArchiveReader(pfd: ParcelFileDescriptor) : Closeable {
     val size = pfd.statSize
     val address = Os.mmap(0, size, OsConstants.PROT_READ, OsConstants.MAP_PRIVATE, pfd.fileDescriptor, 0)
 
+    // KMK -->
+    // Streams read straight from the mapping, so it stays mapped until the reader and its last open stream are
+    // both closed. A page still decoding when its chapter's loader recycles would otherwise read unmapped memory.
+    private val lock = Any()
+    private var openStreams = 0
+    private var closed = false
+    // KMK <--
+
     // SY -->
     var encrypted: Boolean = false
         private set
@@ -23,16 +31,14 @@ class ArchiveReader(pfd: ParcelFileDescriptor) : Closeable {
     }
     // SY <--
 
-    inline fun <T> useEntries(block: (Sequence<ArchiveEntry>) -> T): T = ArchiveInputStream(
-        address,
-        size,
+    inline fun <T> useEntries(block: (Sequence<ArchiveEntry>) -> T): T = openStream(
         // SY -->
         encrypted,
         // SY <--
     ).use { block(generateSequence { it.getNextEntry() }) }
 
     fun getInputStream(entryName: String): InputStream? {
-        val archive = ArchiveInputStream(address, size, /* SY --> */ encrypted /* SY <-- */)
+        val archive = openStream(/* SY --> */ encrypted /* SY <-- */)
         try {
             while (true) {
                 val entry = archive.getNextEntry() ?: break
@@ -48,9 +54,28 @@ class ArchiveReader(pfd: ParcelFileDescriptor) : Closeable {
         return null
     }
 
+    // KMK -->
+    @PublishedApi
+    internal fun openStream(encrypted: Boolean): ArchiveInputStream {
+        synchronized(lock) {
+            check(!closed) { "Archive is closed" }
+            openStreams++
+        }
+        return ArchiveInputStream(address, size, encrypted, onClose = ::releaseStream)
+    }
+
+    private fun releaseStream() {
+        val unmap = synchronized(lock) {
+            openStreams--
+            closed && openStreams == 0
+        }
+        if (unmap) Os.munmap(address, size)
+    }
+    // KMK <--
+
     // SY -->
     private fun checkEncryptionStatus() {
-        val archive = ArchiveInputStream(address, size, false)
+        val archive = openStream(false)
         try {
             while (true) {
                 val entry = archive.getNextEntry() ?: break
@@ -84,6 +109,13 @@ class ArchiveReader(pfd: ParcelFileDescriptor) : Closeable {
     // SY <--
 
     override fun close() {
-        Os.munmap(address, size)
+        // KMK -->
+        val unmap = synchronized(lock) {
+            if (closed) return
+            closed = true
+            openStreams == 0
+        }
+        if (unmap) Os.munmap(address, size)
+        // KMK <--
     }
 }

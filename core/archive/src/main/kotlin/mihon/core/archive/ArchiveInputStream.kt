@@ -14,6 +14,9 @@ class ArchiveInputStream(
     // SY -->
     encrypted: Boolean,
     // SY <--
+    // KMK -->
+    private val onClose: (() -> Unit)? = null,
+    // KMK <--
 ) : InputStream() {
     private val lock = Any()
 
@@ -65,6 +68,9 @@ class ArchiveInputStream(
         }
 
         Archive.readFree(archive)
+        // KMK -->
+        onClose?.invoke()
+        // KMK <--
     }
 
     fun getNextEntry(): MihonArchiveEntry? {
