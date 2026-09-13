@@ -15,6 +15,7 @@ import mihon.domain.manga.model.toDomainManga
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.library.model.LibrarySort
 import tachiyomi.domain.library.service.LibraryPreferences
+import tachiyomi.domain.manga.interactor.GetLibraryManga
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.storage.service.StorageManager
@@ -22,13 +23,15 @@ import tachiyomi.source.local.LocalSource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.ByteArrayOutputStream
-import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.system.measureTimeMillis
 
 /**
- * A library that grows every pass, sorted and searched from the library screen. It grows by [SERIES_PER_PASS] local
- * series a pass until the share of free storage it may use is full, so how far it gets depends on the device, not
- * on a number picked here. The other scenarios read, back up and update whatever it has built.
+ * A library sorted and searched from the library screen, then resized for the next pass. It grows by
+ * [SERIES_PER_PASS] local series while they fit in the share of free storage it may use and the collected Java heap
+ * stays under [HEAP_SHARE] of its limit, and gives a pass's worth back when the heap is over it. How big it gets
+ * depends on the device, and an eternal run settles just under what the process can hold instead of running out of
+ * memory every few minutes, which hides slower problems. The other scenarios read, back up and update what it built.
  */
 object LibraryScenario : StressScenario {
     override val name = "library"
@@ -37,6 +40,9 @@ object LibraryScenario : StressScenario {
     private const val SERIES_PER_PASS = 250
     private const val STORAGE_SHARE = 0.05
     private const val BYTES_PER_SERIES_ESTIMATE = 16 * 1024L
+
+    /** Backups and restores copy the whole library, so the steady state leaves room for a second copy. */
+    private const val HEAP_SHARE = 0.5
 
     private val sortTypes = listOf(
         LibrarySort.Type.Alphabetical,
@@ -56,16 +62,22 @@ object LibraryScenario : StressScenario {
         val localDir = Injekt.get<StorageManager>().getLocalSourceDirectory()
             ?: throw StressSkip("no storage folder is set")
 
-        val budget = seriesBudget(localDir)
-        val target = min(SERIES_PER_PASS.toLong() * (iteration + 1), budget).toInt()
-        val existing = withIOContext { localDir.listFiles().orEmpty().count { it.name.orEmpty().startsWith(PREFIX) } }
-        if (existing < target) {
-            generate(context, localDir, existing, target)
-            addToLibrary(context)
-        }
-        context.step("size", mapOf("series" to maxOf(existing, target), "budget" to budget))
-
         exercise(context)
+
+        val budget = seriesBudget(localDir)
+        val existing = withIOContext { localDir.listFiles().orEmpty().count { it.name.orEmpty().startsWith(PREFIX) } }
+        val heap = heapShare()
+        val series = when {
+            heap > HEAP_SHARE && existing > SERIES_PER_PASS -> existing - shrink(context, localDir, SERIES_PER_PASS)
+            heap <= HEAP_SHARE && existing < budget -> {
+                val target = minOf(existing + SERIES_PER_PASS.toLong(), budget).toInt()
+                generate(context, localDir, existing, target)
+                addToLibrary(context)
+                target
+            }
+            else -> existing
+        }
+        context.step("size", mapOf("series" to series, "budget" to budget, "heapPercent" to (heap * 100).roundToInt()))
     }
 
     /** How many generated series fit in the share of free storage the scenario may take. */
@@ -73,6 +85,13 @@ object LibraryScenario : StressScenario {
         val free = DiskUtil.getAvailableStorageSpace(dir)
         if (free <= 0) return SERIES_PER_PASS.toLong()
         return (free * STORAGE_SHARE / BYTES_PER_SERIES_ESTIMATE).toLong().coerceAtLeast(SERIES_PER_PASS.toLong())
+    }
+
+    /** Java heap in use once collected, as a share of the most this process may have. */
+    private fun heapShare(): Double {
+        val runtime = Runtime.getRuntime()
+        runtime.gc()
+        return (runtime.totalMemory() - runtime.freeMemory()).toDouble() / runtime.maxMemory()
     }
 
     private suspend fun generate(context: StressContext, localDir: UniFile, from: Int, until: Int) = withIOContext {
@@ -112,6 +131,27 @@ object LibraryScenario : StressScenario {
             if (index % 25 == 0) context.alive()
         }
         context.step("added", mapOf("series" to added.size))
+    }
+
+    /**
+     * Takes the newest [count] generated series out of the library and deletes their folders, so the next generated
+     * series carry on from the highest one left. Returns how many went.
+     */
+    private suspend fun shrink(context: StressContext, localDir: UniFile, count: Int): Int = withIOContext {
+        val updateManga = Injekt.get<UpdateManga>()
+        val newest = Injekt.get<GetLibraryManga>().await()
+            .map { it.manga }
+            .filter { it.source == LocalSource.ID && it.url.startsWith(PREFIX) }
+            .distinctBy { it.id }
+            .sortedByDescending { it.url }
+            .take(count)
+        newest.forEachIndexed { index, manga ->
+            updateManga.awaitUpdateFavorite(manga.id, false)
+            localDir.findFile(manga.url)?.delete()
+            if (index % 25 == 0) context.alive()
+        }
+        context.step("removed", mapOf("series" to newest.size))
+        newest.size
     }
 
     /** Every sort, both ways, then searches, each timed until the library screen has settled. */
