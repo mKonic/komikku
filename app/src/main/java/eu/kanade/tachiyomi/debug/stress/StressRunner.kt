@@ -55,6 +55,7 @@ object StressRunner {
         ScreenChurnScenario,
         ReaderScenario,
         LibraryScenario,
+        LocalSearchScenario,
         BackupScenario,
         UpdateScenario,
         SearchScenario,
