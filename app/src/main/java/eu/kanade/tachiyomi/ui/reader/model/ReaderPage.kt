@@ -1,6 +1,9 @@
 package eu.kanade.tachiyomi.ui.reader.model
 
 import eu.kanade.tachiyomi.source.model.Page
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.io.InputStream
 
 open class ReaderPage(
@@ -25,4 +28,25 @@ open class ReaderPage(
             field = value
             if (value) shiftedPage = false
         }
+
+    // KMK -->
+    private val _displayState = MutableStateFlow(DisplayState.Pending)
+
+    /**
+     * Whether a viewer has this page's image ready on screen, or has given up on it. [status] only says
+     * the bytes arrived; this is set once they decoded (or failed to), which is what the soak test
+     * waits on before turning the page.
+     */
+    val displayState: StateFlow<DisplayState> = _displayState.asStateFlow()
+
+    fun markDisplayed() {
+        _displayState.value = DisplayState.Displayed
+    }
+
+    fun markDisplayFailed() {
+        _displayState.value = DisplayState.Failed
+    }
+
+    enum class DisplayState { Pending, Displayed, Failed }
+    // KMK <--
 }

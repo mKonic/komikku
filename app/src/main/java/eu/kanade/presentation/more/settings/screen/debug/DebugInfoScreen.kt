@@ -13,8 +13,10 @@ import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.PreferenceScaffold
 import eu.kanade.presentation.more.settings.screen.about.AboutScreen
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.util.system.DeviceUtil
 import eu.kanade.tachiyomi.util.system.WebViewUtil
+import eu.kanade.tachiyomi.util.system.isPreviewBuildType
 import kotlinx.collections.immutable.mutate
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.guava.await
@@ -29,7 +31,7 @@ class DebugInfoScreen : Screen() {
             titleRes = MR.strings.pref_debug_info,
             onBackPressed = navigator::pop,
             itemsProvider = {
-                listOf(
+                listOfNotNull(
                     Preference.PreferenceItem.TextPreference(
                         title = WorkerInfoScreen.TITLE,
                         onClick = { navigator.push(WorkerInfoScreen()) },
@@ -38,6 +40,12 @@ class DebugInfoScreen : Screen() {
                         title = BackupSchemaScreen.TITLE,
                         onClick = { navigator.push(BackupSchemaScreen()) },
                     ),
+                    // KMK --> a development tool, so kept out of release builds
+                    Preference.PreferenceItem.TextPreference(
+                        title = ReaderSoakTestScreen.TITLE,
+                        onClick = { navigator.push(ReaderSoakTestScreen()) },
+                    ).takeIf { BuildConfig.DEBUG || isPreviewBuildType },
+                    // KMK <--
                     getAppInfoGroup(),
                     getDeviceInfoGroup(),
                 )

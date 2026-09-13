@@ -98,6 +98,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsScreenModel
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
+import eu.kanade.tachiyomi.ui.reader.soak.ReaderSoakTest
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderProgressIndicator
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerViewer
@@ -282,6 +283,12 @@ class ReaderActivity : BaseActivity() {
             .filterNotNull()
             .onEach(::setChapters)
             .launchIn(lifecycleScope)
+
+        // KMK -->
+        if (intent.getBooleanExtra(ReaderSoakTest.EXTRA_SOAK, false) && ReaderSoakTest.isActive) {
+            lifecycleScope.launch { ReaderSoakTest.drive(this@ReaderActivity) }
+        }
+        // KMK <--
 
         viewModel.eventFlow
             .onEach { event ->
@@ -527,6 +534,9 @@ class ReaderActivity : BaseActivity() {
         config = null
         menuToggleToast?.cancel()
         readingModeToast?.cancel()
+        // KMK -->
+        ReaderSoakTest.onReaderDestroyed(this)
+        // KMK <--
     }
 
     override fun onPause() {

@@ -253,6 +253,9 @@ class WebtoonPageHolder(
     private fun setError(error: Throwable?) {
         progressContainer.isVisible = false
         initErrorLayout(error)
+        // KMK -->
+        page?.markDisplayFailed()
+        // KMK <--
     }
 
     /**
@@ -261,6 +264,9 @@ class WebtoonPageHolder(
     private fun onImageDecoded() {
         progressContainer.isVisible = false
         removeErrorLayout()
+        // KMK -->
+        page?.markDisplayed()
+        // KMK <--
     }
 
     /**

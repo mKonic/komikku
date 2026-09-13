@@ -215,6 +215,9 @@ open class WebGpuViewer(
                                 val oldImagePage = page.imagePage
                                 val errorMessage = e.message ?: "Failed to decode image"
                                 page.imagePage = ErrorPage(errorMessage, page.spreadPosition)
+                                // KMK -->
+                                page.page.markDisplayFailed()
+                                // KMK <--
                                 page.state = PageState.IDLE
                                 cleanupImage(oldImagePage)
                                 page.imagePage.invalidate()
@@ -1244,6 +1247,9 @@ open class WebGpuViewer(
                 if (pageInCache(page) && !page.isDecoded && !page.imagePage.destroyed) {
                     val oldImagePage = page.imagePage
                     page.imagePage = imagePage
+                    // KMK -->
+                    page.page.markDisplayed()
+                    // KMK <--
                     noteIfLone(page)
                     page.state = PageState.IDLE
                     cleanupImage(oldImagePage)

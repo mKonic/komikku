@@ -425,11 +425,19 @@ class PagerPageHolder(
     private fun setError(error: Throwable?) {
         progressIndicator?.hide()
         showErrorLayout(error)
+        // KMK -->
+        page.markDisplayFailed()
+        extraPage?.markDisplayFailed()
+        // KMK <--
     }
 
     override fun onImageLoaded() {
         super.onImageLoaded()
         progressIndicator?.hide()
+        // KMK -->
+        page.markDisplayed()
+        extraPage?.markDisplayed()
+        // KMK <--
     }
 
     /**
