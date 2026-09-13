@@ -11,6 +11,24 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Fixed
+- Leaving a CBZ or EPUB chapter while its pages were still loading could crash the app: pages went on
+  reading the archive after it was unmapped, and a page load starting as the chapter closed threw. The
+  archive now stays mapped until its last open page is done (mihonapp/mihon#3092).
+- Global search skipped the local source unless the "other" language was enabled (mihonapp/mihon#3784).
+- Deleting a category renumbered the Default category's position along with the others
+  (mihonapp/mihon#3279).
+- The duplicate check for an entry with a blank title matched the whole library (mihonapp/mihon#3308).
+- A wide update badge pushed the Extensions tab title out of the Browse tab row; the title ellipsizes now
+  (mihonapp/mihon#3424).
+- Enter in a search field now closes the keyboard, and coming back to the results no longer reopens it
+  (mihonapp/mihon#3131).
+- Turning pages quickly with automatic background flashed the default background before each page's own
+  was picked; a new page starts with the last one's (mihonapp/mihon#2827).
+
+### Improved
+- Entries outside the library open faster: their details show before the default chapter flags are
+  written, and the write is skipped when the flags already match (mihonapp/mihon#3055).
 
 ## [v1.4.0] - 2026-09-13
 ### Added
