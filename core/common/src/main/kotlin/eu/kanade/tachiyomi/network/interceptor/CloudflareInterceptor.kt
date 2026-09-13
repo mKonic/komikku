@@ -2,18 +2,22 @@ package eu.kanade.tachiyomi.network.interceptor
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.webkit.ScriptHandler
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import eu.kanade.tachiyomi.network.AndroidCookieJar
 import eu.kanade.tachiyomi.util.system.isOutdated
 import eu.kanade.tachiyomi.util.system.toast
-import okhttp3.Cookie
-import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
@@ -30,6 +34,14 @@ class CloudflareInterceptor(
 
     private val executor = ContextCompat.getMainExecutor(context)
 
+    private val listenerScript = """
+        addEventListener("message", ({data}) => {
+            if (data?.source === "cloudflare-challenge") {
+                $BRIDGE?.postMessage(data.event);
+            }
+        })
+    """.trimIndent()
+
     override fun shouldIntercept(response: Response): Boolean {
         // Check if Cloudflare anti-bot is on
         // Checking the cf-mitigated header is the official way to detect a Cloudflare challenge:
@@ -37,19 +49,21 @@ class CloudflareInterceptor(
         return response.header("cf-mitigated") == "challenge" && response.header("Server") in SERVER_CHECK
     }
 
+    override fun getNonce(url: HttpUrl): String? = cookieManager.get(url).firstOrNull {
+        it.name == "cf_clearance"
+    }?.value
+
     override fun intercept(
         chain: Interceptor.Chain,
         request: Request,
         response: Response,
-    ): Response {
+        nonce: String?,
+    ): Response? {
         try {
             response.close()
             cookieManager.remove(request.url, COOKIE_NAMES, 0)
-            val oldCookie = cookieManager.get(request.url)
-                .firstOrNull { it.name == "cf_clearance" }
-            resolveWithWebView(request, oldCookie)
-
-            return chain.proceed(request)
+            resolveWithWebView(request, nonce)
+            return null
         }
         // Because OkHttp's enqueue only handles IOExceptions, wrap the exception so that
         // we don't crash the entire app
@@ -61,7 +75,7 @@ class CloudflareInterceptor(
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun resolveWithWebView(originalRequest: Request, oldCookie: Cookie?) {
+    private fun resolveWithWebView(originalRequest: Request, originalNonce: String?) {
         // We need to lock this thread until the WebView finds the challenge solution url, because
         // OkHttp doesn't support asynchronous interceptors.
         val latch = CountDownLatch(1)
@@ -70,7 +84,12 @@ class CloudflareInterceptor(
 
         var challengeFound = false
         var cloudflareBypassed = false
+        var failed = false
         var isWebViewOutdated = false
+
+        var listenerScriptHandler: ScriptHandler? = null
+        // Read once on the main thread, where the WebView APIs below run.
+        var isolatedWorld = false
 
         val origRequestUrl = originalRequest.url.toString()
         val headers = parseHeaders(originalRequest.headers)
@@ -78,27 +97,60 @@ class CloudflareInterceptor(
         executor.execute {
             webview = createWebView(originalRequest)
 
-            webview.addJavascriptInterface(
-                object {
-                    @Suppress("unused")
-                    @JavascriptInterface
-                    fun interactiveDetected() {
-                        // The challenge cannot be solved non-interactively, abort.
+            with(webview) {
+                isFocusable = false
+                isFocusableInTouchMode = false
+                descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+            }
+
+            fun handleEvent(event: String) {
+                when (event) {
+                    // The challenge cannot be solved non-interactively, abort.
+                    "interactiveBegin" -> latch.countDown()
+                    "complete" -> failed = false
+                    "fail" -> {
+                        failed = true
                         latch.countDown()
                     }
-                },
-                "komikku",
-            )
+                }
+            }
+
+            isolatedWorld = WebViewFeature.isFeatureSupported(WebViewFeature.JS_INJECTION_IN_FRAME_AND_WORLD)
+            if (isolatedWorld) {
+                // An isolated world keeps the page from seeing the bridge.
+                val world = WebViewCompat.getExecutionWorld(webview, BRIDGE)
+                val allowedOrigins = setOf("${originalRequest.url.scheme}://${originalRequest.url.host}")
+
+                WebViewCompat.addWebMessageListener(webview, BRIDGE, allowedOrigins, world) {
+                        _,
+                        message,
+                        _,
+                        isMainFrame,
+                        _,
+                    ->
+                    if (isMainFrame) message.data?.let(::handleEvent)
+                }
+                listenerScriptHandler = WebViewCompat.addJavaScriptOnEvent(
+                    webview,
+                    listenerScript,
+                    WebViewCompat.INJECTION_EVENT_DOCUMENT_START,
+                    allowedOrigins,
+                    world,
+                )
+            } else {
+                webview.addJavascriptInterface(
+                    object {
+                        @Suppress("unused")
+                        @JavascriptInterface
+                        fun postMessage(event: String) = handleEvent(event)
+                    },
+                    BRIDGE,
+                )
+            }
 
             webview.webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView, url: String) {
-                    fun isCloudFlareBypassed(): Boolean {
-                        return cookieManager.get(origRequestUrl.toHttpUrl())
-                            .firstOrNull { it.name == "cf_clearance" }
-                            .let { it != null && it != oldCookie }
-                    }
-
-                    if (isCloudFlareBypassed()) {
+                    if (!failed && isBypassed(originalRequest.url, originalNonce)) {
                         cloudflareBypassed = true
                         latch.countDown()
                     }
@@ -107,18 +159,9 @@ class CloudflareInterceptor(
                         if (!challengeFound) {
                             // The first request didn't return the challenge, abort.
                             latch.countDown()
-                        } else {
-                            // Listen for an interactiveBegin event
-                            view.evaluateJavascript(
-                                """
-                                    addEventListener("message", ({data}) => {
-                                        if (data?.source === "cloudflare-challenge" && data?.event === "interactiveBegin") {
-                                            komikku.interactiveDetected();
-                                        }
-                                    })
-                                """.trimIndent(),
-                                null,
-                            )
+                        } else if (!isolatedWorld) {
+                            // Listen for challenge events
+                            view.evaluateJavascript(listenerScript, null)
                         }
                     }
                 }
@@ -138,6 +181,12 @@ class CloudflareInterceptor(
                         }
                     }
                 }
+
+                override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+                    // The renderer died; this WebView is unusable. Returning true keeps the app alive.
+                    latch.countDown()
+                    return true
+                }
             }
 
             webview.loadUrl(origRequestUrl, headers)
@@ -150,14 +199,23 @@ class CloudflareInterceptor(
                 isWebViewOutdated = webview?.isOutdated() == true
             }
 
-            webview?.run {
-                stopLoading()
-                destroy()
+            webview?.let { view ->
+                if (isolatedWorld) {
+                    WebViewCompat.removeWebMessageListener(view, WebViewCompat.getExecutionWorld(view, BRIDGE), BRIDGE)
+                } else {
+                    view.removeJavascriptInterface(BRIDGE)
+                }
+                listenerScriptHandler?.remove()
+                (view.parent as? ViewGroup)?.removeView(view)
+                view.stopLoading()
+                view.destroy()
             }
         }
 
         // Throw exception if we failed to bypass Cloudflare
         if (!cloudflareBypassed) {
+            // A failed attempt can leave a clearance cookie the site no longer accepts.
+            cookieManager.remove(originalRequest.url, COOKIE_NAMES, 0)
             // Prompt user to update WebView if it seems too outdated
             if (isWebViewOutdated) {
                 context.toast(MR.strings.information_webview_outdated, Toast.LENGTH_LONG)
@@ -168,6 +226,7 @@ class CloudflareInterceptor(
     }
 }
 
+private const val BRIDGE = "komikku"
 private val SERVER_CHECK = arrayOf("cloudflare-nginx", "cloudflare")
 private val COOKIE_NAMES = listOf("cf_clearance")
 
