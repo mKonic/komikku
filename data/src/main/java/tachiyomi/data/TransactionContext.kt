@@ -46,11 +46,18 @@ internal suspend fun <T> AndroidDatabaseHandler.withTransaction(block: suspend (
         val transactionElement = coroutineContext[TransactionElement]!!
         transactionElement.acquire()
         try {
+            // KMK --> the block runs with this whole context, not just the dispatcher. runBlocking never inherits its
+            // caller's context, so a block given only the dispatcher lost the TransactionElement: a transaction nested
+            // inside it then opened a second transaction on another thread, which waited forever for the connection
+            // this one holds. Restoring a backup deadlocked that way once it nested a chunk transaction around each
+            // entry's own.
+            val blockContext = coroutineContext.minusKey(Job)
             db.transactionWithResult {
-                runBlocking(transactionContext) {
+                runBlocking(blockContext) {
                     block()
                 }
             }
+            // KMK <--
         } finally {
             transactionElement.release()
         }

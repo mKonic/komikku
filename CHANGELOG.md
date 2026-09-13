@@ -19,6 +19,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   the default folder in shared storage once it is granted (mihonapp/mihon#3461).
 
 ### Fixed
+- Restoring a backup could hang for good on its first entry. A database transaction nested three deep
+  lost track of the one it was inside and waited on it forever, which the per-chunk restore made
+  every restore do.
 - An app update could not install when an earlier update's download was still in the cache: the
   new release was resumed onto the old file, which came out the right size but was not a valid APK.
   A download now only resumes an unfinished download of the same release.
