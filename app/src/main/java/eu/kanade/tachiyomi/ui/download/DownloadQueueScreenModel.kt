@@ -148,6 +148,11 @@ class DownloadQueueScreenModel(
     val isDownloaderRunning = downloadManager.isDownloaderRunning
         .stateIn(screenModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    // KMK --> stays true while downloads wait for a network, so the button still offers to pause (mihonapp/mihon#3500)
+    val isDownloadRequested = downloadManager.isDownloadRequested
+        .stateIn(screenModelScope, SharingStarted.WhileSubscribed(5000), false)
+    // KMK <--
+
     fun getDownloadStatusFlow() = downloadManager.statusFlow()
     fun getDownloadProgressFlow() = downloadManager.progressFlow()
 

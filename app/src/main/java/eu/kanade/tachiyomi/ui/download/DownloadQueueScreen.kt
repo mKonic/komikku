@@ -208,10 +208,10 @@ object DownloadQueueScreen : Screen() {
                 )
             },
             floatingActionButton = {
-                val isRunning by screenModel.isDownloaderRunning.collectAsStateWithLifecycle()
+                val isRequested by screenModel.isDownloadRequested.collectAsStateWithLifecycle()
                 SmallExtendedFloatingActionButton(
                     text = {
-                        val id = if (isRunning) {
+                        val id = if (isRequested) {
                             MR.strings.action_pause
                         } else {
                             MR.strings.action_resume
@@ -219,7 +219,7 @@ object DownloadQueueScreen : Screen() {
                         Text(text = stringResource(id))
                     },
                     icon = {
-                        val icon = if (isRunning) {
+                        val icon = if (isRequested) {
                             MaterialSymbols.Rounded.Pause
                         } else {
                             MaterialSymbols.RoundedFilled.PlayArrow
@@ -227,7 +227,7 @@ object DownloadQueueScreen : Screen() {
                         Icon(imageVector = icon, contentDescription = null)
                     },
                     onClick = {
-                        if (isRunning) {
+                        if (isRequested) {
                             screenModel.pauseDownloads()
                         } else {
                             screenModel.startDownloads()

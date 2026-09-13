@@ -61,9 +61,17 @@ class DownloadManager(
     val queueState
         get() = downloader.queueState
 
-    // For use by DownloadService only
+    // For use by DownloadJob only
     fun downloaderStart() = downloader.start()
+    fun downloaderPause() = downloader.pause()
     fun downloaderStop(reason: String? = null) = downloader.stop(reason)
+    fun downloaderPauseForNetwork(reason: String) = downloader.pauseForNetwork(reason)
+
+    internal suspend fun awaitQueueRestored() = downloader.awaitQueueRestored()
+
+    /** Whether downloading was asked for and has not finished, including while it waits for a network. */
+    internal val isDownloadRequested
+        get() = DownloadJob.isRequestedFlow(context)
 
     val isDownloaderRunning
         get() = DownloadJob.isRunningFlow(context)
@@ -71,20 +79,15 @@ class DownloadManager(
     /**
      * Tells the downloader to begin downloads.
      */
-    fun startDownloads() {
+    fun startDownloads(): Unit = synchronized(DownloadJob.session.lock) {
         if (downloader.isRunning) return
-
-        if (DownloadJob.isRunning(context)) {
-            downloader.start()
-        } else {
-            DownloadJob.start(context)
-        }
+        DownloadJob.start(context)
     }
 
     /**
      * Tells the downloader to pause downloads.
      */
-    fun pauseDownloads() {
+    fun pauseDownloads(): Unit = synchronized(DownloadJob.session.lock) {
         downloader.pause()
         downloader.stop()
     }
@@ -92,7 +95,7 @@ class DownloadManager(
     /**
      * Empties the download queue.
      */
-    fun clearQueue() {
+    fun clearQueue(): Unit = synchronized(DownloadJob.session.lock) {
         downloader.clearQueue()
         downloader.stop()
     }
