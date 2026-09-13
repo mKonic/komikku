@@ -678,6 +678,12 @@ class MainActivity : BaseActivity() {
                 }
                 null
             }
+            ReaderSoakTest.ACTION_SEED_LOCAL -> {
+                if (isDebugBuildType || isPreviewBuildType) {
+                    lifecycleScope.launch { ReaderSoakTest.seedLocalSource(this@MainActivity) }
+                }
+                null
+            }
             // KMK <--
             Intent.ACTION_SEARCH, Intent.ACTION_SEND, "com.google.android.gms.actions.SEARCH_ACTION" -> {
                 // If the intent match the "standard" Android search intent

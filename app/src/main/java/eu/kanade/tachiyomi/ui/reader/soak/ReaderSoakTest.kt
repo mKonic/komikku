@@ -3,7 +3,10 @@ package eu.kanade.tachiyomi.ui.reader.soak
 import android.content.Context
 import android.content.Intent
 import android.os.Debug
+import eu.kanade.domain.chapter.interactor.SyncChaptersWithSource
+import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.manga.model.readingMode
+import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
@@ -19,12 +22,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.withTimeoutOrNull
 import logcat.LogPriority
+import mihon.domain.manga.model.toDomainManga
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.domain.manga.interactor.GetLibraryManga
+import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.source.local.LocalSource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
@@ -45,10 +51,13 @@ import kotlin.time.Duration.Companion.seconds
  *
  * Besides the debug screen, a run starts straight from adb:
  * `am start -n <package>/eu.kanade.tachiyomi.ui.main.MainActivity -a komikku.soak.START --ei chapters 2 --ei rounds 3`
+ * and `-a komikku.soak.SEED_LOCAL` first fills the library from the local source on a device with no
+ * extensions.
  */
 object ReaderSoakTest {
 
     const val ACTION_START = "komikku.soak.START"
+    const val ACTION_SEED_LOCAL = "komikku.soak.SEED_LOCAL"
     const val EXTRA_CHAPTERS = "chapters"
     const val EXTRA_ROUNDS = "rounds"
     const val EXTRA_SOAK = "komikku.soak"
@@ -102,6 +111,32 @@ object ReaderSoakTest {
             .sortedByDescending { it.lastRead }
             .distinctBy { it.readingMode }
             .map { it.mangaId }
+    }
+
+    /**
+     * Adds every title in the local source to the library with its chapters, so a device without
+     * extensions has something to read - for the local AVD checks.
+     */
+    suspend fun seedLocalSource(context: Context) {
+        val source = Injekt.get<SourceManager>().get(LocalSource.ID)
+        if (source == null) {
+            withUIContext { context.toast("Soak test: the local source is unavailable") }
+            return
+        }
+        val titles = source.getPopularManga(1).mangas.map { it.toDomainManga(LocalSource.ID) }
+        val syncChapters = Injekt.get<SyncChaptersWithSource>()
+        val updateManga = Injekt.get<UpdateManga>()
+        val added = Injekt.get<NetworkToLocalManga>()(titles).count { manga ->
+            val update = source.getMangaUpdate(
+                manga.toSManga(),
+                emptyList(),
+                fetchDetails = false,
+                fetchChapters = true,
+            )
+            syncChapters.await(update.chapters, manga, source)
+            updateManga.awaitUpdateFavorite(manga.id, true)
+        }
+        withUIContext { context.toast("Soak test: added $added local series") }
     }
 
     /** Reads the first [chaptersPerSeries] chapters of each series in turn, [rounds] times over. */
