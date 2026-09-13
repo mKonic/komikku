@@ -1,8 +1,8 @@
 package eu.kanade.tachiyomi.ui.reader.setting
 
 import cafe.adriel.voyager.core.model.ScreenModel
-import eu.kanade.presentation.util.ioCoroutineScope
 import eu.kanade.tachiyomi.ui.reader.ReaderViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -13,6 +13,11 @@ import uy.kohesive.injekt.api.get
 
 class ReaderSettingsScreenModel(
     readerState: StateFlow<ReaderViewModel.State>,
+    // KMK -->
+    // The reader's own scope. This model is built outside a navigator, where Voyager's scopes belong
+    // to whichever screen registered last and outlive the reader, keeping every closed one alive.
+    scope: CoroutineScope,
+    // KMK <--
     val onChangeReadingMode: (ReadingMode) -> Unit,
     val onChangeOrientation: (ReaderOrientation) -> Unit,
     val preferences: ReaderPreferences = Injekt.get(),
@@ -21,10 +26,10 @@ class ReaderSettingsScreenModel(
     val viewerFlow = readerState
         .map { it.viewer }
         .distinctUntilChanged()
-        .stateIn(ioCoroutineScope, SharingStarted.Lazily, null)
+        .stateIn(scope, SharingStarted.Lazily, null)
 
     val mangaFlow = readerState
         .map { it.manga }
         .distinctUntilChanged()
-        .stateIn(ioCoroutineScope, SharingStarted.Lazily, null)
+        .stateIn(scope, SharingStarted.Lazily, null)
 }

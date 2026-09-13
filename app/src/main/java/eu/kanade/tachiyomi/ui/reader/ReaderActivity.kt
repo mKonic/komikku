@@ -327,6 +327,9 @@ class ReaderActivity : BaseActivity() {
             val settingsScreenModel = remember {
                 ReaderSettingsScreenModel(
                     readerState = viewModel.state,
+                    // KMK -->
+                    scope = lifecycleScope,
+                    // KMK <--
                     onChangeReadingMode = viewModel::setMangaReadingMode,
                     onChangeOrientation = viewModel::setMangaOrientationType,
                 )
