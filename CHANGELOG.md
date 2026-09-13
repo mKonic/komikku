@@ -11,6 +11,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+
+## [v1.5.2] - 2026-09-14
 ### Fixed
 - Every entry whose related titles failed to load after its screen was closed, as they do offline,
   stayed in memory until the app was closed. Browsing many entries in one session grew memory
