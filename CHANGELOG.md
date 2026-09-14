@@ -11,6 +11,18 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Fixed
+- With a large local library, opening a local entry could hold up a backup or library update running
+  at the same time: each title keyword listed the whole local folder at once, and those listings
+  took every thread the backup and update needed. Searches that run together now share one listing.
+- The app could crash while showing a large library if entries were added to it or removed from it
+  at that moment. Android reads a large list in parts, and a change between two parts left rows
+  missing. The list is now read again when that happens.
+- The app closed if Android stopped the browser engine, for example to free memory, while the
+  in-app browser, the Discord login or the E-Hentai login was open. That screen now closes instead.
+- Every time the WebGPU reader opened, it started a new thread, and the graphics driver can keep
+  memory for each thread after the reader closes (about 4 MB each on the Android emulator). Readers
+  now reuse the same threads.
 
 ## [v1.5.2] - 2026-09-14
 ### Fixed
