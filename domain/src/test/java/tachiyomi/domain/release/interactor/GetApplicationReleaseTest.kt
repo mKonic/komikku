@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.domain.release.model.Release
+import tachiyomi.domain.release.service.AppUpdatePolicy
 import tachiyomi.domain.release.service.ReleaseService
 import java.time.Instant
 
@@ -25,11 +26,14 @@ class GetApplicationReleaseTest {
         val preferenceStore = mockk<PreferenceStore>()
         preference = mockk()
         every { preferenceStore.getLong(any(), any()) } returns preference
-        // KMK: the check also records the version it found
+        // KMK: the check also records the version it found, and reads the reader's check interval
         val found = mockk<Preference<String>>()
         every { found.get() } returns ""
         every { found.set(any()) }.answers { }
         every { preferenceStore.getString(any(), any()) } returns found
+        val interval = mockk<Preference<Int>>()
+        every { interval.get() } returns AppUpdatePolicy.CHECK_INTERVAL_DEFAULT
+        every { preferenceStore.getInt(any(), any()) } returns interval
         releaseService = mockk()
 
         getApplicationRelease = GetApplicationRelease(releaseService, preferenceStore)

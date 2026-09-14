@@ -563,7 +563,10 @@ class MainActivity : BaseActivity() {
 
         // App updates
         LaunchedEffect(Unit) {
-            if (updaterEnabled) {
+            if (updaterEnabled && !checkedForUpdatesThisLaunch) {
+                // KMK: the activity is recreated on rotation, theme and locale changes, so without
+                // this a check interval of "every app launch" would ask again on each of them.
+                checkedForUpdatesThisLaunch = true
                 try {
                     // KMK -->
                     AppUpdateJob.setupTask(context)
@@ -780,6 +783,9 @@ class MainActivity : BaseActivity() {
         const val INTENT_SEARCH_FILTER = "filter"
     }
 }
+
+// KMK: process wide, so it survives the activity but not the app being started again
+private var checkedForUpdatesThisLaunch = false
 
 // Splash screen
 private const val SPLASH_MIN_DURATION = 500 // ms

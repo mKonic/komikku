@@ -164,6 +164,16 @@ object SettingsAdvancedScreen : SearchableSettings {
                 },
             ),
             // KMK -->
+            Preference.PreferenceItem.ListPreference(
+                preference = exhPreferences.appUpdateInterval(),
+                entries = persistentMapOf(
+                    0 to stringResource(KMR.strings.auto_update_app_interval_launch),
+                    1 to stringResource(MR.strings.update_24hour),
+                    2 to stringResource(MR.strings.update_48hour),
+                    7 to stringResource(MR.strings.update_weekly),
+                ),
+                title = stringResource(KMR.strings.auto_update_app_interval),
+            ),
             Preference.PreferenceItem.MultiSelectListPreference(
                 preference = exhPreferences.appShouldAutoUpdate(),
                 entries = persistentMapOf(

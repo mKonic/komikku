@@ -3,6 +3,7 @@ package tachiyomi.domain.release.interactor
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.domain.release.model.Release
+import tachiyomi.domain.release.service.AppUpdatePolicy
 import tachiyomi.domain.release.service.ReleaseService
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -24,11 +25,18 @@ class GetApplicationRelease(
         preferenceStore.getString(Preference.appStateKey("last_app_found"), "")
     }
 
+    /** KMK: days to leave between checks, the reader's to set. Zero checks on every launch. */
+    private val checkInterval: Preference<Int> by lazy {
+        preferenceStore.getInt(AppUpdatePolicy.CHECK_INTERVAL_KEY, AppUpdatePolicy.CHECK_INTERVAL_DEFAULT)
+    }
+
     suspend fun await(arguments: Arguments): Result {
         val now = Instant.now()
 
         // Limit checks to once every 3 days at most
-        val nextCheckTime = Instant.ofEpochMilli(lastChecked.get()).plus(2, ChronoUnit.DAYS)
+        // KMK: an interval of zero leaves the next check time at the last one, which is never in the future
+        val nextCheckTime = Instant.ofEpochMilli(lastChecked.get())
+            .plus(checkInterval.get().toLong(), ChronoUnit.DAYS)
         // KMK: the limit is there to spare the network, not to hide an update that is already known
         // about. Asking again costs one request and is the only way the prompt comes back at launch
         // for someone who has not installed it yet; without this, checking by hand re-arms two days

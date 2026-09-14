@@ -16,6 +16,11 @@ class ExhPreferences(
             AppUpdatePolicy.DEVICE_ONLY_ON_WIFI,
         ),
     )
+
+    fun appUpdateInterval() = preferenceStore.getInt(
+        AppUpdatePolicy.CHECK_INTERVAL_KEY,
+        AppUpdatePolicy.CHECK_INTERVAL_DEFAULT,
+    )
     // KMK <--
 
     // SY -->

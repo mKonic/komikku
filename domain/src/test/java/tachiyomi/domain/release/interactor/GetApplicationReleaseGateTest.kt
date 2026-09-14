@@ -6,12 +6,16 @@ import org.junit.jupiter.api.Test
 import tachiyomi.core.common.preference.InMemoryPreferenceStore
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.domain.release.model.Release
+import tachiyomi.domain.release.service.AppUpdatePolicy
 import tachiyomi.domain.release.service.ReleaseService
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 /**
- * The rate limit around the update check. It is there to spare the network, and the cases below are
- * the ones where it was instead hiding an update the reader had already been told about.
+ * The rate limit around the update check: how long it waits, and when it has to ask anyway.
+ *
+ * The limit is there to spare the network, and the cases below are the ones where it was instead
+ * hiding an update the reader had already been told about.
  */
 class GetApplicationReleaseGateTest {
 
@@ -42,6 +46,7 @@ class GetApplicationReleaseGateTest {
     private fun store(
         checkedAt: Instant? = null,
         found: String = "",
+        intervalDays: Int = AppUpdatePolicy.CHECK_INTERVAL_DEFAULT,
     ) = InMemoryPreferenceStore(
         sequenceOf(
             InMemoryPreferenceStore.InMemoryPreference(
@@ -53,6 +58,11 @@ class GetApplicationReleaseGateTest {
                 key = Preference.appStateKey("last_app_found"),
                 data = found,
                 defaultValue = "",
+            ),
+            InMemoryPreferenceStore.InMemoryPreference(
+                key = AppUpdatePolicy.CHECK_INTERVAL_KEY,
+                data = intervalDays,
+                defaultValue = AppUpdatePolicy.CHECK_INTERVAL_DEFAULT,
             ),
         ),
     )
@@ -99,5 +109,30 @@ class GetApplicationReleaseGateTest {
         // Now running the version that was pending, so there is nothing left to re-announce.
         interactor.await(arguments("1.6.0")) shouldBe GetApplicationRelease.Result.NoNewUpdate
         service.calls shouldBe 0
+    }
+
+    @Test
+    fun `an interval of zero checks on every launch`() = runTest {
+        val service = FakeService(emptyList())
+        val interactor = GetApplicationRelease(service, store(checkedAt = Instant.now(), intervalDays = 0))
+
+        interactor.await(arguments("1.6.0")) shouldBe GetApplicationRelease.Result.NoNewUpdate
+        interactor.await(arguments("1.6.0")) shouldBe GetApplicationRelease.Result.NoNewUpdate
+        service.calls shouldBe 2
+    }
+
+    @Test
+    fun `a longer interval holds the check back past the default window`() = runTest {
+        val threeDaysAgo = Instant.now().minus(3, ChronoUnit.DAYS)
+        val service = FakeService(emptyList())
+
+        // The default would have asked by now.
+        GetApplicationRelease(service, store(checkedAt = threeDaysAgo))
+            .await(arguments("1.6.0")) shouldBe GetApplicationRelease.Result.NoNewUpdate
+        service.calls shouldBe 1
+
+        GetApplicationRelease(service, store(checkedAt = threeDaysAgo, intervalDays = 7))
+            .await(arguments("1.6.0")) shouldBe GetApplicationRelease.Result.NoNewUpdate
+        service.calls shouldBe 1
     }
 }
