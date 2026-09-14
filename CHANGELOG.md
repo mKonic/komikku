@@ -10,6 +10,14 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [v1.7.1] - 2026-09-14
+### Fixed
+- Opening Data and storage no longer stalls while it measures the chapter and page preview caches,
+  reads how much space each storage volume has, and checks the storage folder is still there. All
+  of it ran on the main thread, and measuring a cache walks every file in it.
+- Opening WebGPU settings no longer brings the renderer up on the main thread just to find out
+  whether the device supports it.
+
 ## [v1.7.0] - 2026-09-14
 ### Added
 - A check interval for app updates, under Advanced. The choices are every app launch, daily, every
