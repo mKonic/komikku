@@ -250,6 +250,14 @@ abstract class SearchScreenModel(
     sealed interface Dialog {
         data class Migrate(val target: Manga, val current: Manga) : Dialog
     }
+
+    // KMK --> its threads are not daemons, so every search screen that came and went kept five of them, and their
+    // stacks, for the rest of the process. FeedScreenModel and SourceFeedScreenModel already close theirs.
+    override fun onDispose() {
+        super.onDispose()
+        coroutineDispatcher.close()
+    }
+    // KMK <--
 }
 
 enum class SourceFilter {
