@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.reader.viewer.webgpu
 
 import android.graphics.Color
 import android.graphics.PointF
+import android.graphics.RectF
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -52,6 +53,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences.TransitionAnimati
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView.ZoomStartPosition
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
+import eu.kanade.tachiyomi.ui.reader.viewer.calculateChapterGap
 import eu.kanade.tachiyomi.util.system.createReaderThemeContext
 import eu.kanade.tachiyomi.util.system.readerBackgroundColor
 import kotlinx.coroutines.CancellationException
@@ -65,7 +67,10 @@ import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
+import tachiyomi.core.common.i18n.pluralStringResource
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.util.TreeSet
@@ -231,7 +236,7 @@ open class WebGpuViewer(
                             if (pageInCache(page) && !page.isDecoded && !page.imagePage.destroyed) {
                                 val oldImagePage = page.imagePage
                                 val errorMessage = e.message ?: "Failed to decode image"
-                                page.imagePage = ErrorPage(errorMessage, page.spreadPosition)
+                                page.imagePage = ErrorPage(errorMessage, page.spreadPosition, page)
                                 // KMK -->
                                 page.page.markDisplayFailed()
                                 // KMK <--
@@ -480,9 +485,29 @@ open class WebGpuViewer(
         }
     }
 
+    /**
+     * Puts a page that failed back through the loader. The error page is swapped for a progress
+     * one first: [decodeReaderPage] sees a page that is not ready and calls [startPageLoad], which
+     * watches the status flow again, so this is all it takes to restart the whole sequence.
+     */
+    private fun retryPage(page: ViewerReaderPage) {
+        page.page.chapter.pageLoader?.retryPage(page.page)
+        synchronized(lock) {
+            if (!pageInCache(page)) return
+            val old = page.imagePage
+            page.imagePage = ProgressPage()
+            page.state = PageState.IDLE
+            cleanupImage(old)
+            page.imagePage.invalidate()
+            queueForDecode(page, prioritize = true)
+        }
+    }
+
     inner class ErrorPage internal constructor(
         message: String,
         private val spreadPosition: SpreadPosition = SpreadPosition.SINGLE,
+        /** The page that failed, so the button below can put it back through the loader. */
+        private val failed: ViewerReaderPage? = null,
     ) : ImagePage.Render(0, 0) {
         override val width: Int
             get() = viewportPageWidth(spreadPosition != SpreadPosition.SINGLE)
@@ -503,6 +528,23 @@ open class WebGpuViewer(
 
         override val backgroundColor: Int = readerBackgroundColor()
 
+        /**
+         * Where the retry button landed last time it was drawn, in view pixels. Written on the
+         * render thread and read on the main thread, hence volatile; null until it has been drawn
+         * once, and also whenever there is nothing to retry.
+         */
+        @Volatile
+        private var retryBounds: RectF? = null
+
+        /** True when the tap was on the button, so the caller knows not to turn the page as well. */
+        fun retryIfHit(x: Float, y: Float): Boolean {
+            val bounds = retryBounds ?: return false
+            if (!bounds.contains(x, y)) return false
+            val page = failed ?: return false
+            retryPage(page)
+            return true
+        }
+
         override fun render(dst: GPUTexture, x: Float, y: Float, scale: Float) {
             val padding = with(pager.state.density) { 24.dp.toPx() }
             val size = scale * with(pager.state.density) { 16.dp.toPx() }
@@ -510,6 +552,7 @@ open class WebGpuViewer(
             val cx = dst.width * (0.5f + scale * x)
             val cy = dst.height * (0.5f + scale * y)
 
+            val foreground = readerOnBackgroundColor()
             text(
                 dst,
                 activity.baseContext,
@@ -518,10 +561,44 @@ open class WebGpuViewer(
                 cx,
                 cy,
                 size,
-                color = readerOnBackgroundColor(),
+                color = foreground,
                 align = TextAlign.Center,
                 maxWidth = dst.width - 2f * padding,
             )
+
+            if (failed == null) {
+                retryBounds = null
+                return
+            }
+
+            // A drawn button rather than a whole-page tap target: tapping elsewhere still turns
+            // the page, which is how a reader gets past a page that will not load at all.
+            val label = activity.stringResource(MR.strings.action_retry)
+            val buttonHeight = scale * with(pager.state.density) { 44.dp.toPx() }
+            val buttonWidth = scale * with(pager.state.density) { 140.dp.toPx() }
+            val top = cy + size * 2f
+            val left = cx - buttonWidth / 2f
+
+            rect(
+                left / dst.width,
+                top / dst.height,
+                (left + buttonWidth) / dst.width,
+                (top + buttonHeight) / dst.height,
+                foreground and 0x33FFFFFF.toInt(),
+            )
+            text(
+                dst,
+                activity.baseContext,
+                FontFamily.Default,
+                label,
+                cx,
+                top + (buttonHeight - size) / 2f,
+                size,
+                color = foreground,
+                align = TextAlign.Center,
+                maxWidth = buttonWidth,
+            )
+            retryBounds = RectF(left, top, left + buttonWidth, top + buttonHeight)
         }
     }
 
@@ -587,15 +664,42 @@ open class WebGpuViewer(
 
         override val backgroundColor: Int = readerBackgroundColor()
 
+        /**
+         * The same wording the standard viewers use, rather than the hardcoded English this page
+         * carried before: the chapter labels, the "no next chapter" notice at the end of an entry,
+         * and the warning that the source skips a run of chapters.
+         */
+        private fun transitionText(): String {
+            val lines: MutableList<String> = mutableListOf()
+
+            if (prevChapter == null && nextChapter != null) {
+                lines.add(activity.stringResource(MR.strings.transition_no_previous))
+            }
+            prevChapter?.chapter?.let { chapter ->
+                val label = if (nextChapter == null) MR.strings.transition_current else MR.strings.transition_finished
+                lines.add(activity.stringResource(label) + " " + chapter.name)
+            }
+
+            val gap = calculateChapterGap(nextChapter, prevChapter)
+            if (gap > 0) {
+                lines.add(activity.pluralStringResource(MR.plurals.missing_chapters_warning, gap, gap))
+            }
+
+            if (nextChapter == null && prevChapter != null) {
+                lines.add(activity.stringResource(MR.strings.transition_no_next))
+            }
+            nextChapter?.chapter?.let { chapter ->
+                lines.add(activity.stringResource(MR.strings.transition_next) + " " + chapter.name)
+            }
+
+            return lines.joinToString("\n")
+        }
+
         override fun render(dst: GPUTexture, x: Float, y: Float, scale: Float) {
             // Its own footprint, so the page carries its background wherever a transition puts it.
             fillPage(dst, x, y, scale, backgroundColor)
 
-            val lines: MutableList<String> = mutableListOf()
-            prevChapter?.chapter?.let { chapter -> lines.add("Previous: " + chapter.name) }
-            nextChapter?.chapter?.let { chapter -> lines.add("Next: " + chapter.name) }
-
-            val text = lines.joinToString("\n")
+            val text = transitionText()
 
             val padding = with(pager.state.density) { 24.dp.toPx() }
             val size = scale * with(pager.state.density) { 16.dp.toPx() }
@@ -909,7 +1013,7 @@ open class WebGpuViewer(
         colorLutSource = uri
         colorLutJob?.cancel()
         colorLutFilter = null
-        pager.state.filters.filters = emptyList()
+        updateFilters()
         if (uri.isEmpty()) return
 
         colorLutJob = scope.launch {
@@ -923,10 +1027,66 @@ open class WebGpuViewer(
                     null
                 }
             } ?: return@launch
-            val filter = FilterLut3d(lut).also { it.intensity = config.colorLutIntensity / 100f }
-            colorLutFilter = filter
-            pager.state.filters.filters = listOf(filter)
+            colorLutFilter = FilterLut3d(lut).also { it.intensity = config.colorLutIntensity / 100f }
+            updateFilters()
         }
+    }
+
+    /**
+     * Greyscale and inverted colours as the renderer's own filter, because the standard viewers'
+     * route - a hardware layer paint on the reader's container - cannot reach a SurfaceView.
+     *
+     * Both are affine in r, g and b, so a two-entry table reproduces them exactly under the
+     * trilinear sampling the filter already does: no larger cube would be more accurate.
+     */
+    private var toneFilter: FilterLut3d? = null
+
+    private fun applyTone(grayscale: Boolean, invertedColors: Boolean) {
+        toneFilter = if (!grayscale && !invertedColors) {
+            null
+        } else {
+            FilterLut3d(toneLut(grayscale, invertedColors))
+        }
+        updateFilters()
+    }
+
+    private fun toneLut(grayscale: Boolean, invertedColors: Boolean): Lut3d {
+        val data = FloatArray(2 * 2 * 2 * 3)
+        var i = 0
+        // Red varies fastest, as in a .cube - see Lut3d.identity.
+        for (b in 0..1) {
+            for (g in 0..1) {
+                for (r in 0..1) {
+                    var red = r.toFloat()
+                    var green = g.toFloat()
+                    var blue = b.toFloat()
+                    if (grayscale) {
+                        // The weights ColorMatrix.setSaturation(0) uses, so both readers agree.
+                        val luma = 0.213f * red + 0.715f * green + 0.072f * blue
+                        red = luma
+                        green = luma
+                        blue = luma
+                    }
+                    if (invertedColors) {
+                        red = 1f - red
+                        green = 1f - green
+                        blue = 1f - blue
+                    }
+                    data[i++] = red
+                    data[i++] = green
+                    data[i++] = blue
+                }
+            }
+        }
+        return Lut3d(2, data)
+    }
+
+    /**
+     * The chain, in the order it runs: the reader's own table first, then the tone change, which
+     * matches the standard viewers where the layer paint applies over everything.
+     */
+    private fun updateFilters() {
+        pager.state.filters.filters = listOfNotNull(colorLutFilter, toneFilter)
     }
     // KMK <--
 
@@ -950,7 +1110,13 @@ open class WebGpuViewer(
                 return@fetch buildSpreadPage(page)
             }
 
-            onTap = { offset ->
+            onTap = onTap@{ offset ->
+                // The retry button on a failed page comes first: it is drawn inside whatever
+                // navigation region it happens to land in, and turning the page instead would
+                // make it untappable.
+                val failed = (currentPage as? ViewerReaderPage)?.imagePage as? ErrorPage
+                if (failed?.retryIfHit(offset.x, offset.y) == true) return@onTap
+
                 when (config.navigator.getAction(PointF(offset.x, offset.y))) {
                     NavigationRegion.MENU -> activity.toggleMenu()
                     NavigationRegion.NEXT -> if (isReversed) moveToPrevious() else moveToNext()
@@ -975,6 +1141,9 @@ open class WebGpuViewer(
 
         applyColorLut(config.colorLut, config.colorLutIntensity)
         config.colorLutChangedListener = { applyColorLut(config.colorLut, config.colorLutIntensity) }
+
+        applyTone(config.grayscale, config.invertedColors)
+        config.toneChangedListener = { applyTone(config.grayscale, config.invertedColors) }
 
         // blank space in the long strip clears to the reader background rather than black
         (pager.state as? ImageViewerContinuousState)?.backgroundColor = readerBackgroundColor()
@@ -1149,6 +1318,22 @@ open class WebGpuViewer(
                         Page.State.Queue, Page.State.LoadPage, Page.State.DownloadImage -> true
                         is Page.State.Error -> {
                             logcat(LogPriority.ERROR) { "Page load error: ${state.error}" }
+                            // Without this the page keeps its progress indicator for the rest of
+                            // the session: nothing queues a decode for a page that never arrived.
+                            synchronized(lock) {
+                                if (pageInCache(page) && !page.imagePage.destroyed) {
+                                    val old = page.imagePage
+                                    page.imagePage = ErrorPage(
+                                        state.error?.message
+                                            ?: activity.stringResource(MR.strings.decode_image_error),
+                                        page.spreadPosition,
+                                        page,
+                                    )
+                                    page.page.markDisplayFailed()
+                                    cleanupImage(old)
+                                    page.imagePage.invalidate()
+                                }
+                            }
                             false
                         }
 

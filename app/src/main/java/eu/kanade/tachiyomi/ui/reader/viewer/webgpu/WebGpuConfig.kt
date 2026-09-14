@@ -87,6 +87,14 @@ class WebGpuConfig(
     /** Reading the table is file I/O, so the viewer does it rather than this constructor. */
     var colorLutChangedListener: (() -> Unit)? = null
 
+    var grayscale = false
+        private set
+
+    var invertedColors = false
+        private set
+
+    var toneChangedListener: (() -> Unit)? = null
+
     init {
         readerPreferences.readerTheme()
             .register(
@@ -124,6 +132,15 @@ class WebGpuConfig(
                 { Hdr.maxPeakValue = 2f.pow(it) },
                 { imagePropertyChangedListener?.invoke() },
             )
+
+        // The standard viewers get these from a hardware layer paint on the reader's container.
+        // That cannot reach the renderer, which draws into a SurfaceView the view hierarchy only
+        // punches a hole for, so they go through the renderer's own filter chain instead.
+        readerPreferences.grayscale()
+            .register({ grayscale = it }, { toneChangedListener?.invoke() })
+
+        readerPreferences.invertedColors()
+            .register({ invertedColors = it }, { toneChangedListener?.invoke() })
 
         readerPreferences.colorLut()
             .register({ colorLut = it }, { colorLutChangedListener?.invoke() })
