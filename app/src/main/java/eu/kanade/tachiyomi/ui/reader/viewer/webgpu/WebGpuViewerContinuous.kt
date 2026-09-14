@@ -24,13 +24,26 @@ class WebGpuViewerContinuous(activity: ReaderActivity, val useGap: Boolean = fal
 
     private val state get() = (pager as ImageViewContinuous).state
 
+    /**
+     * The page [ImageViewerContinuousState.onViewport] last reported, so only a change is acted on.
+     * Read and written on the render thread alone, which is the only caller.
+     */
+    private var lastReadThrough: ImagePage? = null
+
     init {
         // Scrolling clear of a transition page is the only point this mode can call the chapter
-        // before it finished - reaching a page's top comes a screen too early. Reported on every
-        // change, so scrolling back up over it and down again selects that last page again.
-        state.onPageScrolledThrough = onScrolledThrough@{ imagePage ->
-            val chapter = (imagePage as? TransitionPage)?.prevChapter ?: return@onScrolledThrough
-            val lastPage = chapter.pages?.lastOrNull() ?: return@onScrolledThrough
+        // before it finished - reaching a page's top comes a screen too early.
+        //
+        // onViewport reports every frame rather than only when the page changes, so the identity
+        // check is ours to make: selecting a page writes chapter progress and can start a chapter
+        // load, neither of which belongs at frame rate. Comparing against the last report rather
+        // than the last selection keeps scrolling back up over a transition and down again
+        // selecting that last page again.
+        state.onViewport = onViewport@{ readThrough ->
+            if (readThrough === lastReadThrough) return@onViewport
+            lastReadThrough = readThrough
+            val chapter = (readThrough as? TransitionPage)?.prevChapter ?: return@onViewport
+            val lastPage = chapter.pages?.lastOrNull() ?: return@onViewport
             activity.onPageSelected(lastPage)
         }
     }

@@ -289,6 +289,9 @@ private val settingScreens = listOf(
     SettingsAppearanceScreen,
     SettingsLibraryScreen,
     SettingsReaderScreen,
+    // KMK -->
+    SettingsWebGpuScreen,
+    // KMK <--
     SettingsDownloadScreen,
     SettingsTrackingScreen,
     // AM (CONNECTIONS) -->

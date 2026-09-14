@@ -1051,6 +1051,9 @@
 
     <!-- KMK: WebGPU reader -->
     <string name="pref_high_quality_renderer">Use high quality renderer</string>
+    <string name="pref_high_quality_renderer_summary">Draw pages with the GPU. Smoother zooming and sharper text, and the settings below apply.</string>
+    <string name="pref_webgpu_summary">Renderer, transitions, display cutout and long strip layout</string>
+    <string name="webgpu_unsupported">This device cannot use the WebGPU renderer, so the standard reader is used.</string>
     <string name="webgpu_viewer">WebGPU</string>
     <string name="pref_continuous_minwidth">Min width</string>
     <string name="pref_continuous_gap">Gap</string>
