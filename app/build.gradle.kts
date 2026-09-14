@@ -230,7 +230,7 @@ dependencies {
     implementation(compose.foundation)
     implementation(compose.material3.core)
     // KMK --> high quality WebGPU renderer from Mihon
-    implementation(files("/home/mkonic/dev/android/webgpuviewer/library/build/outputs/aar/library-release.aar")) // LOCAL TEST
+    implementation(libs.webgpuviewer)
     // KMK <--
 
     // KMK --> Material Symbols, generated from SVG by Valkyrie
