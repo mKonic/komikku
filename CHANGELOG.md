@@ -10,6 +10,13 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [Unreleased]
+### Fixed
+- Auto scroll works in the high quality reader. It only ever recognised the two older viewers, so
+  turning it on with the high quality renderer did nothing at all - no scroll, no page turn, no
+  hint that the setting had been ignored. It now does what a forward tap does: a page turn in the
+  paged modes, half a screen of scrolling in the continuous ones.
+
 ## [v1.7.3] - 2026-09-14
 ### Fixed
 - Zooming and panning in the high quality reader no longer stutters with the Enhanced (ArtCNN)

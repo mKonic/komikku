@@ -103,6 +103,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.ReaderProgressIndicator
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.VerticalPagerViewer
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonViewer
 import eu.kanade.tachiyomi.ui.webview.WebViewActivity
 import eu.kanade.tachiyomi.util.system.isNightMode
@@ -812,6 +813,13 @@ class ReaderActivity : BaseActivity() {
                                                 v.scrollDown()
                                             }
                                         }
+                                        // KMK --> the renderer is neither of the above, so auto
+                                        // scroll used to fall through this when and do nothing at
+                                        // all. moveToNext is what a forward tap already runs: a
+                                        // page turn when paged, half a viewport of animated scroll
+                                        // when continuous.
+                                        is WebGpuViewer -> v.moveToNext()
+                                        // KMK <--
                                     }
                                 }
                                 delay(interval)
