@@ -30,6 +30,10 @@ internal class ArchivePageLoader(private val reader: ArchiveReader) : PageLoader
         it.deleteRecursively()
     }
 
+    // KMK: whether this loader extracted pages into [tmpDir]. Only then is there anything to delete on recycle; the
+    // default mode never makes the folder, and recycle runs on the main thread on every chapter change.
+    private var extracted = false
+
     init {
         reader.wrongPassword?.let { wrongPassword ->
             if (wrongPassword) {
@@ -38,6 +42,7 @@ internal class ArchivePageLoader(private val reader: ArchiveReader) : PageLoader
         }
         if (readerPreferences.archiveReaderMode().get() == ReaderPreferences.ArchiveReaderMode.CACHE_TO_DISK) {
             tmpDir.mkdirs()
+            extracted = true
             reader.useEntries { entries ->
                 entries
                     .filter { it.isFile && ImageUtil.isImage(it.name) { reader.getInputStream(it.name)!! } }
@@ -105,7 +110,7 @@ internal class ArchivePageLoader(private val reader: ArchiveReader) : PageLoader
         super.recycle()
         reader.close()
         // SY -->
-        tmpDir.deleteRecursively()
+        if (extracted) tmpDir.deleteRecursively()
         // SY <--
     }
 }
