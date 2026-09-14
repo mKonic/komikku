@@ -56,6 +56,7 @@ import eu.kanade.tachiyomi.util.system.createReaderThemeContext
 import eu.kanade.tachiyomi.util.system.readerBackgroundColor
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
@@ -888,27 +889,30 @@ open class WebGpuViewer(
     /** The filter is kept across intensity changes, so only picking a new table re-reads a file. */
     private var colorLutFilter: FilterLut3d? = null
 
+    /** The table the filter above holds, or is being read for. */
     private var colorLutSource = ""
+
+    private var colorLutJob: Job? = null
 
     /**
      * The table is a document the user picked, which can be gone, unreadable or not a `.cube` at
      * all by the time we open it, so a failure drops the filter rather than taking the reader down.
      */
     private fun applyColorLut(uri: String, intensity: Int) {
-        if (uri.isEmpty()) {
-            colorLutSource = ""
-            colorLutFilter = null
-            pager.state.filters.filters = emptyList()
-            return
-        }
-
-        colorLutFilter?.takeIf { colorLutSource == uri }?.let {
-            it.intensity = intensity / 100f
+        // Both the table and its strength come through here, and the config publishes each on its
+        // own: without this the strength arriving would start a second read of the same file.
+        if (uri == colorLutSource) {
+            colorLutFilter?.intensity = intensity / 100f
             return
         }
 
         colorLutSource = uri
-        scope.launch {
+        colorLutJob?.cancel()
+        colorLutFilter = null
+        pager.state.filters.filters = emptyList()
+        if (uri.isEmpty()) return
+
+        colorLutJob = scope.launch {
             val lut = withContext(Dispatchers.IO) {
                 try {
                     activity.contentResolver.openInputStream(uri.toUri())?.use { stream ->
@@ -918,14 +922,7 @@ open class WebGpuViewer(
                     logcat(LogPriority.WARN, e) { "Could not read the colour table at $uri" }
                     null
                 }
-            }
-            // Another table may have been picked while this one was being read.
-            if (colorLutSource != uri) return@launch
-            if (lut == null) {
-                colorLutFilter = null
-                pager.state.filters.filters = emptyList()
-                return@launch
-            }
+            } ?: return@launch
             val filter = FilterLut3d(lut).also { it.intensity = config.colorLutIntensity / 100f }
             colorLutFilter = filter
             pager.state.filters.filters = listOf(filter)
