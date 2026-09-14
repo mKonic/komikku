@@ -33,6 +33,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - The reader settings offered page layout, page transitions, inverted double pages, the zoom-in
   and double-tap zoom switches and the centre margin while the WebGPU renderer was drawing, none
   of which it reads.
+- Advanced offered a custom display profile while the WebGPU renderer was drawing. Only the legacy
+  decoder applies one, so picking a file there did nothing. The colour table on the WebGPU screen
+  is the equivalent.
 - HDR is available again on Android 15. The reader asked the display for a value that only exists
   on Android 16, and treated the refusal as "this screen cannot show HDR".
 
