@@ -16,6 +16,11 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   turning it on with the high quality renderer did nothing at all - no scroll, no page turn, no
   hint that the setting had been ignored. It now does what a forward tap does: a page turn in the
   paged modes, half a screen of scrolling in the continuous ones.
+- The vertical seekbar shows in the high quality reader's vertical and continuous modes. It was
+  offered to the two older viewers only, so turning it on left the bar along the bottom.
+- Saving and sharing a two page spread works in the high quality reader. The page actions dialog
+  offers both pages there, but the save and share behind them recognised only the standard paged
+  viewer and quietly did nothing.
 
 ## [v1.7.3] - 2026-09-14
 ### Fixed

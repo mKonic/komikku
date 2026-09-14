@@ -686,7 +686,12 @@ class ReaderActivity : BaseActivity() {
         val verticalSeekbarLandscape =
             configuration.orientation == Configuration.ORIENTATION_LANDSCAPE && landscapeVerticalSeekbar
         val verticalSeekbarHorizontal = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
-        val viewerIsVertical = (state.viewer is WebtoonViewer || state.viewer is VerticalPagerViewer)
+        // KMK: the renderer's own vertical modes count too - it is neither of the two older
+        // viewers, so without this the vertical seekbar never appeared under it.
+        val viewerIsVertical = (
+            state.viewer is WebtoonViewer || state.viewer is VerticalPagerViewer ||
+                (state.viewer as? WebGpuViewer)?.isVertical == true
+            )
         val showVerticalSeekbar =
             !forceHorizontalSeekbar && (verticalSeekbarLandscape || verticalSeekbarHorizontal) && viewerIsVertical
         val navBarType = when {

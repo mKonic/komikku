@@ -1,5 +1,7 @@
 package eu.kanade.tachiyomi.ui.reader.viewer.webgpu
 
+import android.graphics.Color
+import androidx.annotation.ColorInt
 import ca.mpreg.webgpuviewer.renderer.Hdr
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView
@@ -29,6 +31,12 @@ class WebGpuConfig(
         private set
 
     var automaticBackground = false
+        private set
+
+    // KMK: what a saved or shared two page spread is laid onto, the same as the standard viewer
+    // keeps. The reader theme is the only thing that decides it.
+    @ColorInt
+    var pageCanvasColor = themeToCanvasColor(theme)
         private set
 
     var dualPageSplitChangedListener: ((Boolean) -> Unit)? = null
@@ -107,6 +115,7 @@ class WebGpuConfig(
                 {
                     theme = it
                     automaticBackground = it == 3
+                    pageCanvasColor = themeToCanvasColor(it)
                 },
                 { imagePropertyChangedListener?.invoke() },
             )
@@ -329,5 +338,14 @@ class WebGpuConfig(
             else -> defaultNavigation()
         }
         navigationModeChangedListener?.invoke()
+    }
+
+    // KMK: the standard viewer's own mapping, mirrored value for value so a spread saved or shared
+    // from either viewer lands on the same background.
+    @ColorInt
+    private fun themeToCanvasColor(theme: Int): Int = when (theme) {
+        1 -> Color.BLACK
+        2 -> 0x202125
+        else -> Color.WHITE
     }
 }

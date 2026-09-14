@@ -46,6 +46,7 @@ import eu.kanade.tachiyomi.ui.reader.soak.ReaderSoakTest
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.R2LPagerViewer
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewer
 import eu.kanade.tachiyomi.util.chapter.filterDownloaded
 import eu.kanade.tachiyomi.util.chapter.removeDuplicates
 import eu.kanade.tachiyomi.util.editCover
@@ -1308,11 +1309,29 @@ class ReaderViewModel @JvmOverloads constructor(
     }
 
     // SY -->
+    // KMK --> the page actions dialog opens under the high quality renderer too - the viewer hands
+    // onPageLongTap a spread partner - but saving and sharing a spread cast the viewer to
+    // PagerViewer and gave up, so both did nothing at all there. Resolve the two layout facts they
+    // need from whichever viewer is up instead.
+    private class SpreadLayout(val isLTR: Boolean, @ColorInt val bg: Int)
+
+    private fun spreadLayout(): SpreadLayout? = when (val viewer = state.value.viewer) {
+        is PagerViewer -> SpreadLayout(
+            isLTR = (viewer !is R2LPagerViewer) xor viewer.config.invertDoublePages,
+            bg = viewer.config.pageCanvasColor,
+        )
+        // The renderer lays a spread out from its own setting and hides the page order switch, so
+        // the reading direction alone decides which page goes on the left.
+        is WebGpuViewer -> SpreadLayout(isLTR = !viewer.isReversed, bg = viewer.config.pageCanvasColor)
+        else -> null
+    }
+    // KMK <--
+
     fun saveImages() {
         val (firstPage, secondPage) = (state.value.dialog as? Dialog.PageActions ?: return)
-        val viewer = state.value.viewer as? PagerViewer ?: return
-        val isLTR = (viewer !is R2LPagerViewer) xor (viewer.config.invertDoublePages)
-        val bg = viewer.config.pageCanvasColor
+        // KMK -->
+        val (isLTR, bg) = spreadLayout()?.let { it.isLTR to it.bg } ?: return
+        // KMK <--
 
         if (firstPage.status != Page.State.Ready) return
         if (secondPage?.status != Page.State.Ready) return
@@ -1424,9 +1443,9 @@ class ReaderViewModel @JvmOverloads constructor(
     // SY -->
     fun shareImages(copyToClipboard: Boolean) {
         val (firstPage, secondPage) = (state.value.dialog as? Dialog.PageActions ?: return)
-        val viewer = state.value.viewer as? PagerViewer ?: return
-        val isLTR = (viewer !is R2LPagerViewer) xor (viewer.config.invertDoublePages)
-        val bg = viewer.config.pageCanvasColor
+        // KMK -->
+        val (isLTR, bg) = spreadLayout()?.let { it.isLTR to it.bg } ?: return
+        // KMK <--
 
         if (firstPage.status != Page.State.Ready) return
         if (secondPage?.status != Page.State.Ready) return
