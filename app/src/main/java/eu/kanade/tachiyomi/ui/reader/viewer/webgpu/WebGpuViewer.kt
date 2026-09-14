@@ -91,6 +91,9 @@ open class WebGpuViewer(
 
     open val isContinuous: Boolean = false
 
+    /** Whether a continuous strip leaves a gap between pages; false for a paged viewer. */
+    open val useGap: Boolean = false
+
     // KMK --> komikku resolves dependencies through Injekt
     val readerPreferences by lazy { Injekt.get<ReaderPreferences>() }
     // KMK <--

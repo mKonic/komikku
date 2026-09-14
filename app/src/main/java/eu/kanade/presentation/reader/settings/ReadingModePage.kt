@@ -75,6 +75,7 @@ internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
             screenModel,
             webGpu = webGpuViewer != null,
             isContinuous = webGpuViewer?.isContinuous == true,
+            useGap = webGpuViewer?.useGap == true,
         )
         webGpuViewer?.let {
             WebGpuViewerSettings(
@@ -197,6 +198,7 @@ private fun PagerViewerSettings(
     // what the standard paged viewer does, and a continuous strip is navigated like a long strip.
     webGpu: Boolean = false,
     isContinuous: Boolean = false,
+    useGap: Boolean = false,
     // KMK <--
 ) {
     HeadingItem(MR.strings.pager_viewer)
@@ -260,9 +262,15 @@ private fun PagerViewerSettings(
     )
     // KMK <--
 
+    // KMK: the renderer trims a strip's borders from the long strip setting, so the panel has to
+    // offer the one the mode actually reads.
     CheckboxItem(
         label = stringResource(MR.strings.pref_crop_borders),
-        pref = screenModel.preferences.cropBorders(),
+        pref = when {
+            !strip -> screenModel.preferences.cropBorders()
+            useGap -> screenModel.preferences.cropBordersContinuousVertical()
+            else -> screenModel.preferences.cropBordersWebtoon()
+        },
     )
 
     // KMK -->

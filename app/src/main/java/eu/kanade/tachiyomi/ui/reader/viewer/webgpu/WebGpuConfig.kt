@@ -92,7 +92,15 @@ class WebGpuConfig(
         readerPreferences.zoomStart()
             .register({ zoomTypeFromPreference(it) }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.cropBorders()
+        // Border trimming is a per-mode setting in the standard viewers, and a strip is not a
+        // paged view: reading the paged one in every mode meant turning trimming on for pages also
+        // turned it on for strips, and neither long strip switch did anything under the renderer.
+        val cropBorders = when {
+            !viewer.isContinuous -> readerPreferences.cropBorders()
+            viewer.useGap -> readerPreferences.cropBordersContinuousVertical()
+            else -> readerPreferences.cropBordersWebtoon()
+        }
+        cropBorders
             .register({ imageCropBorders = it }, { imagePropertyChangedListener?.invoke() })
 
         readerPreferences.upscaler()
