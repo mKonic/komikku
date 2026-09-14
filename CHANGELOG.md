@@ -10,6 +10,17 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [v1.7.2] - 2026-09-14
+### Added
+- Crash reporting again, on release and beta builds. Crashes, native ones included, go to this
+  fork's own Firebase project, and the switch in onboarding and Settings > Privacy turns it off.
+  It had been dead rather than disabled: the check that decides whether to start it named upstream
+  Komikku's signing certificate, which this fork's builds can never match.
+
+### Removed
+- Analytics. Its settings toggle had been commented out for a long while the preference itself
+  defaulted to on, so it was neither used nor refusable. Crash reporting is all that is left.
+
 ## [v1.7.1] - 2026-09-14
 ### Fixed
 - Opening Data and storage no longer stalls while it measures the chapter and page preview caches,
