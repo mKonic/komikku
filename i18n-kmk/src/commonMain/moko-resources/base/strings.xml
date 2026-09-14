@@ -140,6 +140,8 @@
     <string name="auto_update_app_disable_auto_download">Don't auto download update</string>
     <string name="auto_update_app_interval">Check for app updates</string>
     <string name="auto_update_app_interval_launch">Every app launch</string>
+    <string name="update_check_skip_version">Skip this version</string>
+    <string name="update_check_skipped">%1$s won\'t be offered again</string>
     <!-- Onboarding section -->
     <string name="onboarding_permission_external_storage">Access media files permission</string>
     <string name="onboarding_permission_external_storage_description">Allow using custom covers in entry's Edit Info</string>

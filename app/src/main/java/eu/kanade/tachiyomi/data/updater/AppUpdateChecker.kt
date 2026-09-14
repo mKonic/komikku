@@ -77,6 +77,9 @@ class AppUpdateChecker(
     }
 
     // KMK -->
+    /** Stop offering [version] by itself. A later release, or a manual check, still reports it. */
+    fun skipUpdate(version: String) = getApplicationRelease.skip(version)
+
     suspend fun getReleaseNotes(): GetApplicationRelease.Result {
         return withIOContext {
             getApplicationRelease.awaitReleaseNotes(

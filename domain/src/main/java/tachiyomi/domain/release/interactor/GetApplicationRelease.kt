@@ -30,8 +30,17 @@ class GetApplicationRelease(
         preferenceStore.getInt(AppUpdatePolicy.CHECK_INTERVAL_KEY, AppUpdatePolicy.CHECK_INTERVAL_DEFAULT)
     }
 
+    /** KMK: a version the reader has turned down for good, so only this one stops being offered. */
+    private val skipped: Preference<String> by lazy {
+        preferenceStore.getString(Preference.appStateKey("skipped_app_version"), "")
+    }
+
+    /** KMK: stop offering [version] on its own. A later release, or a manual check, still reports. */
+    fun skip(version: String) = skipped.set(version)
+
     suspend fun await(arguments: Arguments): Result {
         val now = Instant.now()
+        val skippedVersion = skipped.get()
 
         // Limit checks to once every 3 days at most
         // KMK: an interval of zero leaves the next check time at the last one, which is never in the future
@@ -41,7 +50,9 @@ class GetApplicationRelease(
         // about. Asking again costs one request and is the only way the prompt comes back at launch
         // for someone who has not installed it yet; without this, checking by hand re-arms two days
         // of silence every time.
-        val pending = lastFound.get().takeIf(String::isNotEmpty)?.let { found ->
+        // KMK: a skipped version is not worth spending a request on either, or every launch would
+        // ask again about the one release the reader said they did not want.
+        val pending = lastFound.get().takeIf { it.isNotEmpty() && it != skippedVersion }?.let { found ->
             isNewVersion(arguments.isPreview, arguments.commitCount, arguments.versionName, found)
         } ?: false
         if (!arguments.forceCheck && !pending && now.isBefore(nextCheckTime)) {
@@ -78,8 +89,11 @@ class GetApplicationRelease(
             versionTag = latest.version,
         )
         return when {
-            isNewVersion -> Result.NewUpdate(latest)
-            else -> Result.NoNewUpdate
+            !isNewVersion -> Result.NoNewUpdate
+            // KMK: turned down for good, so the app stops raising it by itself. Asking still answers
+            // honestly, and a release after this one is a different version and is offered again.
+            !arguments.forceCheck && latest.version == skippedVersion -> Result.NoNewUpdate
+            else -> Result.NewUpdate(latest)
         }
     }
 

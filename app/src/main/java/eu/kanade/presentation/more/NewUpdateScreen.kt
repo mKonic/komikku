@@ -19,6 +19,7 @@ import mihon.icons.materialsymbols.automirroredrounded.OpenInNew
 import mihon.icons.materialsymbols.rounded.NewReleases
 import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -31,6 +32,9 @@ fun NewUpdateScreen(
     onOpenInBrowser: () -> Unit,
     onRejectUpdate: () -> Unit,
     onAcceptUpdate: () -> Unit,
+    // KMK -->
+    onSkipUpdate: () -> Unit,
+    // KMK <--
 ) {
     InfoScreen(
         icon = MaterialSymbols.Rounded.NewReleases,
@@ -59,6 +63,12 @@ fun NewUpdateScreen(
                 Spacer(modifier = Modifier.width(MaterialTheme.padding.extraSmall))
                 Icon(imageVector = MaterialSymbols.AutoMirroredRounded.OpenInNew, contentDescription = null)
             }
+
+            // KMK -->
+            TextButton(onClick = onSkipUpdate) {
+                Text(text = stringResource(KMR.strings.update_check_skip_version))
+            }
+            // KMK <--
         }
     }
 }
@@ -80,6 +90,7 @@ private fun NewUpdateScreenPreview() {
             onOpenInBrowser = {},
             onRejectUpdate = {},
             onAcceptUpdate = {},
+            onSkipUpdate = {},
         )
     }
 }

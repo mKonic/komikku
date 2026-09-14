@@ -13,8 +13,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 ## [v1.7.0] - 2026-09-14
 ### Added
 - A check interval for app updates, under Advanced. The choices are every app launch, daily, every
-  two days and weekly; every two days is what the app did before and stays the default. Launch
-  means the app starting, not the screen rotating.
+  two days and weekly; every two days is what the app did before and stays the default.
+- Skip this version, on the update prompt. The app stops raising that release on its own; checking
+  by hand still reports it, and the release after it is offered as usual.
 
 ### Fixed
 - An update the app had already found was not offered again at launch until the wait between

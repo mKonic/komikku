@@ -19,6 +19,15 @@ import java.time.temporal.ChronoUnit
  */
 class GetApplicationReleaseGateTest {
 
+    /**
+     * Stand-ins for what is installed and what the repository is offering. Only their order matters:
+     * the interactor compares whatever strings it is handed, so nothing here follows the app's own
+     * version line.
+     */
+    private val installed = "1.0.0"
+    private val newer = "v1.1.0"
+    private val newerStill = "v1.2.0"
+
     private class FakeService(private val releases: List<Release>) : ReleaseService {
         var calls = 0
         override suspend fun latest(arguments: GetApplicationRelease.Arguments): Release? = releases.firstOrNull()
@@ -35,17 +44,19 @@ class GetApplicationReleaseGateTest {
         downloadLink = "",
     )
 
-    private fun arguments(versionName: String) = GetApplicationRelease.Arguments(
+    private fun arguments(versionName: String, forceCheck: Boolean = false) = GetApplicationRelease.Arguments(
         isFoss = false,
         isPreview = false,
         commitCount = 0,
         versionName = versionName,
         repository = "owner/repo",
+        forceCheck = forceCheck,
     )
 
     private fun store(
         checkedAt: Instant? = null,
         found: String = "",
+        skipped: String = "",
         intervalDays: Int = AppUpdatePolicy.CHECK_INTERVAL_DEFAULT,
     ) = InMemoryPreferenceStore(
         sequenceOf(
@@ -60,6 +71,11 @@ class GetApplicationReleaseGateTest {
                 defaultValue = "",
             ),
             InMemoryPreferenceStore.InMemoryPreference(
+                key = Preference.appStateKey("skipped_app_version"),
+                data = skipped,
+                defaultValue = "",
+            ),
+            InMemoryPreferenceStore.InMemoryPreference(
                 key = AppUpdatePolicy.CHECK_INTERVAL_KEY,
                 data = intervalDays,
                 defaultValue = AppUpdatePolicy.CHECK_INTERVAL_DEFAULT,
@@ -71,11 +87,11 @@ class GetApplicationReleaseGateTest {
     fun `an update found once is still reported while it is not installed`() = runTest {
         // What made the prompt vanish from launch: checking by hand set the timestamp, and every
         // launch for the next two days then answered "nothing new" although the update was waiting.
-        val releases = listOf(release("v1.6.0"))
+        val releases = listOf(release(newer))
         val service = FakeService(releases)
-        val interactor = GetApplicationRelease(service, store(checkedAt = Instant.now(), found = "v1.6.0"))
+        val interactor = GetApplicationRelease(service, store(checkedAt = Instant.now(), found = newer))
 
-        interactor.await(arguments("1.5.0")) shouldBe GetApplicationRelease.Result.NewUpdate(releases.getLatest()!!)
+        interactor.await(arguments(installed)) shouldBe GetApplicationRelease.Result.NewUpdate(releases.getLatest()!!)
     }
 
     @Test
@@ -83,7 +99,7 @@ class GetApplicationReleaseGateTest {
         val service = FakeService(emptyList())
         val interactor = GetApplicationRelease(service, store(checkedAt = Instant.now()))
 
-        interactor.await(arguments("1.6.0")) shouldBe GetApplicationRelease.Result.NoNewUpdate
+        interactor.await(arguments(installed)) shouldBe GetApplicationRelease.Result.NoNewUpdate
         service.calls shouldBe 0
     }
 
@@ -94,20 +110,61 @@ class GetApplicationReleaseGateTest {
         val service = FakeService(emptyList())
         val interactor = GetApplicationRelease(service, store())
 
-        interactor.await(arguments("1.6.0")) shouldBe GetApplicationRelease.Result.NoNewUpdate
+        interactor.await(arguments(installed)) shouldBe GetApplicationRelease.Result.NoNewUpdate
         service.calls shouldBe 1
 
-        interactor.await(arguments("1.6.0")) shouldBe GetApplicationRelease.Result.NoNewUpdate
+        interactor.await(arguments(installed)) shouldBe GetApplicationRelease.Result.NoNewUpdate
         service.calls shouldBe 1
     }
 
     @Test
     fun `installing the update lets the window apply again`() = runTest {
         val service = FakeService(emptyList())
-        val interactor = GetApplicationRelease(service, store(checkedAt = Instant.now(), found = "v1.6.0"))
+        val interactor = GetApplicationRelease(service, store(checkedAt = Instant.now(), found = newer))
 
         // Now running the version that was pending, so there is nothing left to re-announce.
-        interactor.await(arguments("1.6.0")) shouldBe GetApplicationRelease.Result.NoNewUpdate
+        interactor.await(arguments(newer)) shouldBe GetApplicationRelease.Result.NoNewUpdate
+        service.calls shouldBe 0
+    }
+
+    @Test
+    fun `a skipped version is not raised again by the app itself`() = runTest {
+        val service = FakeService(listOf(release(newer)))
+        val interactor = GetApplicationRelease(service, store(skipped = newer))
+
+        interactor.await(arguments(installed)) shouldBe GetApplicationRelease.Result.NoNewUpdate
+    }
+
+    @Test
+    fun `asking by hand still reports a skipped version`() = runTest {
+        val releases = listOf(release(newer))
+        val service = FakeService(releases)
+        val interactor = GetApplicationRelease(service, store(skipped = newer))
+
+        interactor.await(arguments(installed, forceCheck = true)) shouldBe
+            GetApplicationRelease.Result.NewUpdate(releases.getLatest()!!)
+    }
+
+    @Test
+    fun `a release after the skipped one is offered`() = runTest {
+        val releases = listOf(release(newerStill))
+        val service = FakeService(releases)
+        val interactor = GetApplicationRelease(service, store(skipped = newer))
+
+        interactor.await(arguments(installed)) shouldBe GetApplicationRelease.Result.NewUpdate(releases.getLatest()!!)
+    }
+
+    @Test
+    fun `a skipped version does not keep the check awake`() = runTest {
+        // Without this the re-offer above would spend a request on every launch, for the one release
+        // the reader has said they do not want.
+        val service = FakeService(listOf(release(newer)))
+        val interactor = GetApplicationRelease(
+            service,
+            store(checkedAt = Instant.now(), found = newer, skipped = newer),
+        )
+
+        interactor.await(arguments(installed)) shouldBe GetApplicationRelease.Result.NoNewUpdate
         service.calls shouldBe 0
     }
 
@@ -116,8 +173,8 @@ class GetApplicationReleaseGateTest {
         val service = FakeService(emptyList())
         val interactor = GetApplicationRelease(service, store(checkedAt = Instant.now(), intervalDays = 0))
 
-        interactor.await(arguments("1.6.0")) shouldBe GetApplicationRelease.Result.NoNewUpdate
-        interactor.await(arguments("1.6.0")) shouldBe GetApplicationRelease.Result.NoNewUpdate
+        interactor.await(arguments(installed)) shouldBe GetApplicationRelease.Result.NoNewUpdate
+        interactor.await(arguments(installed)) shouldBe GetApplicationRelease.Result.NoNewUpdate
         service.calls shouldBe 2
     }
 
@@ -128,11 +185,11 @@ class GetApplicationReleaseGateTest {
 
         // The default would have asked by now.
         GetApplicationRelease(service, store(checkedAt = threeDaysAgo))
-            .await(arguments("1.6.0")) shouldBe GetApplicationRelease.Result.NoNewUpdate
+            .await(arguments(installed)) shouldBe GetApplicationRelease.Result.NoNewUpdate
         service.calls shouldBe 1
 
         GetApplicationRelease(service, store(checkedAt = threeDaysAgo, intervalDays = 7))
-            .await(arguments("1.6.0")) shouldBe GetApplicationRelease.Result.NoNewUpdate
+            .await(arguments(installed)) shouldBe GetApplicationRelease.Result.NoNewUpdate
         service.calls shouldBe 1
     }
 }

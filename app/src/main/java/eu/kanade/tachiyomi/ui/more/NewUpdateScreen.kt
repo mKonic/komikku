@@ -7,8 +7,12 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.more.NewUpdateScreen
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.data.updater.AppUpdateChecker
 import eu.kanade.tachiyomi.data.updater.AppUpdateDownloadJob
 import eu.kanade.tachiyomi.util.system.openInBrowser
+import eu.kanade.tachiyomi.util.system.toast
+import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.i18n.kmk.KMR
 
 class NewUpdateScreen(
     private val versionName: String,
@@ -38,6 +42,13 @@ class NewUpdateScreen(
                 )
                 navigator.pop()
             },
+            // KMK -->
+            onSkipUpdate = {
+                AppUpdateChecker().skipUpdate(versionName)
+                context.toast(context.stringResource(KMR.strings.update_check_skipped, versionName))
+                navigator.pop()
+            },
+            // KMK <--
         )
     }
 }
