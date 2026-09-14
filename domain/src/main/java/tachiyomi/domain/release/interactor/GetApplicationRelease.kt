@@ -16,12 +16,27 @@ class GetApplicationRelease(
         preferenceStore.getLong(Preference.appStateKey("last_app_check"), 0)
     }
 
+    /**
+     * KMK: the newest version a check has found, so the rate limit below can tell "nothing new since
+     * last time" apart from "an update is sitting there and this reader has not installed it yet".
+     */
+    private val lastFound: Preference<String> by lazy {
+        preferenceStore.getString(Preference.appStateKey("last_app_found"), "")
+    }
+
     suspend fun await(arguments: Arguments): Result {
         val now = Instant.now()
 
         // Limit checks to once every 3 days at most
         val nextCheckTime = Instant.ofEpochMilli(lastChecked.get()).plus(2, ChronoUnit.DAYS)
-        if (!arguments.forceCheck && now.isBefore(nextCheckTime)) {
+        // KMK: the limit is there to spare the network, not to hide an update that is already known
+        // about. Asking again costs one request and is the only way the prompt comes back at launch
+        // for someone who has not installed it yet; without this, checking by hand re-arms two days
+        // of silence every time.
+        val pending = lastFound.get().takeIf(String::isNotEmpty)?.let { found ->
+            isNewVersion(arguments.isPreview, arguments.commitCount, arguments.versionName, found)
+        } ?: false
+        if (!arguments.forceCheck && !pending && now.isBefore(nextCheckTime)) {
             return Result.NoNewUpdate
         }
 
@@ -37,10 +52,15 @@ class GetApplicationRelease(
                     )
             }
 
-        val latest = releases.getLatest() ?: return Result.NoNewUpdate
+        val latest = releases.getLatest()
         // KMK <--
 
+        // KMK: before the early return below, so a check that finds nothing still counts as a check.
+        // Left until after the request, it meant an up to date app asked again on every single launch.
         lastChecked.set(now.toEpochMilli())
+        lastFound.set(latest?.version.orEmpty())
+
+        if (latest == null) return Result.NoNewUpdate
 
         // Check if latest version is different from current version
         val isNewVersion = isNewVersion(

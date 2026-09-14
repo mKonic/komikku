@@ -25,6 +25,11 @@ class GetApplicationReleaseTest {
         val preferenceStore = mockk<PreferenceStore>()
         preference = mockk()
         every { preferenceStore.getLong(any(), any()) } returns preference
+        // KMK: the check also records the version it found
+        val found = mockk<Preference<String>>()
+        every { found.get() } returns ""
+        every { found.set(any()) }.answers { }
+        every { preferenceStore.getString(any(), any()) } returns found
         releaseService = mockk()
 
         getApplicationRelease = GetApplicationRelease(releaseService, preferenceStore)
