@@ -52,6 +52,13 @@ class WebGpuViewerContinuous(activity: ReaderActivity, override val useGap: Bool
         state.animateScroll(direction * state.height / 2f)
     }
 
+    // A whole screen, not the forward tap's half of one: that is the distance the standard long
+    // strip viewer covers per auto scroll interval, and a shorter step reads as a crawl at the
+    // same setting.
+    override fun autoScrollStep() {
+        state.animateScroll(state.height.toFloat())
+    }
+
     override fun moveRight() = scrollByHalfPage(1)
 
     override fun moveLeft() = scrollByHalfPage(-1)

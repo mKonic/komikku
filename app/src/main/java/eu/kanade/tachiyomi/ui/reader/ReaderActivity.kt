@@ -839,10 +839,10 @@ class ReaderActivity : BaseActivity() {
                                         }
                                         // KMK --> the renderer is neither of the above, so auto
                                         // scroll used to fall through this when and do nothing at
-                                        // all. moveToNext is what a forward tap already runs: a
-                                        // page turn when paged, half a viewport of animated scroll
-                                        // when continuous.
-                                        is WebGpuViewer -> v.moveToNext()
+                                        // all: a page turn in the paged modes, a screen of
+                                        // animated scroll in the continuous ones, which is the
+                                        // distance the viewers above cover per interval.
+                                        is WebGpuViewer -> v.autoScrollStep()
                                         // KMK <--
                                     }
                                 }

@@ -277,6 +277,14 @@ open class WebGpuViewer(
     val currentReaderPage: ReaderPage? get() = (currentPage as? ViewerReaderPage)?.page
 
     /**
+     * KMK: one auto scroll step. A paged mode turns a page, which is what the standard paged
+     * viewer does per interval. [WebGpuViewerContinuous] overrides it to cover a whole screen,
+     * the distance the standard long strip viewer covers - a forward tap's half viewport would
+     * crawl at the same interval setting.
+     */
+    open fun autoScrollStep() = moveToNext()
+
+    /**
      * KMK: a strip's home scale - the chosen width, then capped to an aspect ratio the way the
      * standard long strip viewer caps it. Without the cap a wide screen stretches a strip across
      * its whole width whatever shape the page is, which is what the setting exists to stop.
