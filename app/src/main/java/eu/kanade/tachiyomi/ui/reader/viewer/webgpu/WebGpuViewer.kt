@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.reader.viewer.webgpu
 
 import android.graphics.Color
 import android.graphics.PointF
+import android.graphics.Rect
 import android.graphics.RectF
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -13,6 +14,7 @@ import androidx.compose.ui.util.fastCoerceIn
 import androidx.core.net.toUri
 import androidx.webgpu.GPUTexture
 import ca.mpreg.imagedecoder.ImageDecoder
+import ca.mpreg.webgpuviewer.ImageUtil
 import ca.mpreg.webgpuviewer.ImageView
 import ca.mpreg.webgpuviewer.closeTo
 import ca.mpreg.webgpuviewer.draw.TextAlign
@@ -161,12 +163,12 @@ open class WebGpuViewer(
     private val pairAspectTolerance = 0.1f
 
     private sealed class PageKey {
-        data class Reader(val chapterId: Long?, val index: Int) : PageKey()
+        data class Reader(val chapterId: Long?, val index: Int, val half: SplitHalf? = null) : PageKey()
         data class Transition(val prevId: Long?, val nextId: Long?) : PageKey()
     }
 
     private fun pageKey(page: ViewerPage): PageKey = when (page) {
-        is ViewerReaderPage -> PageKey.Reader(page.page.chapter.chapter.id, page.page.index)
+        is ViewerReaderPage -> PageKey.Reader(page.page.chapter.chapter.id, page.page.index, page.half)
         is ViewerTransitionPage -> PageKey.Transition(page.prevChapter?.chapter?.id, page.nextChapter?.chapter?.id)
         else -> PageKey.Transition(null, null)
     }
@@ -425,10 +427,15 @@ open class WebGpuViewer(
      * Gets or creates a page. Thread-safe.
      * @param referencePage The page to use as reference for eviction (defaults to currentPage)
      */
-    fun getPage(page: ReaderPage, referencePage: ViewerPage? = null): ViewerPage {
-        val key = PageKey.Reader(page.chapter.chapter.id, page.index)
+    fun getPage(
+        page: ReaderPage,
+        referencePage: ViewerPage? = null,
+        // KMK: which half of a page split in two, or null when it is shown whole.
+        half: SplitHalf? = if (config.dualPageSplit) SplitHalf.FIRST else null,
+    ): ViewerPage {
+        val key = PageKey.Reader(page.chapter.chapter.id, page.index, half)
         return synchronized(lock) {
-            findInCache(key) ?: ViewerReaderPage(page).also { newPage ->
+            findInCache(key) ?: ViewerReaderPage(page, half).also { newPage ->
                 pageCache[key] = newPage
                 val limit = cacheSize
                 while (pageCache.size > limit) {
@@ -750,13 +757,51 @@ open class WebGpuViewer(
             get() = nextChapter?.pages?.firstOrNull()?.let { getPage(it, currentPage) }
     }
 
-    inner class ViewerReaderPage(val page: ReaderPage) : ViewerPage() {
+    /**
+     * Which half of a page too wide for the screen this is, when the reader splits such pages into
+     * two. [FIRST] is the half shown first, which is the right-hand side of a right-to-left read.
+     */
+    enum class SplitHalf { FIRST, SECOND }
+
+    /**
+     * Whether this page is one the reader shows as two. Needs the image, so it answers no until
+     * the decode lands - the page graph is read live, so the second half appears by itself once it
+     * does. Not while dual page view is on: that mode is already putting two pages on one screen.
+     */
+    private fun splitsInTwo(page: ViewerReaderPage): Boolean {
+        if (!config.dualPageSplit || isDualPageMode()) return false
+        return (page.rawAspectRatio ?: 0f) > 1f
+    }
+
+    /**
+     * Which half of [page] to land on when arriving from the page after it: its second, when it is
+     * one the reader splits. A page whose decode has not landed yet answers FIRST and corrects
+     * itself on the next read of the graph.
+     */
+    private fun backHalf(page: ReaderPage): SplitHalf? {
+        if (!config.dualPageSplit) return null
+        val first = synchronized(lock) {
+            findInCache(PageKey.Reader(page.chapter.chapter.id, page.index, SplitHalf.FIRST))
+        } as? ViewerReaderPage
+        return if (first != null && splitsInTwo(first)) SplitHalf.SECOND else SplitHalf.FIRST
+    }
+
+    inner class ViewerReaderPage(val page: ReaderPage, val half: SplitHalf? = null) : ViewerPage() {
         /** Cached spread ImagePage when this page is the anchor of a dual-page spread */
         var spreadPage: ImagePage.ImageSpread? = null
 
         /** The side the file names, or null for none. Never a value merely derived from the index. */
         @Volatile
         internal var taggedSpreadPosition: SpreadPosition? = null
+
+        /**
+         * The whole decoded image's shape, before any trim - so it still reads wide once this page
+         * has been cropped to half of a wide one, which is what keeps [splitsInTwo] stable.
+         */
+        internal val rawAspectRatio: Float?
+            get() = (imagePage as? ImagePage.ImageSingle)?.let {
+                if (it.isDecoded && it.height > 0) it.width.toFloat() / it.height else null
+            }
 
         /** The decoded image's shape, or null while this page is still a placeholder. */
         internal val aspectRatio: Float?
@@ -804,7 +849,12 @@ open class WebGpuViewer(
 
         override val prev: ViewerPage?
             get() = page.chapter.pages?.let { pages ->
-                pages.getOrNull(page.index - 1)?.let { getPage(it, currentPage) } ?: run {
+                // KMK: the two halves of a split page sit between the pages either side of it.
+                if (half == SplitHalf.SECOND) {
+                    return@let getPage(page, currentPage, SplitHalf.FIRST)
+                }
+                pages.getOrNull(page.index - 1)
+                    ?.let { getPage(it, currentPage, backHalf(it)) } ?: run {
                     val prevChapter = prevChapter ?: return@run getPage(null, page.chapter, currentPage)
 
                     if (prevChapter.state !is ReaderChapter.State.Loaded) {
@@ -821,6 +871,11 @@ open class WebGpuViewer(
 
         override val next: ViewerPage?
             get() = page.chapter.pages?.let { pages ->
+                // KMK: a wide page is read as two, so its own second half comes before the page
+                // after it. Only once it is decoded - until then nothing knows it is wide.
+                if (half == SplitHalf.FIRST && splitsInTwo(this)) {
+                    return@let getPage(page, currentPage, SplitHalf.SECOND)
+                }
                 pages.getOrNull(page.index + 1)?.let { getPage(it, currentPage) } ?: run {
                     val nextChapter = nextChapter ?: return@run getPage(page.chapter, null, currentPage)
 
@@ -1361,6 +1416,35 @@ open class WebGpuViewer(
         }
     }
 
+    /**
+     * Crops [image] to the half [page] stands for, when the reader splits pages this wide. Left
+     * alone otherwise, including for a page that turns out not to be wide after all, which then
+     * simply has no second half to go to.
+     */
+    private fun applySplitTrim(page: ViewerReaderPage, image: Image) {
+        val half = page.half ?: return
+        if (!config.dualPageSplit || isDualPageMode()) return
+        if (image.width <= image.height) return
+
+        // The first half is the side the reader starts on: the right of a right-to-left read.
+        // The invert switch swaps that, as it does in the standard viewers.
+        val firstIsLeft = !isReversed != config.dualPageInvert
+        val takeLeft = (half == SplitHalf.FIRST) == firstIsLeft
+
+        val middle = image.width / 2
+        val side = if (takeLeft) {
+            Rect(0, 0, middle, image.height)
+        } else {
+            Rect(middle, 0, image.width, image.height)
+        }
+
+        // Border trimming, if it ran, already narrowed the image; keep both. Rect.intersect
+        // narrows in place and leaves the rect alone when there is no overlap, which is the right
+        // answer anyway: the plain half.
+        image.trim?.let { side.intersect(it) }
+        image.trim = side
+    }
+
     private suspend fun decodeReaderPage(page: ViewerReaderPage) {
         if (page.page.status != Page.State.Ready) {
             startPageLoad(page)
@@ -1432,6 +1516,26 @@ open class WebGpuViewer(
                 val firstFrame = dec.decodeNext()
 
                 if (pageCount == 1) {
+                    // A page wider than it is tall reads better turned on its side than shrunk to
+                    // fit. A gain map is a second buffer with its own size and would have to turn
+                    // with it, so an HDR page carrying one is left alone rather than torn from it.
+                    val turn = config.dualPageRotateToFit &&
+                        firstFrame.width > firstFrame.height &&
+                        firstFrame.gainmap == null
+                    val turned = if (turn) {
+                        ImageUtil.rotateQuarter(
+                            firstFrame.image,
+                            firstFrame.width,
+                            firstFrame.height,
+                            bytesPerPixel = if (firstFrame.isHdr) 8 else 4,
+                            // 90 degrees is clockwise in the standard viewers, and their invert
+                            // switch turns the other way.
+                            clockwise = !config.dualPageRotateToFitInvert,
+                        )
+                    } else {
+                        null
+                    }
+
                     // Only trim when not animated and not in dual page mode
                     val trimColors = if (config.imageCropBorders && !isDualPageMode()) {
                         listOf(
@@ -1443,9 +1547,9 @@ open class WebGpuViewer(
                     }
 
                     val firstImage = Image(
-                        firstFrame.image,
-                        firstFrame.width,
-                        firstFrame.height,
+                        turned ?: firstFrame.image,
+                        if (turned != null) firstFrame.height else firstFrame.width,
+                        if (turned != null) firstFrame.width else firstFrame.height,
                         createMipMaps = true,
                         trimColors = trimColors,
                         trimThreshold = 0.15f,
@@ -1454,6 +1558,11 @@ open class WebGpuViewer(
                         hdrHeadroom = firstFrame.hdrHeadroom,
                         gainmap = firstFrame.gainmapInput(),
                     )
+
+                    // KMK: a page the reader splits keeps its whole image and shows half of it.
+                    // The renderer already draws only an image's trim rect, so the two halves are
+                    // a crop each rather than two smaller decodes.
+                    applySplitTrim(page, firstImage)
 
                     ImagePage.ImageSingle(firstImage)
                 } else {

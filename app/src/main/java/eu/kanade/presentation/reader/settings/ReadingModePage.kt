@@ -287,29 +287,49 @@ private fun PagerViewerSettings(
         pref = screenModel.preferences.navigateToPan(),
     )
 
-    val dualPageSplitPaged by screenModel.preferences.dualPageSplitPaged().collectAsState()
+    // KMK: the renderer splits and rotates a strip's pages from the long strip switches, the same
+    // way it trims their borders, so the panel has to offer whichever the mode actually reads.
+    val splitPref = if (strip) {
+        screenModel.preferences.dualPageSplitWebtoon()
+    } else {
+        screenModel.preferences.dualPageSplitPaged()
+    }
+    val dualPageSplit by splitPref.collectAsState()
     CheckboxItem(
         label = stringResource(MR.strings.pref_dual_page_split),
-        pref = screenModel.preferences.dualPageSplitPaged(),
+        pref = splitPref,
     )
 
-    if (dualPageSplitPaged) {
+    if (dualPageSplit) {
         CheckboxItem(
             label = stringResource(MR.strings.pref_dual_page_invert),
-            pref = screenModel.preferences.dualPageInvertPaged(),
+            pref = if (strip) {
+                screenModel.preferences.dualPageInvertWebtoon()
+            } else {
+                screenModel.preferences.dualPageInvertPaged()
+            },
         )
     }
 
-    val dualPageRotateToFit by screenModel.preferences.dualPageRotateToFit().collectAsState()
+    val rotatePref = if (strip) {
+        screenModel.preferences.dualPageRotateToFitWebtoon()
+    } else {
+        screenModel.preferences.dualPageRotateToFit()
+    }
+    val dualPageRotateToFit by rotatePref.collectAsState()
     CheckboxItem(
         label = stringResource(MR.strings.pref_page_rotate),
-        pref = screenModel.preferences.dualPageRotateToFit(),
+        pref = rotatePref,
     )
 
     if (dualPageRotateToFit) {
         CheckboxItem(
             label = stringResource(MR.strings.pref_page_rotate_invert),
-            pref = screenModel.preferences.dualPageRotateToFitInvert(),
+            pref = if (strip) {
+                screenModel.preferences.dualPageRotateToFitInvertWebtoon()
+            } else {
+                screenModel.preferences.dualPageRotateToFitInvert()
+            },
         )
     }
 

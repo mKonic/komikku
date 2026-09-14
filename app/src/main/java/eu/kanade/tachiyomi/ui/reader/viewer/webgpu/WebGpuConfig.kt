@@ -179,7 +179,22 @@ class WebGpuConfig(
             .onEach { updateNavigation(this.navigationMode) }
             .launchIn(scope)
 
-        readerPreferences.dualPageSplitPaged()
+        // Splitting a wide page is a per-mode setting in the standard viewers, as border trimming
+        // is, so a strip has to read the long strip switches rather than the paged ones.
+        val strip = viewer.isContinuous
+        val splitPref =
+            if (strip) readerPreferences.dualPageSplitWebtoon() else readerPreferences.dualPageSplitPaged()
+        val invertPref =
+            if (strip) readerPreferences.dualPageInvertWebtoon() else readerPreferences.dualPageInvertPaged()
+        val rotatePref =
+            if (strip) readerPreferences.dualPageRotateToFitWebtoon() else readerPreferences.dualPageRotateToFit()
+        val rotateInvertPref = if (strip) {
+            readerPreferences.dualPageRotateToFitInvertWebtoon()
+        } else {
+            readerPreferences.dualPageRotateToFitInvert()
+        }
+
+        splitPref
             .register(
                 { dualPageSplit = it },
                 {
@@ -188,16 +203,16 @@ class WebGpuConfig(
                 },
             )
 
-        readerPreferences.dualPageInvertPaged()
+        invertPref
             .register({ dualPageInvert = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.dualPageRotateToFit()
+        rotatePref
             .register(
                 { dualPageRotateToFit = it },
                 { imagePropertyChangedListener?.invoke() },
             )
 
-        readerPreferences.dualPageRotateToFitInvert()
+        rotateInvertPref
             .register(
                 { dualPageRotateToFitInvert = it },
                 { imagePropertyChangedListener?.invoke() },
