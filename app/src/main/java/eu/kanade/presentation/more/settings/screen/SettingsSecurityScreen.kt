@@ -237,13 +237,11 @@ object SettingsSecurityScreen : SearchableSettings {
                     title = stringResource(MR.strings.onboarding_permission_crashlytics),
                     subtitle = stringResource(MR.strings.onboarding_permission_crashlytics_description),
                 ),
-                /*
                 Preference.PreferenceItem.SwitchPreference(
                     preference = privacyPreferences.analytics(),
                     title = stringResource(MR.strings.onboarding_permission_analytics),
                     subtitle = stringResource(MR.strings.onboarding_permission_analytics_description),
                 ),
-                 */
                 Preference.PreferenceItem.InfoPreference(stringResource(MR.strings.firebase_summary)),
             ),
         )

@@ -2,9 +2,11 @@ package mihon.telemetry
 
 import android.content.Context
 import com.google.firebase.FirebaseApp
+import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 object TelemetryConfig {
+    private var analytics: FirebaseAnalytics? = null
     private var crashlytics: FirebaseCrashlytics? = null
 
     fun init(context: Context, isPreviewBuildType: Boolean, commitCount: String) {
@@ -12,14 +14,19 @@ object TelemetryConfig {
         if (!context.isMihonProductionApp()) return
 
         FirebaseApp.initializeApp(context)
+        analytics = FirebaseAnalytics.getInstance(context)
         crashlytics = FirebaseCrashlytics.getInstance()
         // KMK -->
-        // Crash reports only: analytics is not collected. The preview build's commit count goes on each report
-        // instead of an analytics user property, so a preview crash still says which build it came from.
+        // The commit count rides on the crash report itself rather than on an analytics user property, so a
+        // preview crash still says which build it came from when analytics is switched off.
         if (isPreviewBuildType) {
             crashlytics?.setCustomKey("preview_version", commitCount)
         }
         // KMK <--
+    }
+
+    fun setAnalyticsEnabled(enabled: Boolean) {
+        analytics?.setAnalyticsCollectionEnabled(enabled)
     }
 
     fun setCrashlyticsEnabled(enabled: Boolean) {
