@@ -10,6 +10,12 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [v1.6.2] - 2026-09-14
+### Fixed
+- Setting HDR highlights to off left an HDR page with all of its headroom instead of reading it as
+  SDR: the renderer treated a ceiling of one as "no limit asked for" rather than "no headroom".
+  Verified on a 668 nit panel against a PQ image measuring 2.29 stops.
+
 ## [v1.6.1] - 2026-09-14
 ### Fixed
 - The Retry button on a failed page in the WebGPU reader did nothing when tapped. Its hit test was
