@@ -2,6 +2,7 @@ package eu.kanade.presentation.webview
 
 import android.content.pm.ApplicationInfo
 import android.webkit.CookieManager
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebView
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -44,6 +45,7 @@ import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.components.material.Button
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Composable
 fun EhLoginWebViewScreen(
@@ -101,8 +103,17 @@ fun EhLoginWebViewScreen(
             return@Scaffold
         }
 
+        // KMK: destroyed on dispose once its renderer is gone
+        val rendererGone = remember { AtomicBoolean(false) }
         val webClient = remember {
             object : AccompanistWebViewClient() {
+                // KMK --> the renderer died, usually killed for memory; this WebView is unusable and has to go
+                override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+                    if (rendererGone.compareAndSet(false, true)) onUp()
+                    return true
+                }
+                // KMK <--
+
                 override fun onPageFinished(view: WebView, url: String?) {
                     super.onPageFinished(view, url)
                     onPageFinished(view, url ?: return)
@@ -118,6 +129,9 @@ fun EhLoginWebViewScreen(
                 WebView(
                     state = state,
                     navigator = navigator,
+                    // KMK -->
+                    onDispose = { if (rendererGone.get()) it.destroy() },
+                    // KMK <--
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(bottom = 48.dp),

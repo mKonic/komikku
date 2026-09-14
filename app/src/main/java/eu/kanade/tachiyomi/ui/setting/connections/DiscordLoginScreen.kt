@@ -11,6 +11,7 @@ import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.webkit.JavascriptInterface
 import android.webkit.JsResult
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebStorage
 import android.webkit.WebView
@@ -62,6 +63,7 @@ import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.i18n.stringResource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import java.util.concurrent.atomic.AtomicBoolean
 
 private const val DISCORD_DOMAIN = "https://discord.com"
 private const val DISCORD_LOGIN_URL = "$DISCORD_DOMAIN/login"
@@ -82,8 +84,17 @@ class DiscordLoginScreen : Screen() {
 
         var currentUrl by remember { mutableStateOf(DISCORD_LOGIN_URL) }
 
+        // KMK: destroyed on dispose once its renderer is gone
+        val rendererGone = remember { AtomicBoolean(false) }
         val webViewClient = remember {
             object : AccompanistWebViewClient() {
+                // KMK --> the renderer died, usually killed for memory; this WebView is unusable and has to go
+                override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+                    if (rendererGone.compareAndSet(false, true)) navigator.pop()
+                    return true
+                }
+                // KMK <--
+
                 override fun onPageFinished(view: WebView, url: String?) {
                     super.onPageFinished(view, url)
                     url?.let {
@@ -230,6 +241,9 @@ class DiscordLoginScreen : Screen() {
                     .fillMaxSize()
                     .padding(contentPadding),
                 navigator = webViewNavigator,
+                // KMK -->
+                onDispose = { if (rendererGone.get()) it.destroy() },
+                // KMK <--
                 onCreated = { webView ->
                     webView.setDefaultSettings()
 

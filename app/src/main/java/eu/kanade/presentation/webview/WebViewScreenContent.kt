@@ -3,6 +3,7 @@ package eu.kanade.presentation.webview
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.os.Message
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
@@ -54,6 +55,7 @@ import mihon.icons.materialsymbols.rounded.Close
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
+import java.util.concurrent.atomic.AtomicBoolean
 
 class WebViewWindow(webContent: WebContent, val navigator: WebViewNavigator) {
     var state by mutableStateOf(WebViewState(webContent))
@@ -98,8 +100,17 @@ fun WebViewScreenContent(
     var currentUrl by remember { mutableStateOf(url) }
     var showCloudflareHelp by remember { mutableStateOf(false) }
 
+    // KMK: every window's WebView is destroyed on dispose once the renderer is gone
+    val rendererGone = remember { AtomicBoolean(false) }
     val webClient = remember {
         object : AccompanistWebViewClient() {
+            // KMK --> the renderer died, usually killed for memory; the WebViews it drew are unusable and have to go
+            override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+                if (rendererGone.compareAndSet(false, true)) onNavigateUp()
+                return true
+            }
+            // KMK <--
+
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
                 url?.let {
@@ -309,7 +320,8 @@ fun WebViewScreenContent(
                 },
                 onDispose = { webView ->
                     val window = windowStack.items.find { it.webView == webView }
-                    if (window == null) {
+                    // KMK: or the renderer is gone and the WebView can't be used again
+                    if (window == null || rendererGone.get()) {
                         // If we couldn't find any window on the stack that owns this WebView, it means that we can
                         // safely dispose of it because the window containing it has been closed.
                         webView.destroy()
