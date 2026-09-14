@@ -49,6 +49,9 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -396,6 +399,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
     private suspend fun updateChapterList() {
         val semaphore = Semaphore(5)
         val progressCount = AtomicInt(0)
+        mutableCompletedCount.value = 0
         val currentlyUpdatingManga = CopyOnWriteArrayList<Manga>()
         val newUpdates = CopyOnWriteArrayList<Pair<Manga, Array<Chapter>>>()
         val failedUpdates = CopyOnWriteArrayList<Pair<Manga, String?>>()
@@ -666,6 +670,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
 
         updatingManga.remove(manga)
         completed.incrementAndFetch()
+        mutableCompletedCount.value = completed.load()
         notifier.showProgressNotification(
             updatingManga,
             completed.load(),
@@ -720,6 +725,11 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
     }
 
     companion object {
+        // KMK --> how many entries the running update has finished, so a test can see it make progress
+        private val mutableCompletedCount = MutableStateFlow(0)
+        val completedCount: StateFlow<Int> = mutableCompletedCount.asStateFlow()
+        // KMK <--
+
         private const val TAG = "LibraryUpdate"
         private const val WORK_NAME_AUTO = "LibraryUpdate-auto"
         private const val WORK_NAME_MANUAL = "LibraryUpdate-manual"
