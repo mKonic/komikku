@@ -62,10 +62,23 @@ import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.util.TreeSet
-import java.util.concurrent.Executors
+import java.util.concurrent.SynchronousQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.time.Duration.Companion.milliseconds
+
+// KMK -->
+/**
+ * Threads for the decode workers, shared by every viewer so a new one reuses an idle thread. A viewer used to start a
+ * thread of its own, and a thread that has touched the GPU can keep a driver connection after it ends (one GPU pipe and
+ * about 4 MB per reader open on the emulator). Each live viewer's worker still gets a thread to park in its lock.
+ */
+private val decodeDispatcher = ThreadPoolExecutor(0, Int.MAX_VALUE, 5L, TimeUnit.MINUTES, SynchronousQueue()) { r ->
+    Thread(r, "WebGpuViewer-Decode").apply { isDaemon = true }
+}.asCoroutineDispatcher()
+// KMK <--
 
 open class WebGpuViewer(
     val activity: ReaderActivity,
@@ -98,12 +111,6 @@ open class WebGpuViewer(
     ).also { cachedOnBackgroundColor = it }
 
     private val scope = MainScope()
-
-    // Dedicated thread for decode worker to avoid blocking Dispatchers.Default pool
-    private val decodeExecutor = Executors.newSingleThreadExecutor { r ->
-        Thread(r, "WebGpuViewer-Decode").apply { isDaemon = true }
-    }
-    private val decodeDispatcher = decodeExecutor.asCoroutineDispatcher()
 
     // Guards pageCache, decodeQueue, deferredCleanup and chapterPreloadsInFlight.
     private val lock = Object()
@@ -228,7 +235,7 @@ open class WebGpuViewer(
                     }
                 }
             } catch (_: InterruptedException) {
-                // destroy()'s shutdownNow, out of lock.wait().
+                // A stray interrupt; destroy() wakes the worker with notifyAll instead.
             } catch (_: CancellationException) {
                 // Scope cancelled with the viewer.
             } catch (e: Exception) {
@@ -994,9 +1001,8 @@ open class WebGpuViewer(
         destroyed = true
         scope.cancel()
 
-        // shutdownNow interrupts the worker out of lock.wait().
-        decodeExecutor.shutdownNow()
-        decodeDispatcher.close()
+        // KMK: the decode threads are shared, so nothing is shut down; notifyAll below wakes the worker, which sees
+        // destroyed and returns its thread to the pool.
 
         synchronized(lock) {
             decodeQueue.clear()
