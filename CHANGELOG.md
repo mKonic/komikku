@@ -10,6 +10,19 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [v1.7.3] - 2026-09-14
+### Fixed
+- Zooming and panning in the high quality reader no longer stutters with the Enhanced (ArtCNN)
+  upscaler. The renderer ran the network over tiles nobody could see, both the ring it keeps ready
+  around the screen and a whole grid built ahead for the next page, so most of that work went to
+  pixels off screen while the frame in front of you waited behind it. Off screen tiles are drawn
+  the cheap way now and redrawn at full quality only if they come into view.
+- The reader menu no longer hides itself while you tap through pages in the high quality reader.
+
+### Changed
+- Enhanced (ArtCNN) upscaling is marked experimental. It is sharper on line art but costs real GPU
+  time per page, and on a slower GPU it can still stutter; Standard remains the fallback.
+
 ## [v1.7.2] - 2026-09-14
 ### Added
 - Crash reporting, on release and beta builds. Crashes, native ones included, go to this fork's own
