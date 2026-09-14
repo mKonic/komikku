@@ -62,9 +62,11 @@ internal object StressStrictMode {
     private fun report(journal: StressJournal, policy: String, violation: Violation) {
         // The top frames inside the app are what identifies it; the framework above them is the same every time.
         val appFrames = violation.stackTrace.filter { it.className.startsWith(APP_PACKAGE) }
-        // The harness reads its own journal directory from the main thread when a run starts. That is this file's
-        // doing, not the app's, and reporting it would put the same line in every report forever.
-        if (appFrames.firstOrNull()?.className?.startsWith(HARNESS_PACKAGE) == true) return
+        // The harnesses do some of their own file work on the main thread: this one reads its journal directory as a
+        // run starts, and the reader soak picks its output file. That is test tooling, not the app, and reporting it
+        // would put the same lines in every report forever.
+        val origin = appFrames.firstOrNull()?.className
+        if (origin != null && HARNESS_PACKAGES.any(origin::startsWith)) return
         val frames = appFrames.take(MAX_FRAMES).joinToString("\n") { "  at $it" }
         val kind = violation.javaClass.simpleName
         // By method rather than by line, with a method that calls itself counted once: a recursive walk of a
@@ -87,7 +89,7 @@ internal object StressStrictMode {
     }
 
     private const val APP_PACKAGE = "eu.kanade"
-    private const val HARNESS_PACKAGE = "eu.kanade.tachiyomi.debug.stress"
+    private val HARNESS_PACKAGES = listOf("eu.kanade.tachiyomi.debug.stress", "eu.kanade.tachiyomi.ui.reader.soak")
     private const val MAX_FRAMES = 8
 }
 
