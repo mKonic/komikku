@@ -45,9 +45,20 @@ jobs:
         with:
           cache-read-only: true
 
+      # A release always reports crashes, so a missing config fails here rather than shipping without it.
+      - name: Add the Firebase config
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "GOOGLE_SERVICES_JSON is not set; a release cannot be built without it." >&2
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+
       # One invocation: every separate ./gradlew call configures the whole build again.
       - name: Check format, run tests and lint, build
-        run: ./gradlew spotlessCheck testDebugUnitTest :app:lintDebug :app:assembleRelease -Penable-updater
+        run: ./gradlew spotlessCheck testDebugUnitTest :app:lintDebug :app:assembleRelease -Penable-updater -Pinclude-telemetry
 
       - name: Sign APKs
         uses: r0adkll/sign-android-release@f30bdd30588842ac76044ecdbd4b6d0e3e813478
