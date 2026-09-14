@@ -119,6 +119,23 @@ private fun WebGpuViewerSettings(screenModel: ReaderSettingsScreenModel, isConti
             )
         }
 
+        // KMK: the aspect cap the standard long strip viewer offers. A gapped strip only takes it
+        // when the smart scale switch is on, which is how that viewer gates it too.
+        val smartScale by screenModel.preferences.longStripGapSmartScale().collectAsState()
+        if (!useGap || smartScale) {
+            val scaleTypePref = screenModel.preferences.webtoonScaleType()
+            val webtoonScaleType by scaleTypePref.collectAsState()
+            SettingsChipRow(KMR.strings.pref_webtoon_scale_type) {
+                ReaderPreferences.WebtoonScaleType.entries.forEach { scaleType ->
+                    FilterChip(
+                        selected = webtoonScaleType == scaleType,
+                        onClick = { scaleTypePref.set(scaleType) },
+                        label = { Text(stringResource(scaleType.titleRes)) },
+                    )
+                }
+            }
+        }
+
         CheckboxItem(
             label = stringResource(MR.strings.pref_webtoon_disable_zoom_out),
             pref = screenModel.preferences.webtoonDisableZoomOut(),

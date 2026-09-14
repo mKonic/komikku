@@ -28,6 +28,13 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   shown by default and drove the standard viewer's layout only, so under the renderer it sat there
   doing nothing; it now turns the renderer's own dual page view on and off.
 
+### Added
+- Smart scale on wide screens for the high quality reader's long strip modes. The setting existed
+  for the standard long strip viewer only, so a strip under the renderer stretched across the whole
+  width of a wide screen however tall the page was. It caps the strip to the chosen aspect ratio,
+  and unlike the standard viewer it also re-measures when you rotate the device rather than only
+  when the setting changes.
+
 ## [v1.7.3] - 2026-09-14
 ### Fixed
 - Zooming and panning in the high quality reader no longer stutters with the Enhanced (ArtCNN)

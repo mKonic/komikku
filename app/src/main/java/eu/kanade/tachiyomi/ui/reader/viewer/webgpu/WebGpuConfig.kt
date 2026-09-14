@@ -80,6 +80,14 @@ class WebGpuConfig(
     var continuousGap = 10
         private set
 
+    // KMK: the strip's aspect cap, as the standard long strip viewer keeps. A wide screen would
+    // otherwise stretch a strip across its whole width whatever the page's own shape.
+    var webtoonScaleType = ReaderPreferences.WebtoonScaleType.FIT
+        private set
+
+    var longStripGapSmartScale = false
+        private set
+
     var upscaling = ReaderPreferences.Upscaling.CATMULL_ROM
         private set
 
@@ -266,6 +274,18 @@ class WebGpuConfig(
         readerPreferences.continuousMinWidth()
             .register(
                 { continuousMinWidth = it },
+                { imagePropertyChangedListener?.invoke() },
+            )
+
+        readerPreferences.webtoonScaleType()
+            .register(
+                { webtoonScaleType = it },
+                { imagePropertyChangedListener?.invoke() },
+            )
+
+        readerPreferences.longStripGapSmartScale()
+            .register(
+                { longStripGapSmartScale = it },
                 { imagePropertyChangedListener?.invoke() },
             )
 

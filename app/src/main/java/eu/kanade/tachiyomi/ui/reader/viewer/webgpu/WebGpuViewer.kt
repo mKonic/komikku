@@ -276,6 +276,30 @@ open class WebGpuViewer(
     // this viewer's own. Page boosting asks for it and had no way to reach it.
     val currentReaderPage: ReaderPage? get() = (currentPage as? ViewerReaderPage)?.page
 
+    /**
+     * KMK: a strip's home scale - the chosen width, then capped to an aspect ratio the way the
+     * standard long strip viewer caps it. Without the cap a wide screen stretches a strip across
+     * its whole width whatever shape the page is, which is what the setting exists to stop.
+     *
+     * Returns the chosen width unchanged when there is nothing to measure against yet; the layout
+     * listener runs this again once the surface has a size.
+     */
+    protected fun continuousHomeScale(state: ImageViewerContinuousState): Float {
+        val chosen = config.continuousMinWidth / 100f
+        val scaleType = config.webtoonScaleType
+        if (scaleType == ReaderPreferences.WebtoonScaleType.FIT) return chosen
+        // A gapped strip takes the cap only with smart scale on, as in the standard viewer.
+        if (useGap && !config.longStripGapSmartScale) return chosen
+
+        val width = state.width.toFloat()
+        val height = state.viewportHeight
+        if (width <= 0f || height <= 0f) return chosen
+
+        val desired = scaleType.ratio
+        if (desired <= 0f || width / height <= desired) return chosen
+        return min(chosen, height * desired / width)
+    }
+
     @Volatile
     var currentPage: ViewerPage? = null
 
@@ -1216,6 +1240,25 @@ open class WebGpuViewer(
 
         // blank space in the long strip clears to the reader background rather than black
         (pager.state as? ImageViewerContinuousState)?.backgroundColor = readerBackgroundColor()
+
+        // The aspect cap measures the viewport, and a rotation changes that without any preference
+        // changing - so recompute on a real size change rather than only when a setting moves.
+        pager.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+            val sameSize = right - left == oldRight - oldLeft && bottom - top == oldBottom - oldTop
+            if (!sameSize) {
+                (pager.state as? ImageViewerContinuousState)?.let { st ->
+                    val next = continuousHomeScale(st)
+                    if (next != st.homeScale) {
+                        // Only follow the new home when the reader is sitting at it; a reader who
+                        // zoomed in keeps the zoom a rotation found them at.
+                        val wasHome = st.scale == st.homeScale
+                        st.homeScale = next
+                        if (wasHome) st.scale = next
+                        st.invalidate()
+                    }
+                }
+            }
+        }
         // KMK <--
 
         config.imagePropertyChangedListener = {
@@ -1262,7 +1305,7 @@ open class WebGpuViewer(
                 pinchZoomEnabled = config.pinchZoom
 
                 (this as? ImageViewerContinuousState)?.let {
-                    homeScale = config.continuousMinWidth / 100f
+                    homeScale = continuousHomeScale(it)
                     scale = homeScale
                     minScale = if (config.zoomOutDisabled) 0f else 0.1f
 
