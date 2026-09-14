@@ -431,6 +431,10 @@ object SettingsAdvancedScreen : SearchableSettings {
         basePreferences: BasePreferences,
     ): Preference.PreferenceGroup {
         val context = LocalContext.current
+        // KMK: only SubsamplingScaleImageView applies an ICC profile, so the picker below did
+        // nothing once the GPU renderer was the one drawing. That renderer takes a colour table
+        // instead, on its own settings screen.
+        val webGpu by basePreferences.highQualityRenderer().collectAsState()
         val chooseColorProfile = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocument(),
         ) { uri ->
@@ -472,6 +476,9 @@ object SettingsAdvancedScreen : SearchableSettings {
                 Preference.PreferenceItem.TextPreference(
                     title = stringResource(MR.strings.pref_display_profile),
                     subtitle = basePreferences.displayProfile().get(),
+                    // KMK: enabled = false hides the row here, which is what this wants - the
+                    // entry is gone while the renderer that ignores it is the one drawing.
+                    enabled = !webGpu,
                     onClick = {
                         chooseColorProfile.launch(arrayOf("*/*"))
                     },
