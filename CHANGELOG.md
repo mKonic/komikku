@@ -17,8 +17,15 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - A choice of upscaling for the WebGPU reader. Enhanced doubles a zoomed page through a small
   neural network before filtering, which sharpens line art for more work per page. The reader
   shipped with this and there was no way to turn it on, so every page used the standard one.
+- A colour table for the WebGPU reader, from a `.cube` file, with a strength slider. A display
+  profile, a warmer paper white or a film look all go through this.
+- A ceiling on how far past white an HDR page's highlights may go, up to four stops, with off
+  reading every page as SDR.
 
 ### Fixed
+- An ordinary flick in the WebGPU reader now carries the page on the way a list would. The
+  threshold for a fling was a fixed figure roughly three times what the platform calls one, so a
+  gentle flick scrolled only as far as the finger dragged it and stopped dead.
 - The WebGPU reader took its tap zones, tap inversion and border trimming from the paged settings
   even while showing a long strip, so the long strip settings did nothing and a paged preference
   applied where it did not belong.
