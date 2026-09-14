@@ -24,6 +24,14 @@ if (Config.includeTelemetry) {
     }
 }
 
+// KMK: webgpuviewer resolves through an ivy repository over GitHub release assets, which carries no
+// POM for the plugin to read, so it would be the one bundled library missing from the licence list.
+aboutLibraries {
+    collect {
+        configPath = file("config")
+    }
+}
+
 android {
     namespace = "eu.kanade.tachiyomi"
 
