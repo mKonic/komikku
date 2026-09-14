@@ -16,6 +16,8 @@ import ca.mpreg.webgpuviewer.closeTo
 import ca.mpreg.webgpuviewer.draw.TextAlign
 import ca.mpreg.webgpuviewer.renderer.GainmapInput
 import ca.mpreg.webgpuviewer.renderer.Image
+import ca.mpreg.webgpuviewer.renderer.UpscalerArtCnn
+import ca.mpreg.webgpuviewer.renderer.UpscalerCatmullRom
 import ca.mpreg.webgpuviewer.renderer.WebGpuRenderer
 import ca.mpreg.webgpuviewer.transition.TransitionBasic
 import ca.mpreg.webgpuviewer.transition.TransitionCube
@@ -864,6 +866,19 @@ open class WebGpuViewer(
         return spread
     }
 
+    // KMK -->
+    /**
+     * ArtCNN reports for itself whether a device can build its pipelines, and [TileRenderer] falls
+     * back to Catmull-Rom when it cannot, so this never has to check anything first.
+     */
+    private fun applyUpscaler(upscaling: ReaderPreferences.Upscaling) {
+        pager.state.upscaler = when (upscaling) {
+            ReaderPreferences.Upscaling.CATMULL_ROM -> UpscalerCatmullRom()
+            ReaderPreferences.Upscaling.ARTCNN -> UpscalerArtCnn()
+        }
+    }
+    // KMK <--
+
     init {
         pager.state.apply {
             fetchPage = fetch@{ index ->
@@ -901,7 +916,13 @@ open class WebGpuViewer(
             }
         }
 
-        // KMK --> blank space in the long strip clears to the reader background rather than black
+        // KMK --> the renderer ships two upscalers and nothing chose between them, so every reader
+        // ran the cheap one. Assigning drops the tiles already built, which is why it is also
+        // reapplied on change rather than only at startup.
+        applyUpscaler(config.upscaling)
+        config.upscalingChangedListener = { applyUpscaler(it) }
+
+        // blank space in the long strip clears to the reader background rather than black
         (pager.state as? ImageViewerContinuousState)?.backgroundColor = readerBackgroundColor()
         // KMK <--
 

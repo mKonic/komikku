@@ -66,12 +66,17 @@ internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
         WebtoonWithGapsViewerSettings(screenModel)
         // SY <--
     } else {
-        PagerViewerSettings(screenModel)
         // KMK -->
         // The WebGPU renderer draws both the paged and the continuous modes off the pager
         // preferences above, so its own settings are an addition to them rather than a
-        // replacement.
-        (viewer as? WebGpuViewer)?.let {
+        // replacement. The panel is told which it is, so it can drop what the renderer ignores.
+        val webGpuViewer = viewer as? WebGpuViewer
+        PagerViewerSettings(
+            screenModel,
+            webGpu = webGpuViewer != null,
+            isContinuous = webGpuViewer?.isContinuous == true,
+        )
+        webGpuViewer?.let {
             WebGpuViewerSettings(
                 screenModel,
                 isContinuous = it.isContinuous,
@@ -186,16 +191,28 @@ private fun WebGpuViewerSettings(screenModel: ReaderSettingsScreenModel, isConti
 // KMK <--
 
 @Composable
-private fun PagerViewerSettings(screenModel: ReaderSettingsScreenModel) {
+private fun PagerViewerSettings(
+    screenModel: ReaderSettingsScreenModel,
+    // KMK --> The WebGPU renderer draws both modes from this panel, but it honours only some of
+    // what the standard paged viewer does, and a continuous strip is navigated like a long strip.
+    webGpu: Boolean = false,
+    isContinuous: Boolean = false,
+    // KMK <--
+) {
     HeadingItem(MR.strings.pager_viewer)
 
-    val navigationModePager by screenModel.preferences.navigationModePager().collectAsState()
-    val pagerNavInverted by screenModel.preferences.pagerNavInverted().collectAsState()
+    // KMK -->
+    val strip = webGpu && isContinuous
+    val navigationMode = if (strip) screenModel.preferences.navigationModeWebtoon() else screenModel.preferences.navigationModePager()
+    val navInverted = if (strip) screenModel.preferences.webtoonNavInverted() else screenModel.preferences.pagerNavInverted()
+    // KMK <--
+    val navigationModePager by navigationMode.collectAsState()
+    val pagerNavInverted by navInverted.collectAsState()
     TapZonesItems(
         selected = navigationModePager,
-        onSelect = screenModel.preferences.navigationModePager()::set,
+        onSelect = navigationMode::set,
         invertMode = pagerNavInverted,
-        onSelectInvertMode = screenModel.preferences.pagerNavInverted()::set,
+        onSelectInvertMode = navInverted::set,
     )
 
     val imageScaleType by screenModel.preferences.imageScaleType().collectAsState()
@@ -221,14 +238,17 @@ private fun PagerViewerSettings(screenModel: ReaderSettingsScreenModel) {
     }
 
     // SY -->
-    val pageLayout by screenModel.preferences.pageLayout().collectAsState()
-    SettingsChipRow(SYMR.strings.page_layout) {
-        ReaderPreferences.PageLayouts.mapIndexed { index, it ->
-            FilterChip(
-                selected = pageLayout == index,
-                onClick = { screenModel.preferences.pageLayout().set(index) },
-                label = { Text(stringResource(it)) },
-            )
+    // KMK: the WebGPU renderer lays dual pages out from its own setting instead.
+    if (!webGpu) {
+        val pageLayout by screenModel.preferences.pageLayout().collectAsState()
+        SettingsChipRow(SYMR.strings.page_layout) {
+            ReaderPreferences.PageLayouts.mapIndexed { index, it ->
+                FilterChip(
+                    selected = pageLayout == index,
+                    onClick = { screenModel.preferences.pageLayout().set(index) },
+                    label = { Text(stringResource(it)) },
+                )
+            }
         }
     }
     // SY <--
@@ -285,42 +305,46 @@ private fun PagerViewerSettings(screenModel: ReaderSettingsScreenModel) {
         )
     }
 
-    // SY -->
-    CheckboxItem(
-        label = stringResource(MR.strings.pref_page_transitions),
-        pref = screenModel.preferences.pageTransitionsPager(),
-    )
-
-    CheckboxItem(
-        label = stringResource(SYMR.strings.invert_double_pages),
-        pref = screenModel.preferences.invertDoublePages(),
-    )
-
-    // KMK -->
-    CheckboxItem(
-        label = stringResource(KMR.strings.pref_paged_disable_zoom_in),
-        pref = screenModel.preferences.pagedDisableZoomIn(),
-    )
-    val pagedDisableZoomIn by screenModel.preferences.pagedDisableZoomIn().collectAsState()
-    if (!pagedDisableZoomIn) {
+    // KMK: the renderer animates its own transitions, keeps no separate zoom-in switch and
+    // draws no centre margin, so these would be settings that change nothing under it.
+    if (!webGpu) {
+        // SY -->
         CheckboxItem(
-            label = stringResource(MR.strings.pref_double_tap_zoom),
-            pref = screenModel.preferences.pagedDoubleTapZoomEnabled(),
+            label = stringResource(MR.strings.pref_page_transitions),
+            pref = screenModel.preferences.pageTransitionsPager(),
         )
-    }
-    // KMK <--
 
-    val centerMarginType by screenModel.preferences.centerMarginType().collectAsState()
-    SettingsChipRow(SYMR.strings.pref_center_margin) {
-        ReaderPreferences.CenterMarginTypes.mapIndexed { index, it ->
-            FilterChip(
-                selected = centerMarginType == index,
-                onClick = { screenModel.preferences.centerMarginType().set(index) },
-                label = { Text(stringResource(it)) },
+        CheckboxItem(
+            label = stringResource(SYMR.strings.invert_double_pages),
+            pref = screenModel.preferences.invertDoublePages(),
+        )
+
+        // KMK -->
+        CheckboxItem(
+            label = stringResource(KMR.strings.pref_paged_disable_zoom_in),
+            pref = screenModel.preferences.pagedDisableZoomIn(),
+        )
+        val pagedDisableZoomIn by screenModel.preferences.pagedDisableZoomIn().collectAsState()
+        if (!pagedDisableZoomIn) {
+            CheckboxItem(
+                label = stringResource(MR.strings.pref_double_tap_zoom),
+                pref = screenModel.preferences.pagedDoubleTapZoomEnabled(),
             )
         }
+        // KMK <--
+
+        val centerMarginType by screenModel.preferences.centerMarginType().collectAsState()
+        SettingsChipRow(SYMR.strings.pref_center_margin) {
+            ReaderPreferences.CenterMarginTypes.mapIndexed { index, it ->
+                FilterChip(
+                    selected = centerMarginType == index,
+                    onClick = { screenModel.preferences.centerMarginType().set(index) },
+                    label = { Text(stringResource(it)) },
+                )
+            }
+        }
+        // SY <--
     }
-    // SY <--
 }
 
 @Composable

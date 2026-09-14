@@ -57,6 +57,11 @@ abstract class ViewerNavigation {
     private val readerPreferences: ReaderPreferences by injectLazy()
     protected val regionSize1
         get() = if (readerPreferences.smallerTapZone().get()) 0.25f else 0.33f
-    protected val regionSize2 = 1f - regionSize1
+
+    // A getter like the one above rather than a value fixed at construction: the two are read
+    // together when a subclass builds its regions, and one following the preference while the
+    // other kept its first answer would leave the zones unbalanced.
+    protected val regionSize2
+        get() = 1f - regionSize1
     // KMK <--
 }

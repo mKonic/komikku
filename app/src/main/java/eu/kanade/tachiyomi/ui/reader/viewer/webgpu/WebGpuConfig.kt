@@ -70,6 +70,12 @@ class WebGpuConfig(
     var continuousGap = 10
         private set
 
+    var upscaling = ReaderPreferences.Upscaling.CATMULL_ROM
+        private set
+
+    /** Set by the viewer, so a change reaches the tile cache that has already been built. */
+    var upscalingChangedListener: ((ReaderPreferences.Upscaling) -> Unit)? = null
+
     init {
         readerPreferences.readerTheme()
             .register(
@@ -89,20 +95,38 @@ class WebGpuConfig(
         readerPreferences.cropBorders()
             .register({ imageCropBorders = it }, { imagePropertyChangedListener?.invoke() })
 
+        readerPreferences.upscaler()
+            .register({ upscaling = it }, { upscalingChangedListener?.invoke(it) })
+
         readerPreferences.navigateToPan()
             .register({ navigateToPan = it })
 
         readerPreferences.landscapeZoom()
             .register({ landscapeZoom = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.navigationModePager()
-            .register({ navigationMode = it }, { updateNavigation(navigationMode) })
+        // A continuous strip is read like the long strip viewer, not like a paged one, so it takes
+        // that viewer's tap zones and inversion. Reading both modes off the paged preferences meant
+        // a long strip reader silently got whatever the paged one was configured with.
+        val navigationMode =
+            if (viewer.isContinuous) readerPreferences.navigationModeWebtoon() else readerPreferences.navigationModePager()
+        val navInverted =
+            if (viewer.isContinuous) readerPreferences.webtoonNavInverted() else readerPreferences.pagerNavInverted()
 
-        readerPreferences.pagerNavInverted()
+        navigationMode
+            .register({ this.navigationMode = it }, { updateNavigation(this.navigationMode) })
+
+        navInverted
             .register({ tappingInverted = it }, { navigator.invertMode = it })
-        readerPreferences.pagerNavInverted().changes()
+        navInverted.changes()
             .drop(1)
             .onEach { navigationModeChangedListener?.invoke() }
+            .launchIn(scope)
+
+        // The tap zones are sized when a navigation is built, so a change has to rebuild it. Both
+        // standard viewers do this; without it the new zone size only appeared on the next open.
+        readerPreferences.smallerTapZone().changes()
+            .drop(1)
+            .onEach { updateNavigation(this.navigationMode) }
             .launchIn(scope)
 
         readerPreferences.dualPageSplitPaged()
