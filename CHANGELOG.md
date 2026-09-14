@@ -21,8 +21,24 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   profile, a warmer paper white or a film look all go through this.
 - A ceiling on how far past white an HDR page's highlights may go, up to four stops, with off
   reading every page as SDR.
+- The WebGPU reader splits a page too wide for the screen into two, and can turn one on its side
+  to fit instead. Both were offered in the reader settings and did nothing under it before.
+- A failed page in the WebGPU reader has a Retry button, and a page that fails to download now
+  says so instead of showing a progress ring for the rest of the session.
+- Onboarding asks whether to use the GPU renderer, rather than leaving it to be found in
+  Settings later.
 
 ### Fixed
+- Greyscale and inverted colours work in the WebGPU reader. They are applied to the reader's
+  container as a layer paint, which cannot reach the surface the renderer draws into, so both
+  switches did nothing there on Android 14 and above.
+- The WebGPU reader's chapter transition is translated, warns when the source skips a run of
+  chapters, and says when there is no next chapter. It printed two English lines before.
+- The WebGPU reader took its double tap zoom, pinch zoom, page splitting and rotate-to-fit
+  settings from the paged switches even while showing a long strip.
+- Long-pressing a double page spread in the WebGPU reader offers both pages, not just one.
+- Advanced no longer offers a custom display profile while the WebGPU renderer is drawing; only
+  the legacy decoder applies one.
 - An ordinary flick in the WebGPU reader now carries the page on the way a list would. The
   threshold for a fling was a fixed figure roughly three times what the platform calls one, so a
   gentle flick scrolled only as far as the finger dragged it and stopped dead.
@@ -31,8 +47,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   applied where it did not belong.
 - Changing the tap zone size did not reach the WebGPU reader until it was reopened.
 - The reader settings offered page layout, page transitions, inverted double pages, the zoom-in
-  and double-tap zoom switches and the centre margin while the WebGPU renderer was drawing, none
-  of which it reads.
+  switch and the centre margin while the WebGPU renderer was drawing, none of which it reads.
 - Advanced offered a custom display profile while the WebGPU renderer was drawing. Only the legacy
   decoder applies one, so picking a file there did nothing. The colour table on the WebGPU screen
   is the equivalent.
