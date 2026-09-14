@@ -2,7 +2,9 @@ package eu.kanade.tachiyomi.debug.stress
 
 import androidx.work.WorkInfo
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.manga.interactor.GetLibraryManga
@@ -21,6 +23,9 @@ object UpdateScenario : StressScenario {
 
     /** Generous per entry, so the limit scales with the library rather than being one number for all of it. */
     private const val LOCAL_MILLIS_PER_ENTRY = 2_000L
+
+    /** How long to wait for an update that was already going, an earlier pass or one WorkManager resumed. */
+    private const val SETTLE_MILLIS = 120_000L
     private const val ONLINE_MILLIS_PER_ENTRY = 30_000L
 
     override suspend fun run(context: StressContext, iteration: Int) {
@@ -29,7 +34,15 @@ object UpdateScenario : StressScenario {
         val entries = if (context.network) library else library.filter { it.source == LocalSource.ID }
         if (entries.isEmpty()) throw StressSkip("no library entries it may update")
 
-        LibraryUpdateJob.isActiveFlow(app).first { !it }
+        // An update this pass did not start is not its to wait out: WorkManager resumes one the app was killed
+        // during, and over a large library that outlasts any watchdog.
+        val settled = withTimeoutOrNull(SETTLE_MILLIS) {
+            LibraryUpdateJob.isActiveFlow(app).first { active ->
+                context.alive()
+                !active
+            }
+        } != null
+        if (!settled) throw StressSkip("an earlier library update is still going")
         val earlier = withIOContext { LibraryUpdateJob.manualUpdates(app).map { it.id }.toSet() }
         check(LibraryUpdateJob.startNow(app, mangaIds = entries.map { it.id })) { "the library update did not start" }
         context.step("started", mapOf("entries" to entries.size))
@@ -37,12 +50,19 @@ object UpdateScenario : StressScenario {
         val limit = entries.size * if (context.network) ONLINE_MILLIS_PER_ENTRY else LOCAL_MILLIS_PER_ENTRY
         var finished = false
         val ms = measureTimeMillis {
-            finished = withTimeoutOrNull(limit) {
-                LibraryUpdateJob.isActiveFlow(app).first { active ->
-                    context.alive()
-                    !active
-                }
-            } != null
+            // The active flow only emits when the job starts and ends, so an update of a large library looks idle to
+            // the watchdog. Every entry it finishes is progress.
+            finished = coroutineScope {
+                val progress = launch { LibraryUpdateJob.completedCount.collect { context.alive() } }
+                val ended = withTimeoutOrNull(limit) {
+                    LibraryUpdateJob.isActiveFlow(app).first { active ->
+                        context.alive()
+                        !active
+                    }
+                } != null
+                progress.cancel()
+                ended
+            }
         }
         if (!finished) {
             LibraryUpdateJob.stop(app)
