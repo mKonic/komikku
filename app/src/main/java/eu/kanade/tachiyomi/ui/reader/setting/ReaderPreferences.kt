@@ -233,6 +233,23 @@ class ReaderPreferences(
     fun continuousGap() = preferenceStore.getInt("webgpu_continuous_gap", 10)
 
     fun upscaler() = preferenceStore.getEnum("webgpu_upscaler", Upscaling.CATMULL_ROM)
+
+    /**
+     * Stops of headroom the renderer may give an HDR page's highlights, so 2 is the 4x the library
+     * defaults to and 0 reads everything as SDR. A ceiling rather than a target: a page whose
+     * highlights sit below it keeps its own brightness.
+     */
+    fun hdrPeakStops() = preferenceStore.getInt("webgpu_hdr_peak_stops", 2)
+
+    /**
+     * A `.cube` colour lookup table the renderer runs over the finished frame - a display profile,
+     * a paper-white warm-up, a film look. Empty for none. The document picker's URI, so it is read
+     * back through the content resolver rather than a path.
+     */
+    fun colorLut() = preferenceStore.getString("webgpu_color_lut", "")
+
+    /** How far towards the table's answer a frame is taken, as a percentage. */
+    fun colorLutIntensity() = preferenceStore.getInt("webgpu_color_lut_intensity", 100)
     // KMK <--
 
     enum class FlashColor {

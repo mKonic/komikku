@@ -1057,6 +1057,11 @@
     <string name="upscaling_catmull_rom">Standard</string>
     <string name="upscaling_artcnn">Enhanced (ArtCNN)</string>
     <string name="pref_upscaling_summary">Enhanced doubles a zoomed page through a small neural network before filtering. Sharper line art, more GPU work per page.</string>
+    <string name="pref_color_lut">Colour table</string>
+    <string name="pref_color_lut_file">Table file</string>
+    <string name="pref_color_lut_intensity">Strength</string>
+    <string name="pref_hdr_peak">HDR highlights</string>
+    <string name="pref_hdr_peak_summary">How far past white an HDR page may go on a display that can show it. A ceiling, so a page that is already dimmer than this keeps its own brightness.</string>
     <string name="webgpu_unsupported">This device cannot use the WebGPU renderer, so the standard reader is used.</string>
     <string name="webgpu_viewer">WebGPU</string>
     <string name="pref_continuous_minwidth">Min width</string>

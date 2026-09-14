@@ -1,9 +1,14 @@
 package eu.kanade.presentation.more.settings.screen
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.net.toUri
 import ca.mpreg.webgpuviewer.renderer.WebGpuRenderer
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.more.settings.Preference
@@ -62,8 +67,101 @@ object SettingsWebGpuScreen : SearchableSettings {
                 subtitle = stringResource(MR.strings.pref_upscaling_summary),
                 enabled = active,
             ),
+            hdrPeak(readerPreferences, active),
+            colorLutGroup(readerPreferences, active),
             pagedGroup(readerPreferences, active),
             continuousGroup(readerPreferences, active),
+        )
+    }
+
+    /**
+     * A ceiling on how far past white an HDR page's highlights may go, in stops, so the scale is
+     * the panel's rather than the image's: 0 reads every page as SDR, 2 is the library's default.
+     */
+    @Composable
+    private fun hdrPeak(readerPreferences: ReaderPreferences, active: Boolean): Preference {
+        val stops by readerPreferences.hdrPeakStops().collectAsState()
+        return Preference.PreferenceItem.SliderPreference(
+            value = stops,
+            valueRange = 0..4,
+            title = stringResource(MR.strings.pref_hdr_peak),
+            subtitle = stringResource(MR.strings.pref_hdr_peak_summary),
+            valueString = if (stops == 0) {
+                stringResource(MR.strings.off)
+            } else {
+                "${1 shl stops}x"
+            },
+            enabled = active,
+            onValueChanged = { readerPreferences.hdrPeakStops().set(it) },
+        )
+    }
+
+    /**
+     * The renderer can run a 3D lookup table over the finished frame, which is how a display
+     * profile, a warmer paper white or a film look all get expressed. `.cube` has no MIME type of
+     * its own, so the picker has to offer everything and the parse is what rejects a wrong file.
+     */
+    @Composable
+    private fun colorLutGroup(readerPreferences: ReaderPreferences, active: Boolean): Preference {
+        val context = LocalContext.current
+        val numberFormat = remember { NumberFormat.getPercentInstance() }
+        val lut by readerPreferences.colorLut().collectAsState()
+        val intensity by readerPreferences.colorLutIntensity().collectAsState()
+
+        // The system caps how many persisted URI grants a package may hold, so the one being
+        // replaced goes back rather than piling up a grant per table the user has ever tried.
+        val release = { uri: String ->
+            if (uri.isNotEmpty()) {
+                runCatching {
+                    context.contentResolver.releasePersistableUriPermission(
+                        uri.toUri(),
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                    )
+                }
+            }
+            Unit
+        }
+
+        val chooseLut = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument(),
+        ) { uri ->
+            uri?.let {
+                // Without this the URI stops reading the moment the reader is reopened.
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+                release(lut)
+                readerPreferences.colorLut().set(it.toString())
+            }
+        }
+
+        return Preference.PreferenceGroup(
+            title = stringResource(MR.strings.pref_color_lut),
+            enabled = active,
+            preferenceItems = persistentListOf(
+                Preference.PreferenceItem.TextPreference(
+                    title = stringResource(MR.strings.pref_color_lut_file),
+                    subtitle = lut.ifEmpty { stringResource(MR.strings.none) },
+                    onClick = { chooseLut.launch(arrayOf("*/*")) },
+                ),
+                Preference.PreferenceItem.TextPreference(
+                    title = stringResource(MR.strings.action_remove),
+                    enabled = lut.isNotEmpty(),
+                    onClick = {
+                        release(lut)
+                        readerPreferences.colorLut().delete()
+                    },
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    value = intensity,
+                    valueRange = 0..100,
+                    title = stringResource(MR.strings.pref_color_lut_intensity),
+                    valueString = numberFormat.format(intensity / 100f),
+                    enabled = lut.isNotEmpty(),
+                    onValueChanged = { readerPreferences.colorLutIntensity().set(it) },
+                ),
+            ),
         )
     }
 

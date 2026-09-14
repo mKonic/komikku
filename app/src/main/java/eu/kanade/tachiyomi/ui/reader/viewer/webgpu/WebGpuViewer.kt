@@ -9,11 +9,14 @@ import android.view.View
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceIn
+import androidx.core.net.toUri
 import androidx.webgpu.GPUTexture
 import ca.mpreg.imagedecoder.ImageDecoder
 import ca.mpreg.webgpuviewer.ImageView
 import ca.mpreg.webgpuviewer.closeTo
 import ca.mpreg.webgpuviewer.draw.TextAlign
+import ca.mpreg.webgpuviewer.filter.FilterLut3d
+import ca.mpreg.webgpuviewer.filter.Lut3d
 import ca.mpreg.webgpuviewer.renderer.GainmapInput
 import ca.mpreg.webgpuviewer.renderer.Image
 import ca.mpreg.webgpuviewer.renderer.UpscalerArtCnn
@@ -59,6 +62,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.Injekt
@@ -880,6 +884,53 @@ open class WebGpuViewer(
             ReaderPreferences.Upscaling.ARTCNN -> UpscalerArtCnn()
         }
     }
+
+    /** The filter is kept across intensity changes, so only picking a new table re-reads a file. */
+    private var colorLutFilter: FilterLut3d? = null
+
+    private var colorLutSource = ""
+
+    /**
+     * The table is a document the user picked, which can be gone, unreadable or not a `.cube` at
+     * all by the time we open it, so a failure drops the filter rather than taking the reader down.
+     */
+    private fun applyColorLut(uri: String, intensity: Int) {
+        if (uri.isEmpty()) {
+            colorLutSource = ""
+            colorLutFilter = null
+            pager.state.filters.filters = emptyList()
+            return
+        }
+
+        colorLutFilter?.takeIf { colorLutSource == uri }?.let {
+            it.intensity = intensity / 100f
+            return
+        }
+
+        colorLutSource = uri
+        scope.launch {
+            val lut = withContext(Dispatchers.IO) {
+                try {
+                    activity.contentResolver.openInputStream(uri.toUri())?.use { stream ->
+                        stream.bufferedReader().useLines(Lut3d::parseCube)
+                    }
+                } catch (e: Exception) {
+                    logcat(LogPriority.WARN, e) { "Could not read the colour table at $uri" }
+                    null
+                }
+            }
+            // Another table may have been picked while this one was being read.
+            if (colorLutSource != uri) return@launch
+            if (lut == null) {
+                colorLutFilter = null
+                pager.state.filters.filters = emptyList()
+                return@launch
+            }
+            val filter = FilterLut3d(lut).also { it.intensity = config.colorLutIntensity / 100f }
+            colorLutFilter = filter
+            pager.state.filters.filters = listOf(filter)
+        }
+    }
     // KMK <--
 
     init {
@@ -924,6 +975,9 @@ open class WebGpuViewer(
         // reapplied on change rather than only at startup.
         applyUpscaler(config.upscaling)
         config.upscalingChangedListener = { applyUpscaler(it) }
+
+        applyColorLut(config.colorLut, config.colorLutIntensity)
+        config.colorLutChangedListener = { applyColorLut(config.colorLut, config.colorLutIntensity) }
 
         // blank space in the long strip clears to the reader background rather than black
         (pager.state as? ImageViewerContinuousState)?.backgroundColor = readerBackgroundColor()

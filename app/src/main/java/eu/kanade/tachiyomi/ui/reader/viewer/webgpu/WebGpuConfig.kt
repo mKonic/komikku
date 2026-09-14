@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.reader.viewer.webgpu
 
+import ca.mpreg.webgpuviewer.renderer.Hdr
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerConfig
@@ -13,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlin.math.pow
 
 /**
  * Configuration used by pager viewers.
@@ -76,6 +78,15 @@ class WebGpuConfig(
     /** Set by the viewer, so a change reaches the tile cache that has already been built. */
     var upscalingChangedListener: ((ReaderPreferences.Upscaling) -> Unit)? = null
 
+    var colorLut = ""
+        private set
+
+    var colorLutIntensity = 100
+        private set
+
+    /** Reading the table is file I/O, so the viewer does it rather than this constructor. */
+    var colorLutChangedListener: (() -> Unit)? = null
+
     init {
         readerPreferences.readerTheme()
             .register(
@@ -105,6 +116,20 @@ class WebGpuConfig(
 
         readerPreferences.upscaler()
             .register({ upscaling = it }, { upscalingChangedListener?.invoke(it) })
+
+        // The gain map is weighted against this while the page is decoded, so a change only shows
+        // once the pages are decoded again - which is what imagePropertyChangedListener arranges.
+        readerPreferences.hdrPeakStops()
+            .register(
+                { Hdr.maxPeakValue = 2f.pow(it) },
+                { imagePropertyChangedListener?.invoke() },
+            )
+
+        readerPreferences.colorLut()
+            .register({ colorLut = it }, { colorLutChangedListener?.invoke() })
+
+        readerPreferences.colorLutIntensity()
+            .register({ colorLutIntensity = it }, { colorLutChangedListener?.invoke() })
 
         readerPreferences.navigateToPan()
             .register({ navigateToPan = it })
