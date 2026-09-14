@@ -21,6 +21,12 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Saving and sharing a two page spread works in the high quality reader. The page actions dialog
   offers both pages there, but the save and share behind them recognised only the standard paged
   viewer and quietly did nothing.
+- Boosting a page on an E-Hentai style source works in the high quality reader. It could not tell
+  which page you were on there, so boosting always answered that the page was invalid, and retrying
+  a chapter never pushed the page you were actually looking at to the front of the queue.
+- The page layout button in the reader's bottom bar works in the high quality reader. The button is
+  shown by default and drove the standard viewer's layout only, so under the renderer it sat there
+  doing nothing; it now turns the renderer's own dual page view on and off.
 
 ## [v1.7.3] - 2026-09-14
 ### Fixed

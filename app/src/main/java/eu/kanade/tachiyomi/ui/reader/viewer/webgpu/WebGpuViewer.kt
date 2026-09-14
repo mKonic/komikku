@@ -272,6 +272,10 @@ open class WebGpuViewer(
 
     val pages: List<ReaderPage>? get() = (currentPage as? ViewerReaderPage)?.page?.chapter?.pages
 
+    // KMK: the reader page behind [currentPage], for a host that works in reader pages rather than
+    // this viewer's own. Page boosting asks for it and had no way to reach it.
+    val currentReaderPage: ReaderPage? get() = (currentPage as? ViewerReaderPage)?.page
+
     @Volatile
     var currentPage: ViewerPage? = null
 

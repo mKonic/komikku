@@ -767,13 +767,32 @@ class ReaderActivity : BaseActivity() {
             doublePages = state.doublePages,
             onClickChapterList = viewModel::openChapterListDialog,
             onClickPageLayout = {
-                if (readerPreferences.pageLayout().get() == PagerConfig.PageLayout.AUTOMATIC) {
-                    (viewModel.state.value.viewer as? PagerViewer)?.config?.let { config ->
-                        config.doublePages = !config.doublePages
-                        reloadChapters(config.doublePages, true)
+                // KMK --> the renderer lays a spread out from its own setting rather than the
+                // pager's page layout, and this button ships enabled by default - so under the
+                // renderer it was a visible control that did nothing at all. Point it at the
+                // setting the renderer actually reads instead of hiding it.
+                val webGpuViewer = viewModel.state.value.viewer as? WebGpuViewer
+                when {
+                    webGpuViewer != null -> {
+                        val pref = readerPreferences.dualPageView()
+                        pref.set(
+                            if (pref.get() == ReaderPreferences.DualPageView.NEVER) {
+                                ReaderPreferences.DualPageView.ALWAYS
+                            } else {
+                                ReaderPreferences.DualPageView.NEVER
+                            },
+                        )
                     }
-                } else {
-                    readerPreferences.pageLayout().set(1 - readerPreferences.pageLayout().get())
+                    // KMK <--
+                    readerPreferences.pageLayout().get() == PagerConfig.PageLayout.AUTOMATIC -> {
+                        (viewModel.state.value.viewer as? PagerViewer)?.config?.let { config ->
+                            config.doublePages = !config.doublePages
+                            reloadChapters(config.doublePages, true)
+                        }
+                    }
+                    else -> {
+                        readerPreferences.pageLayout().set(1 - readerPreferences.pageLayout().get())
+                    }
                 }
             },
             onClickShiftPage = ::shiftDoublePages,
@@ -907,6 +926,10 @@ class ReaderActivity : BaseActivity() {
     private fun exhCurrentpage(): ReaderPage? {
         val viewer = viewModel.state.value.viewer
         val currentPage = (((viewer as? PagerViewer)?.currentPage ?: (viewer as? WebtoonViewer)?.currentPage) as? ReaderPage)?.index
+            // KMK: the renderer is neither of those, so this reported no current page under it -
+            // boosting a page always answered that it was invalid, and retrying a chapter never
+            // recognised the page being read to boost it ahead of the rest.
+            ?: (viewer as? WebGpuViewer)?.currentReaderPage?.index
         return currentPage?.let { viewModel.state.value.viewerChapters?.currChapter?.pages?.getOrNull(it) }
     }
 
