@@ -10,7 +10,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
-## [Unreleased]
+## [v1.6.0] - 2026-09-14
 ### Added
 - WebGPU now has its own entry in Settings, holding the renderer switch that used to sit under
   Advanced along with the settings that belong to it.
