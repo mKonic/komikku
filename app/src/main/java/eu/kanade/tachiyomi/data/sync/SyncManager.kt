@@ -260,7 +260,8 @@ class SyncManager(
     }
 
     private suspend fun isMangaDifferent(localManga: Manga, remoteManga: BackupManga): Boolean {
-        val localChapters = handler.await {
+        // KMK: awaitList, so a chapter list that changes while it is read is read again
+        val localChapters = handler.awaitList {
             chaptersQueries.getChaptersByMangaId(
                 localManga.id,
                 0,
@@ -268,7 +269,7 @@ class SyncManager(
                 Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
                 Manga.CHAPTER_SHOW_BOOKMARKED,
                 // KMK <--
-            ).executeAsList()
+            )
         }
         val localCategories = getCategories.await(localManga.id).map { it.order }
 

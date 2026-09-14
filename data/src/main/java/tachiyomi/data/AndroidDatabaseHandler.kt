@@ -4,14 +4,15 @@ import androidx.paging.PagingSource
 import app.cash.sqldelight.ExecutableQuery
 import app.cash.sqldelight.Query
 import app.cash.sqldelight.coroutines.asFlow
-import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOne
 import app.cash.sqldelight.coroutines.mapToOneOrNull
 import app.cash.sqldelight.db.SqlDriver
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import tachiyomi.core.common.util.lang.retryInconsistentRead
 
 class AndroidDatabaseHandler(
     val db: Database,
@@ -30,7 +31,8 @@ class AndroidDatabaseHandler(
         inTransaction: Boolean,
         block: suspend Database.() -> Query<T>,
     ): List<T> {
-        return dispatch(inTransaction) { block(db).executeAsList() }
+        // KMK: a large result is read in several cursor windows and can lose rows to a write in between
+        return retryInconsistentRead { dispatch(inTransaction) { block(db).executeAsList() } }
     }
 
     // SY -->
@@ -38,7 +40,8 @@ class AndroidDatabaseHandler(
         inTransaction: Boolean,
         block: suspend Database.() -> ExecutableQuery<T>,
     ): List<T> {
-        return dispatch(inTransaction) { block(db).executeAsList() }
+        // KMK: a large result is read in several cursor windows and can lose rows to a write in between
+        return retryInconsistentRead { dispatch(inTransaction) { block(db).executeAsList() } }
     }
     // SY <--
 
@@ -71,7 +74,10 @@ class AndroidDatabaseHandler(
     }
 
     override fun <T : Any> subscribeToList(block: Database.() -> Query<T>): Flow<List<T>> {
-        return block(db).asFlow().mapToList(queryDispatcher)
+        // KMK: mapToList, read again if rows changed between cursor windows
+        return block(db).asFlow().map { query ->
+            withContext(queryDispatcher) { retryInconsistentRead { query.executeAsList() } }
+        }
     }
 
     override fun <T : Any> subscribeToOne(block: Database.() -> Query<T>): Flow<T> {
