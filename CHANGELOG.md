@@ -10,6 +10,17 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [v1.7.0] - 2026-09-14
+### Added
+- A check interval for app updates, under Advanced. The choices are every app launch, daily, every
+  two days and weekly; every two days is what the app did before and stays the default. Launch
+  means the app starting, not the screen rotating.
+
+### Fixed
+- An update the app had already found was not offered again at launch until the wait between
+  checks had passed, so checking by hand bought two more days of silence about an update that was
+  sitting there uninstalled. The version last found is now remembered and re-offered until it is.
+
 ## [v1.6.2] - 2026-09-14
 ### Fixed
 - Setting HDR highlights to off left an HDR page with all of its headroom instead of reading it as
