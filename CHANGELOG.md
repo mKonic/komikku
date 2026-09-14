@@ -12,14 +12,16 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [v1.7.2] - 2026-09-14
 ### Added
-- Crash reporting again, on release and beta builds. Crashes, native ones included, go to this
-  fork's own Firebase project, and the switch in onboarding and Settings > Privacy turns it off.
-  It had been dead rather than disabled: the check that decides whether to start it named upstream
-  Komikku's signing certificate, which this fork's builds can never match.
-
-### Removed
-- Analytics. Its settings toggle had been commented out for a long while the preference itself
-  defaulted to on, so it was neither used nor refusable. Crash reporting is all that is left.
+- Crash reporting, on release and beta builds. Crashes, native ones included, go to this fork's own
+  Firebase project. It had been dead rather than disabled: the check deciding whether to start it
+  named upstream Komikku's signing certificate, which a build of this fork can never match, and no
+  release was built with telemetry in it to begin with.
+- Analytics beside it, which is where crash reports get their breadcrumb trail, crash-free user
+  counts and spike alerts from. Without it a crash is a stack trace with no record of what led into
+  it.
+- Switches for both, in onboarding and under Settings and privacy. The analytics one had been
+  commented out of both screens. Nothing was ever collected regardless, since no release carried
+  telemetry, but it has to be reachable now that one will.
 
 ### Fixed
 - Open source licences now lists webgpuviewer, the renderer behind the high quality reader. It is
