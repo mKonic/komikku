@@ -1183,7 +1183,11 @@ open class WebGpuViewer(
 
             onLongTap = { _ ->
                 if (activity.viewModel.state.value.menuVisible || config.longTapEnabled) {
-                    (currentPage as? ViewerReaderPage)?.let { activity.onPageLongTap(it.page) }
+                    (currentPage as? ViewerReaderPage)?.let {
+                        // Both halves of a spread, so the page dialog can save or share the pair
+                        // the way the standard pager does.
+                        activity.onPageLongTap(it.page, spreadPartner(it)?.page)
+                    }
                 }
             }
         }
@@ -1243,6 +1247,9 @@ open class WebGpuViewer(
                         alwaysAvoidCutout = true
                     }
                 }
+
+                doubleTapZoomEnabled = config.doubleTapZoom
+                pinchZoomEnabled = config.pinchZoom
 
                 (this as? ImageViewerContinuousState)?.let {
                     homeScale = config.continuousMinWidth / 100f

@@ -95,6 +95,12 @@ class WebGpuConfig(
 
     var toneChangedListener: (() -> Unit)? = null
 
+    var doubleTapZoom = true
+        private set
+
+    var pinchZoom = true
+        private set
+
     init {
         readerPreferences.readerTheme()
             .register(
@@ -259,6 +265,21 @@ class WebGpuConfig(
                 { zoomOutDisabled = it },
                 { imagePropertyChangedListener?.invoke() },
             )
+
+        // Per mode, as in the standard viewers: a strip reads the long strip switches.
+        val doubleTapPref = if (strip) {
+            readerPreferences.webtoonDoubleTapZoomEnabled()
+        } else {
+            readerPreferences.pagedDoubleTapZoomEnabled()
+        }
+        doubleTapPref
+            .register({ doubleTapZoom = it }, { imagePropertyChangedListener?.invoke() })
+
+        // Only the long strip viewer offers this, so a paged read keeps pinch zoom either way.
+        if (strip) {
+            readerPreferences.webtoonPinchToZoomEnabled()
+                .register({ pinchZoom = it }, { imagePropertyChangedListener?.invoke() })
+        }
 
         readerPreferences.continuousGap()
             .register(

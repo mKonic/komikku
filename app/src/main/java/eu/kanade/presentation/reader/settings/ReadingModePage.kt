@@ -287,6 +287,27 @@ private fun PagerViewerSettings(
         pref = screenModel.preferences.navigateToPan(),
     )
 
+    // KMK: both renderers read this one, and the renderer reads the long strip switch while it is
+    // drawing a strip. The zoom-in switch above stays paged-only - the renderer has no such knob.
+    val pagedDisableZoomIn by screenModel.preferences.pagedDisableZoomIn().collectAsState()
+    if (webGpu || !pagedDisableZoomIn) {
+        CheckboxItem(
+            label = stringResource(MR.strings.pref_double_tap_zoom),
+            pref = if (strip) {
+                screenModel.preferences.webtoonDoubleTapZoomEnabled()
+            } else {
+                screenModel.preferences.pagedDoubleTapZoomEnabled()
+            },
+        )
+    }
+
+    if (strip) {
+        CheckboxItem(
+            label = stringResource(KMR.strings.pref_pinch_to_zoom),
+            pref = screenModel.preferences.webtoonPinchToZoomEnabled(),
+        )
+    }
+
     // KMK: the renderer splits and rotates a strip's pages from the long strip switches, the same
     // way it trims their borders, so the panel has to offer whichever the mode actually reads.
     val splitPref = if (strip) {
@@ -352,13 +373,6 @@ private fun PagerViewerSettings(
             label = stringResource(KMR.strings.pref_paged_disable_zoom_in),
             pref = screenModel.preferences.pagedDisableZoomIn(),
         )
-        val pagedDisableZoomIn by screenModel.preferences.pagedDisableZoomIn().collectAsState()
-        if (!pagedDisableZoomIn) {
-            CheckboxItem(
-                label = stringResource(MR.strings.pref_double_tap_zoom),
-                pref = screenModel.preferences.pagedDoubleTapZoomEnabled(),
-            )
-        }
         // KMK <--
 
         val centerMarginType by screenModel.preferences.centerMarginType().collectAsState()
