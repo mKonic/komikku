@@ -536,9 +536,10 @@ open class WebGpuViewer(
         override val backgroundColor: Int = readerBackgroundColor()
 
         /**
-         * Where the retry button landed last time it was drawn, in view pixels. Written on the
-         * render thread and read on the main thread, hence volatile; null until it has been drawn
-         * once, and also whenever there is nothing to retry.
+         * Where the retry button landed last time it was drawn, as a fraction of the surface -
+         * which is what [ImageViewerState.onTap] reports, not pixels. Written on the render thread
+         * and read on the main thread, hence volatile; null until it has been drawn once, and also
+         * whenever there is nothing to retry.
          */
         @Volatile
         private var retryBounds: RectF? = null
@@ -605,7 +606,12 @@ open class WebGpuViewer(
                 align = TextAlign.Center,
                 maxWidth = buttonWidth,
             )
-            retryBounds = RectF(left, top, left + buttonWidth, top + buttonHeight)
+            retryBounds = RectF(
+                left / dst.width,
+                top / dst.height,
+                (left + buttonWidth) / dst.width,
+                (top + buttonHeight) / dst.height,
+            )
         }
     }
 

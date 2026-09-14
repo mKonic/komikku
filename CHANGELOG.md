@@ -10,6 +10,11 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [v1.6.1] - 2026-09-14
+### Fixed
+- The Retry button on a failed page in the WebGPU reader did nothing when tapped. Its hit test was
+  in pixels while a tap is reported as a fraction of the screen, so it never matched.
+
 ## [v1.6.0] - 2026-09-14
 ### Added
 - WebGPU now has its own entry in Settings, holding the renderer switch that used to sit under
