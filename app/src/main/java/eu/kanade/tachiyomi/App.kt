@@ -215,11 +215,6 @@ class App :
             }
             .launchIn(scope)
 
-        privacyPreferences.analytics()
-            .changes()
-            .onEach(TelemetryConfig::setAnalyticsEnabled)
-            .launchIn(scope)
-
         privacyPreferences.crashlytics()
             .changes()
             .onEach(TelemetryConfig::setCrashlyticsEnabled)

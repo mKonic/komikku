@@ -22,8 +22,8 @@ android {
 dependencies {
     if (Config.includeTelemetry) {
         implementation(platform(libs.firebase.bom))
-        implementation(libs.firebase.analytics)
-        implementation(libs.firebase.crashlytics)
+        // Native crashes too: the reader's decoder and renderer are native, and so were most crashes seen so far
+        implementation(libs.firebase.crashlytics.ndk)
     }
 
     // Better logging (EH)
