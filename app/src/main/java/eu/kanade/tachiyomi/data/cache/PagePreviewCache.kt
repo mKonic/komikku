@@ -43,8 +43,13 @@ class PagePreviewCache(private val context: Context) {
     /** Google Json class used for parsing JSON files.  */
     private val json: Json by injectLazy()
 
-    /** Cache class used for cache management.  */
-    private var diskCache = setupDiskCache(75)
+    /**
+     * Cache class used for cache management.
+     *
+     * KMK: opened on first use rather than when the singleton is made, which is on whatever thread asks for it first,
+     * the settings screen's main thread included.
+     */
+    private val diskCache by lazy { setupDiskCache(75) }
 
     /**
      * Returns directory of cache.

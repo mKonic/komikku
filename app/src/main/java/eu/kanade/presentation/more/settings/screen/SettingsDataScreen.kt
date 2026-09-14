@@ -29,6 +29,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -71,7 +72,6 @@ import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import mihon.icons.materialsymbols.MaterialSymbols
@@ -209,18 +209,13 @@ object SettingsDataScreen : SearchableSettings {
         val storageDir by storageDirPref.collectAsState()
 
         // KMK -->
-        var locationValid by remember(storageDir) {
-            mutableStateOf(directoryAccessible(context, storageDir))
+        // Asking whether the folder is still there goes to the storage provider, so it is done off the main thread.
+        // Until it answers the location is shown as set, which is what it almost always is.
+        val locationValid by produceState<Boolean?>(null, storageDir) {
+            value = withIOContext { directoryAccessible(context, storageDir) }
         }
 
-        LaunchedEffect(storageDir) {
-            storageDirPref.changes()
-                .collectLatest {
-                    locationValid = directoryAccessible(context, storageDir)
-                }
-        }
-
-        if (!locationValid) {
+        if (locationValid == false) {
             // KMK <--
             return stringResource(MR.strings.no_location_set)
         }
@@ -370,12 +365,17 @@ object SettingsDataScreen : SearchableSettings {
 
         val chapterCache = remember { Injekt.get<ChapterCache>() }
         var cacheReadableSizeSema by remember { mutableIntStateOf(0) }
-        val cacheReadableSize = remember(cacheReadableSizeSema) { chapterCache.readableSize }
+        // KMK: sizing a cache walks every file in it, which is not something to do on the main thread
+        val cacheReadableSize by produceState("", cacheReadableSizeSema) {
+            value = withIOContext { chapterCache.readableSize }
+        }
 
         // SY -->
         val pagePreviewCache = remember { Injekt.get<PagePreviewCache>() }
         var pagePreviewReadableSizeSema by remember { mutableIntStateOf(0) }
-        val pagePreviewReadableSize = remember(pagePreviewReadableSizeSema) { pagePreviewCache.readableSize }
+        val pagePreviewReadableSize by produceState("", pagePreviewReadableSizeSema) {
+            value = withIOContext { pagePreviewCache.readableSize }
+        }
         // SY <--
 
         return Preference.PreferenceGroup(

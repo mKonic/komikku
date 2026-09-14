@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
@@ -15,6 +16,7 @@ import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableMap
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
@@ -42,21 +44,25 @@ object SettingsWebGpuScreen : SearchableSettings {
         val readerPreferences = remember { Injekt.get<ReaderPreferences>() }
 
         // A failed init or a lost device is final for the process, so this answer cannot change
-        // while the screen is open.
-        val supported = remember { WebGpuRenderer.isAvailable }
+        // while the screen is open. The first time it is asked, WebGPU is brought up to find out,
+        // which loads the native library and opens the device, so it is asked off the main thread.
+        // Null until it answers.
+        val supported by produceState<Boolean?>(null) {
+            value = withIOContext { WebGpuRenderer.isAvailable }
+        }
         val useRenderer by basePreferences.highQualityRenderer().collectAsState()
 
         // Nothing below the switch does anything until the renderer is the one drawing.
-        val active = supported && useRenderer
+        val active = supported == true && useRenderer
 
         return listOfNotNull(
             Preference.PreferenceItem.InfoPreference(stringResource(MR.strings.webgpu_unsupported))
-                .takeUnless { supported },
+                .takeIf { supported == false },
             Preference.PreferenceItem.SwitchPreference(
                 preference = basePreferences.highQualityRenderer(),
                 title = stringResource(MR.strings.pref_high_quality_renderer),
                 subtitle = stringResource(MR.strings.pref_high_quality_renderer_summary),
-                enabled = supported,
+                enabled = supported == true,
             ),
             Preference.PreferenceItem.ListPreference(
                 preference = readerPreferences.upscaler(),
