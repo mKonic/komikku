@@ -8,6 +8,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ca.mpreg.webgpuviewer.renderer.WebGpuRenderer
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.chapter.model.toDbChapter
 import eu.kanade.domain.manga.interactor.SetMangaViewerFlags
@@ -488,6 +489,13 @@ class ReaderViewModel @JvmOverloads constructor(
                     val relativeTime = uiPreferences.relativeTime().get()
                     val autoScrollFreq = readerPreferences.autoscrollInterval().get()
                     // SY <--
+                    // KMK -->
+                    // The viewer is picked on the main thread the moment the manga is in state, and the first
+                    // question put to WebGPU brings it up: the native library, the instance and the device. Asking
+                    // here, on the loading thread, keeps that off the main thread, and the answer is final for the
+                    // process, so the viewer then gets it for free.
+                    if (basePreferences.highQualityRenderer().get()) runCatching { WebGpuRenderer.isAvailable }
+                    // KMK <--
                     mutableState.update {
                         it.copy(
                             manga = manga,
