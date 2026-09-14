@@ -11,6 +11,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+
+## [v1.5.3] - 2026-09-14
 ### Fixed
 - With a large local library, opening a local entry could hold up a backup or library update running
   at the same time: each title keyword listed the whole local folder at once, and those listings
