@@ -21,6 +21,11 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Analytics. Its settings toggle had been commented out for a long while the preference itself
   defaulted to on, so it was neither used nor refusable. Crash reporting is all that is left.
 
+### Fixed
+- Open source licences now lists webgpuviewer, the renderer behind the high quality reader. It is
+  fetched from a GitHub release rather than a Maven repository, so it came with none of the
+  metadata the licence list is built from and was the one bundled library missing from it.
+
 ## [v1.7.1] - 2026-09-14
 ### Fixed
 - Opening Data and storage no longer stalls while it measures the chapter and page preview caches,
