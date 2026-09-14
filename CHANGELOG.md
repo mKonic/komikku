@@ -17,6 +17,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   of it ran on the main thread, and measuring a cache walks every file in it.
 - Opening WebGPU settings no longer brings the renderer up on the main thread just to find out
   whether the device supports it.
+- Opening a chapter with the WebGPU renderer on no longer freezes the screen the first time in a
+  session. The reader asked whether WebGPU was available from the main thread while choosing a
+  viewer, and the first time it is asked is when the renderer starts up.
 
 ## [v1.7.0] - 2026-09-14
 ### Added
