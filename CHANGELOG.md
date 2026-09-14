@@ -23,6 +23,12 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Every time the WebGPU reader opened, it started a new thread, and the graphics driver can keep
   memory for each thread after the reader closes (about 4 MB each on the Android emulator). Readers
   now reuse the same threads.
+- Reading kept growing the app's memory and never gave it back, even after leaving the reader and
+  after Android asked for memory. The reader freed the graphics memory behind each page, tile and
+  transition, but not the handles to it, and nothing else ever released those. On the Android
+  emulator, eight minutes of reading used to keep 15.5 MB after closing the reader and now keeps
+  5.3 MB, and memory comes back down during reading instead of only going up.
+- The list of search results kept five threads per global search for as long as the app ran.
 
 ## [v1.5.2] - 2026-09-14
 ### Fixed
