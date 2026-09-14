@@ -1826,7 +1826,14 @@ open class WebGpuViewer(
                 // MainScope, not the state's: that one dispatches inside the frame callback.
                 val settled = page
                 this@WebGpuViewer.scope.launch {
-                    activity.hideMenu()
+                    // KMK --> tapping through pages settles one page after another, and each
+                    // settle hid the menu the tap had just opened. The standard pager guards the
+                    // same call with this (PagerViewer), and Mihon fixed the renderer's copy in
+                    // #3956 - taken here, where the call is not behind an isContinuous check.
+                    if (!activity.isScrollingThroughPages) {
+                        activity.hideMenu()
+                    }
+                    // KMK <--
                     progressPage(settled)?.let { activity.onPageSelected(it.page) }
                     preloadPages(settled)
 
