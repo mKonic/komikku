@@ -60,6 +60,9 @@ object StressRunner {
         UpdateScenario,
         SearchScenario,
         DownloadScenario,
+        SettingsScenario,
+        ConfigChurnScenario,
+        CategoryScenario,
     )
 
     data class ScenarioStatus(
@@ -146,6 +149,7 @@ object StressRunner {
             journal = newJournal
             manifestFile = file
             installCrashRecorder()
+            StressStrictMode.install(newJournal)
             launchLocked(app, manifest, dir, newJournal)
         }
         context.toast("Stress run ${mode.name.lowercase()}: ${File(root(app), "")}")
@@ -160,6 +164,8 @@ object StressRunner {
             val manifest = StressManifest.read(file)?.takeIf { it.active } ?: return
             val currentJournal = journal ?: return
             currentJournal.record("resume", mapOf("session" to manifest.session))
+            // A resume is a new process, which starts with no policy of its own.
+            StressStrictMode.install(currentJournal)
             launchLocked(app, manifest, file.parentFile ?: return, currentJournal)
         }
     }
@@ -182,6 +188,7 @@ object StressRunner {
         StressManifest.write(file, done)
         journal?.record("stop", mapOf("reason" to reason))
         journal?.flush()
+        StressStrictMode.remove()
         _status.update { it?.copy(manifest = done, running = false) }
     }
 
