@@ -212,6 +212,8 @@ class MainActivity : BaseActivity() {
 
         // Do not let the launcher create a new activity http://stackoverflow.com/questions/16283079
         if (!isTaskRoot) {
+            // KMK: a stress action sent while the reader is on top opens this copy; it needs no screen, so run it first
+            handleStressAction(intent)
             finish()
             return
         }
@@ -647,6 +649,28 @@ class MainActivity : BaseActivity() {
         }
     }
 
+    // KMK -->
+    private fun handleStressAction(intent: Intent) {
+        if (!isDebugBuildType && !isPreviewBuildType) return
+        when (intent.action) {
+            StressRunner.ACTION_START -> {
+                val network = intent.getBooleanExtra(StressRunner.EXTRA_NETWORK, false)
+                val scenarios = intent.getStringExtra(StressRunner.EXTRA_SCENARIOS)
+                    ?.split(',')
+                    ?.map { it.trim() }
+                    ?.filter { it.isNotEmpty() }
+                    ?: StressRunner.defaultScenarios(network)
+                val mode = intent.getStringExtra(StressRunner.EXTRA_MODE)
+                    ?.let { name -> StressMode.entries.firstOrNull { it.name.equals(name, ignoreCase = true) } }
+                    ?: StressMode.ONCE
+                StressRunner.start(this, scenarios, mode, network, intent.getIntExtra(StressRunner.EXTRA_ROUNDS, 1))
+            }
+            StressRunner.ACTION_RESUME -> StressRunner.resume(this)
+            StressRunner.ACTION_STOP -> StressRunner.stop("stopped from an intent")
+        }
+    }
+    // KMK <--
+
     private fun handleIntentAction(intent: Intent, navigator: Navigator): Boolean {
         val notificationId = intent.getIntExtra("notificationId", -1)
         if (notificationId > -1) {
@@ -693,27 +717,8 @@ class MainActivity : BaseActivity() {
                 }
                 null
             }
-            StressRunner.ACTION_START -> {
-                if (isDebugBuildType || isPreviewBuildType) {
-                    val network = intent.getBooleanExtra(StressRunner.EXTRA_NETWORK, false)
-                    val scenarios = intent.getStringExtra(StressRunner.EXTRA_SCENARIOS)
-                        ?.split(',')
-                        ?.map { it.trim() }
-                        ?.filter { it.isNotEmpty() }
-                        ?: StressRunner.defaultScenarios(network)
-                    val mode = intent.getStringExtra(StressRunner.EXTRA_MODE)
-                        ?.let { name -> StressMode.entries.firstOrNull { it.name.equals(name, ignoreCase = true) } }
-                        ?: StressMode.ONCE
-                    StressRunner.start(this, scenarios, mode, network, intent.getIntExtra(StressRunner.EXTRA_ROUNDS, 1))
-                }
-                null
-            }
-            StressRunner.ACTION_RESUME -> {
-                if (isDebugBuildType || isPreviewBuildType) StressRunner.resume(this)
-                null
-            }
-            StressRunner.ACTION_STOP -> {
-                if (isDebugBuildType || isPreviewBuildType) StressRunner.stop("stopped from an intent")
+            StressRunner.ACTION_START, StressRunner.ACTION_RESUME, StressRunner.ACTION_STOP -> {
+                handleStressAction(intent)
                 null
             }
             // KMK <--
