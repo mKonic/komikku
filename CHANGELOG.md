@@ -11,6 +11,23 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Added
+- WebGPU now has its own entry in Settings, holding the renderer switch that used to sit under
+  Advanced along with the settings that belong to it.
+- A choice of upscaling for the WebGPU reader. Enhanced doubles a zoomed page through a small
+  neural network before filtering, which sharpens line art for more work per page. The reader
+  shipped with this and there was no way to turn it on, so every page used the standard one.
+
+### Fixed
+- The WebGPU reader took its tap zones, tap inversion and border trimming from the paged settings
+  even while showing a long strip, so the long strip settings did nothing and a paged preference
+  applied where it did not belong.
+- Changing the tap zone size did not reach the WebGPU reader until it was reopened.
+- The reader settings offered page layout, page transitions, inverted double pages, the zoom-in
+  and double-tap zoom switches and the centre margin while the WebGPU renderer was drawing, none
+  of which it reads.
+- HDR is available again on Android 15. The reader asked the display for a value that only exists
+  on Android 16, and treated the refusal as "this screen cannot show HDR".
 
 ## [v1.5.3] - 2026-09-14
 ### Fixed
