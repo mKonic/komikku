@@ -61,7 +61,10 @@ val EXHENTAI_EXT_SOURCES = mapOf(
     6348816521182710144 to "it", // E-Hentai (It)
     933801322201782118 to "ko", // E-Hentai (Ko)
     250678340923599076 to "pl", // E-Hentai (Pl)
-    7151438547982231541 to "pt-BR", // E-Hentai (PtBr)
+    // KMK: not the id the E-Hentai extension hardcodes for pt-BR - that one belongs to
+    // EHENTAI_EXT_SOURCES above, and repeating it here overwrote the E-Hentai source with this one
+    // whenever ExHentai was enabled. Derived like every other entry in this map instead.
+    2163847240745409426 to "pt-BR", // ExHentai (PtBr)
     2298110591802103872 to "ru", // E-Hentai (Ru)
     1471697890032830855 to "es", // E-Hentai (Es)
     5297549186919793998 to "th", // E-Hentai (Th)

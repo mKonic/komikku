@@ -30,6 +30,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - A wide page carrying HDR gain map data can be turned to fit in the high quality reader. The gain
   map is a second image that has to turn with the page it belongs to, so rather than risk the two
   falling out of step the reader left such a page flat; both turn together now.
+- The Brazilian Portuguese E-Hentai source no longer disappears when ExHentai is turned on. Its
+  source id was repeated in the ExHentai list, so enabling ExHentai registered an ExHentai source
+  over the top of it and left you with one source where there should be two.
 - An animated page can no longer exhaust a device's graphics memory in the high quality reader.
   Every frame is held as a full size texture with no smaller version behind it, so one large page
   with many frames could ask for hundreds of megabytes at once. The animation now runs over as many
