@@ -33,12 +33,21 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - The Brazilian Portuguese E-Hentai source no longer disappears when ExHentai is turned on. Its
   source id was repeated in the ExHentai list, so enabling ExHentai registered an ExHentai source
   over the top of it and left you with one source where there should be two.
+- A page that will not load on E-Hentai now moves to another image server by itself. E-Hentai hands
+  out a server per request and some of them answer slowly or not at all, which spent the whole
+  timeout and then left a broken page for you to retry by hand. The gallery page's own link to a
+  different server is followed instead.
+- E-Hentai no longer writes your session cookies into the log on every single request.
 - An animated page can no longer exhaust a device's graphics memory in the high quality reader.
   Every frame is held as a full size texture with no smaller version behind it, so one large page
   with many frames could ask for hundreds of megabytes at once. The animation now runs over as many
   frames as the device can hold.
 
 ### Improved
+- Gallery previews on E-Hentai cost a fraction of what they did. Every preview on a page is a
+  window into one shared sprite sheet, and each of them downloaded and fully decoded that entire
+  sheet again - twenty times over for a page of twenty thumbnails. The sheet is now fetched and
+  decoded once and only the crop is done per preview.
 - The high quality reader decodes several pages at once. One worker took every page in turn, so
   each page waited out the whole of the page before it - that page's upload included, which happens
   on the renderer's own thread and left the decode threads idle meanwhile. Pages arrive sooner when

@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.LruCache
 import androidx.core.net.toUri
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.asObservableSuccess
@@ -33,7 +34,6 @@ import exh.eh.EHentaiUpdateHelper
 import exh.eh.EHentaiUpdateWorkerConstants
 import exh.eh.GalleryEntry
 import exh.log.xLogD
-import exh.log.xLogI
 import exh.metadata.MetadataUtil
 import exh.metadata.metadata.EHentaiSearchMetadata
 import exh.metadata.metadata.EHentaiSearchMetadata.Companion.EH_GENRE_NAMESPACE
@@ -78,6 +78,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
@@ -860,15 +861,29 @@ class EHentai(
         with(response.asJsoup()) {
             val currentImage = getElementById("img")!!.attr("src")
             // Each press of the retry button will choose another server
-            select("#loadfail").attr("onclick").nullIfBlank()?.let {
-                page.url = addParam(page.url, "nl", it.substring(it.indexOf('\'') + 1 until it.lastIndexOf('\'')))
+            val nl = select("#loadfail").attr("onclick").nullIfBlank()
+                ?.let { it.substring(it.indexOf('\'') + 1 until it.lastIndexOf('\'')) }
+            if (nl != null) {
+                page.url = addParam(page.url, "nl", nl)
             }
             if (currentImage == "https://ehgt.org/g/509.gif") {
                 throw Exception("Exceeded page quota")
             }
-            return currentImage
+            // KMK: the fragment names the page that hands out a different image server, which is
+            // what [ImageRetryInterceptor] asks for when this image's own server does not answer.
+            // A fragment never reaches a server, and the only other thing that reads an image url
+            // is the chapter cache, which hashes the whole string for a key.
+            return if (nl != null) {
+                "$currentImage#${addParam(response.request.url.toString(), "nl", nl)}"
+            } else {
+                currentImage
+            }
         }
     }
+
+    /** As [realImageUrlParse], for a page fetched by [ImageRetryInterceptor] - nothing to record. */
+    private fun retryImageUrlParse(response: Response): String =
+        response.asJsoup().getElementById("img")?.attr("src").orEmpty()
 
     suspend fun fetchFavorites(): Pair<List<ParsedManga>, List<String>> {
         val favoriteUrl = "$baseUrl/favorites.php"
@@ -973,7 +988,6 @@ class EHentai(
                     // KMK -->
                     ?.associate { it.substringBefore("=").trim() to it.substringAfter("=").trim() }
                 val newCookies = cookiesHeader(cfCookies ?: emptyMap())
-                xLogI("Overwritten Cookie: $newCookies")
                 // KMK <--
 
                 val newReq =
@@ -992,6 +1006,7 @@ class EHentai(
 
                 chain.proceed(newReq)
             }
+            .addInterceptor(ImageRetryInterceptor())
             .addInterceptor(ThumbnailPreviewInterceptor())
             .build()
 
@@ -1372,36 +1387,116 @@ class EHentai(
         }
     }
 
+    /**
+     * KMK, taken from the E-Hentai extension: E-Hentai hands out an image server per request and
+     * some of them answer slowly or not at all, which costs the whole read timeout and then fails
+     * the page. The gallery page carries a link that asks for a different server, which
+     * [realImageUrlParse] leaves in the image url's fragment - so a failure can move to another
+     * server here rather than surfacing as a broken page for the reader to retry by hand.
+     *
+     * Retries once: the url it retries with carries no fragment of its own, so this cannot loop.
+     */
+    private inner class ImageRetryInterceptor : Interceptor {
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val request = chain.request()
+            val fallbackPage = request.url.fragment ?: return chain.proceed(request)
+
+            val result = runCatching { chain.proceed(request) }
+            result.getOrNull()?.let { if (it.isSuccessful) return it }
+
+            val retryUrl = runCatching {
+                chain.proceed(GET(fallbackPage, headers)).use { retryImageUrlParse(it) }
+            }.getOrNull()?.toHttpUrlOrNull()
+            // Nothing better to offer, so the original outcome stands - failure included.
+            if (retryUrl == null) return result.getOrThrow()
+
+            result.getOrNull()?.close()
+            return chain.proceed(request.newBuilder().url(retryUrl).build())
+        }
+    }
+
+    /**
+     * Cuts one preview out of the sprite sheet the gallery page lays its thumbnails out from.
+     *
+     * KMK: every preview on a page is a window into the *same* sheet - see [parseNormalPreview],
+     * which reads `background: url(sheet) -offset px` - and each of them is fetched through
+     * [fetchPreviewImage], which is a cacheless call. So a page of twenty previews used to
+     * download that one sheet twenty times and fully decode it twenty times over. The decoded
+     * sheet is kept here instead, bounded by [SPRITE_CACHE_BYTES], and only the crop is per
+     * preview. The download is done under a per-sheet lock so a page opening all its previews at
+     * once still fetches the sheet once rather than twenty times in parallel.
+     */
     private class ThumbnailPreviewInterceptor : Interceptor {
         override fun intercept(chain: Interceptor.Chain): Response {
             val request = chain.request()
 
-            if (request.url.host == THUMB_DOMAIN && request.url.pathSegments.contains(BLANK_THUMB)) {
-                val thumbnailPreview = EHentaiThumbnailPreview.parseFromUrl(request.url)
-                val response = chain.proceed(request.newBuilder().url(thumbnailPreview.imageUrl).build())
-                if (response.isSuccessful) {
-                    val body = ByteArrayOutputStream()
-                        .use {
-                            val bitmap = BitmapFactory.decodeStream(response.body.byteStream())
-                                ?: throw IOException("Null bitmap($thumbnailPreview)")
-                            Bitmap.createBitmap(
-                                bitmap,
-                                thumbnailPreview.widthOffset,
-                                0,
-                                thumbnailPreview.width.coerceAtMost(bitmap.width - thumbnailPreview.widthOffset),
-                                thumbnailPreview.height.coerceAtMost(bitmap.height),
-                            ).compress(Bitmap.CompressFormat.JPEG, 100, it)
-                            it.toByteArray()
-                        }
-                        .toResponseBody("image/jpeg".toMediaType())
+            if (request.url.host != THUMB_DOMAIN || !request.url.pathSegments.contains(BLANK_THUMB)) {
+                return chain.proceed(request)
+            }
 
-                    return response.newBuilder().body(body).build()
-                } else {
-                    return response
+            val thumbnailPreview = EHentaiThumbnailPreview.parseFromUrl(request.url)
+            val sheetUrl = thumbnailPreview.imageUrl
+
+            val sheet = synchronized(sheetLocks[(sheetUrl.hashCode() ushr 1) % sheetLocks.size]) {
+                sprites.get(sheetUrl) ?: run {
+                    val response = chain.proceed(request.newBuilder().url(sheetUrl).build())
+                    // Handed straight back so the caller sees the real failure, as it did before.
+                    if (!response.isSuccessful) return response
+                    val decoded = response.use {
+                        BitmapFactory.decodeStream(it.body.byteStream())
+                    } ?: throw IOException("Null bitmap($thumbnailPreview)")
+                    sprites.put(sheetUrl, decoded)
+                    decoded
                 }
             }
 
-            return chain.proceed(request)
+            val body = ByteArrayOutputStream()
+                .use {
+                    Bitmap.createBitmap(
+                        sheet,
+                        thumbnailPreview.widthOffset,
+                        0,
+                        thumbnailPreview.width.coerceAtMost(sheet.width - thumbnailPreview.widthOffset),
+                        thumbnailPreview.height.coerceAtMost(sheet.height),
+                    ).compress(Bitmap.CompressFormat.JPEG, 100, it)
+                    it.toByteArray()
+                }
+                .toResponseBody("image/jpeg".toMediaType())
+
+            return Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(HTTP_OK)
+                .message("OK")
+                .body(body)
+                .build()
+        }
+
+        companion object {
+            private const val HTTP_OK = 200
+
+            /**
+             * Decoded sheets held at once. A sheet is a strip of twenty-odd thumbnails, so this is
+             * a handful of gallery pages' worth - enough that paging back and forth re-crops
+             * rather than re-downloads, and small enough to be worth nothing if it is all evicted.
+             */
+            private const val SPRITE_CACHE_BYTES = 8 * 1024 * 1024
+
+            /**
+             * Shared by every E-Hentai source instance, which is why it lives here rather than on
+             * one of them: the language sources each build their own client and interceptor.
+             * Never recycled - an evicted sheet may still be mid-crop on another thread.
+             */
+            private val sprites = object : LruCache<String, Bitmap>(SPRITE_CACHE_BYTES) {
+                override fun sizeOf(key: String, value: Bitmap) = value.byteCount
+            }
+
+            /**
+             * Striped rather than one lock per sheet: a map keyed by url would grow for as
+             * long as the session lasts. A collision only means two sheets wait on each
+             * other, which costs one download's wait and never correctness.
+             */
+            private val sheetLocks = Array(8) { Any() }
         }
     }
 
