@@ -59,7 +59,11 @@ import exh.util.trimOrNull
 import exh.util.urlImportFetchSearchManga
 import exh.util.urlImportFetchSearchMangaSuspend
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
@@ -449,32 +453,66 @@ class EHentai(
     }
 
     @Deprecated("Use the suspend API instead", replaceWith = ReplaceWith("getPageList"))
-    override fun fetchPageList(
-        chapter: SChapter,
-    ): Observable<List<Page>> = fetchChapterPage(chapter, baseUrl + chapter.url)
-        .map {
-            it.mapIndexed { i, s ->
-                Page(i, s)
-            }
-        }!!
-
-    private fun fetchChapterPage(
-        chapter: SChapter,
-        np: String,
-        pastUrls: List<String> = emptyList(),
-    ): Observable<List<String>> {
-        val urls = ArrayList(pastUrls)
-        return chapterPageCall(np).flatMap {
-            val jsoup = it.asJsoup()
-            urls += parseChapterPage(jsoup)
-            val nextUrl = nextPageUrl(jsoup)
-            if (nextUrl != null) {
-                fetchChapterPage(chapter, nextUrl, urls)
-            } else {
-                Observable.just(urls)
-            }
-        }
+    override fun fetchPageList(chapter: SChapter): Observable<List<Page>> = runAsObservable {
+        getPageList(chapter)
     }
+
+    /**
+     * KMK: this used to follow the gallery's "next" link one page at a time, recursing through an
+     * Rx flatMap for each. That was two faults at once. Every gallery page cost a round trip before
+     * the reader could draw page one, so a thousand page gallery waited out fifty of them in a row;
+     * and the recursion put a subscription on the stack per page until it overflowed and took the
+     * process down with SIGSEGV - the very thing [getChapterList] refuses to use Rx for.
+     *
+     * The gallery's page nav says how many pages there are and each one is addressable with `?p=`,
+     * so they are fetched together instead, a few at a time so E-Hentai is not hammered.
+     */
+    override suspend fun getPageList(chapter: SChapter): List<Page> {
+        val galleryUrl = baseUrl + chapter.url
+        val first = galleryPage(galleryUrl, 0)
+        val urls = ArrayList(parseChapterPage(first))
+
+        val count = galleryPageCount(first)
+        var tail = first
+        if (count > 1) {
+            val permits = Semaphore(GALLERY_PAGE_PARALLELISM)
+            val docs = coroutineScope {
+                (1 until count).map { page ->
+                    async { permits.withPermit { galleryPage(galleryUrl, page) } }
+                }.awaitAll()
+            }
+            docs.forEach { urls += parseChapterPage(it) }
+            tail = docs.lastOrNull() ?: first
+        }
+
+        // The nav can be windowed on a long gallery, so anything it did not account for is walked
+        // the old way - as a loop, so a deep gallery can never put this back on the stack.
+        while (true) {
+            val next = nextPageUrl(tail) ?: break
+            tail = client.newCall(exGet(next, additionalHeaders = headers)).awaitSuccess().asJsoup()
+            urls += parseChapterPage(tail)
+        }
+
+        return urls.mapIndexed { index, url -> Page(index, url) }
+    }
+
+    private suspend fun galleryPage(galleryUrl: String, page: Int): Document =
+        client.newCall(exGet(galleryPageUrl(galleryUrl, page), additionalHeaders = headers))
+            .awaitSuccess()
+            .asJsoup()
+
+    private fun galleryPageUrl(galleryUrl: String, page: Int): String =
+        galleryUrl.toHttpUrl().newBuilder()
+            .removeAllQueryParameters("p")
+            .apply { if (page > 0) addQueryParameter("p", page.toString()) }
+            .build()
+            .toString()
+
+    /** How many gallery pages the thumbnails are spread over, off the gallery's page nav. */
+    private fun galleryPageCount(doc: Document): Int =
+        doc.select("table.ptt tbody tr td a").asReversed()
+            .firstNotNullOfOrNull { it.text().toIntOrNull() }
+            ?: 1
 
     private fun parseChapterPage(response: Element) = with(response) {
         select(".gdtm a").map {
@@ -484,13 +522,6 @@ class EHentai(
                 Pair(it.child(0).attr("title").removePrefix("Page ").substringBefore(":").toInt(), it.attr("href"))
             },
         ).sortedBy(Pair<Int, String>::first).map { it.second }
-    }
-
-    private fun chapterPageCall(np: String): Observable<Response> {
-        return client.newCall(chapterPageRequest(np)).asObservableSuccess()
-    }
-    private fun chapterPageRequest(np: String): Request {
-        return exGet(url = np, additionalHeaders = headers)
     }
 
     private fun nextPageUrl(element: Element): String? = element.select("a[onclick=return false]").last()?.let {
@@ -1501,6 +1532,9 @@ class EHentai(
     }
 
     companion object {
+        /** Gallery pages fetched at once when building a page list. */
+        private const val GALLERY_PAGE_PARALLELISM = 5
+
         private const val TR_SUFFIX = "TR"
         private const val REVERSE_PARAM = "TEH_REVERSE"
         private val PAGE_COUNT_REGEX = "[0-9]*".toRegex()
