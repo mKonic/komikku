@@ -1,6 +1,9 @@
 package eu.kanade.tachiyomi.debug.stress
 
 import eu.kanade.tachiyomi.source.PagePreviewSource
+import eu.kanade.tachiyomi.source.model.MetadataMangasPage
+import eu.kanade.tachiyomi.source.model.SChapter
+import exh.metadata.metadata.EHentaiSearchMetadata
 import exh.source.EH_SOURCE_ID
 import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.Injekt
@@ -27,8 +30,26 @@ object EhPreviewScenario : StressScenario {
         val source = Injekt.get<SourceManager>().get(EH_SOURCE_ID) as? PagePreviewSource
             ?: throw StressSkip("the E-Hentai source is not enabled")
 
-        val manga = source.getPopularManga(1).mangas.getOrNull(iteration % 5)
+        // The biggest gallery listed, because the cost being measured scales with how many gallery
+        // pages the thumbnails are spread over - a twenty page gallery would show nothing at all.
+        val listing = source.getPopularManga(1)
+        val manga = (listing as? MetadataMangasPage)
+            ?.let { page ->
+                page.mangas.zip(page.mangasMetadata)
+                    .maxByOrNull { (_, meta) -> (meta as? EHentaiSearchMetadata)?.length ?: 0 }
+                    ?.first
+            }
+            ?: listing.mangas.firstOrNull()
             ?: throw StressSkip("no galleries are listed")
+
+        // What a reader waits out before it can draw page one.
+        val chapter = SChapter.create().apply {
+            url = manga.url
+            name = manga.title
+        }
+        var pages = 0
+        val pageListMs = measureTimeMillis { pages = source.getPageList(chapter).size }
+        context.step("ehpagelist", mapOf("pages" to pages, "ms" to pageListMs))
 
         // The chapter list is only read for its last url, so the gallery's own url stands in.
         val previews = source.getPagePreviewList(manga, emptyList(), 1)
