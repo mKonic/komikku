@@ -27,6 +27,23 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - The page layout button in the reader's bottom bar works in the high quality reader. The button is
   shown by default and drove the standard viewer's layout only, so under the renderer it sat there
   doing nothing; it now turns the renderer's own dual page view on and off.
+- A wide page carrying HDR gain map data can be turned to fit in the high quality reader. The gain
+  map is a second image that has to turn with the page it belongs to, so rather than risk the two
+  falling out of step the reader left such a page flat; both turn together now.
+- An animated page can no longer exhaust a device's graphics memory in the high quality reader.
+  Every frame is held as a full size texture with no smaller version behind it, so one large page
+  with many frames could ask for hundreds of megabytes at once. The animation now runs over as many
+  frames as the device can hold.
+
+### Improved
+- The high quality reader decodes several pages at once. One worker took every page in turn, so
+  each page waited out the whole of the page before it - that page's upload included, which happens
+  on the renderer's own thread and left the decode threads idle meanwhile. Pages arrive sooner when
+  moving quickly through a chapter.
+- The high quality reader sizes its tile cache to the device instead of to fixed limits. It kept a
+  screen and a half of tiles between a fixed 16 and 64 MB whatever it was running on; it now keeps
+  more of the page around the viewport on a device with memory to spare and less on one without,
+  and it never asks for a texture larger than the device will actually allocate.
 
 ### Added
 - Smart scale on wide screens for the high quality reader's long strip modes. The setting existed

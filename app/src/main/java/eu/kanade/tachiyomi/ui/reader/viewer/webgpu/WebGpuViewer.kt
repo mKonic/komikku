@@ -20,6 +20,7 @@ import ca.mpreg.webgpuviewer.closeTo
 import ca.mpreg.webgpuviewer.draw.TextAlign
 import ca.mpreg.webgpuviewer.filter.FilterLut3d
 import ca.mpreg.webgpuviewer.filter.Lut3d
+import ca.mpreg.webgpuviewer.renderer.DeviceMemory
 import ca.mpreg.webgpuviewer.renderer.GainmapInput
 import ca.mpreg.webgpuviewer.renderer.Image
 import ca.mpreg.webgpuviewer.renderer.UpscalerArtCnn
@@ -92,6 +93,12 @@ import kotlin.time.Duration.Companion.milliseconds
 private val decodeDispatcher = ThreadPoolExecutor(0, Int.MAX_VALUE, 5L, TimeUnit.MINUTES, SynchronousQueue()) { r ->
     Thread(r, "WebGpuViewer-Decode").apply { isDaemon = true }
 }.asCoroutineDispatcher()
+
+/**
+ * Decode workers each viewer runs. Half the cores, and never more than three - the viewer's init
+ * block has why more of them would cost the page being read rather than help it.
+ */
+private val decodeWorkers = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 3)
 // KMK <--
 
 open class WebGpuViewer(
@@ -209,56 +216,65 @@ open class WebGpuViewer(
     }
 
     init {
-        scope.launch(decodeDispatcher) {
-            try {
-                while (!destroyed) {
-                    // Popped, vetted and marked under one acquisition - no window for an eviction.
-                    val page = synchronized(lock) {
-                        while (decodeQueue.isEmpty()) {
-                            if (destroyed) return@launch
-                            lock.wait()
-                        }
-                        val candidate = decodeQueue.removeLast()
-                        if (pageInCache(candidate) && !candidate.isDecoded) {
-                            candidate.apply { state = PageState.DECODING }
-                        } else {
-                            if (pageInCache(candidate)) candidate.state = PageState.IDLE
-                            null
-                        }
-                    } ?: continue
-
-                    try {
-                        decodeReaderPage(page)
-                    } catch (e: CancellationException) {
-                        // Caught below, the loop would park in wait() on a dead scope.
-                        throw e
-                    } catch (e: Exception) {
-                        logcat(LogPriority.ERROR, e) { "decodeReaderPage: ${e.message}" }
-                        synchronized(lock) {
-                            if (pageInCache(page) && !page.isDecoded && !page.imagePage.destroyed) {
-                                val oldImagePage = page.imagePage
-                                val errorMessage = e.message ?: "Failed to decode image"
-                                page.imagePage = ErrorPage(errorMessage, page.spreadPosition, page)
-                                // KMK -->
-                                page.page.markDisplayFailed()
-                                // KMK <--
-                                page.state = PageState.IDLE
-                                cleanupImage(oldImagePage)
-                                page.imagePage.invalidate()
+        // KMK --> one worker decoded every page in turn, so a page waited out the whole of the
+        // page before it - that page's upload included, which lands on the renderer's single
+        // thread and leaves the decode threads with nothing to do meanwhile. A few workers let
+        // one page's decode overlap the last one's upload.
+        //
+        // Deliberately few. The queue is LIFO, so the page being looked at is always taken first,
+        // and every extra worker is another full-size image held at once and a core taken from
+        // that page to decode one nobody is waiting for yet.
+        repeat(decodeWorkers) {
+            scope.launch(decodeDispatcher) {
+                try {
+                    while (!destroyed) {
+                        // Popped, vetted and marked under one acquisition - no window for an eviction.
+                        val page = synchronized(lock) {
+                            while (decodeQueue.isEmpty()) {
+                                if (destroyed) return@launch
+                                lock.wait()
+                            }
+                            val candidate = decodeQueue.removeLast()
+                            if (pageInCache(candidate) && !candidate.isDecoded) {
+                                candidate.apply { state = PageState.DECODING }
                             } else {
-                                if (pageInCache(page)) page.state = PageState.IDLE
+                                if (pageInCache(candidate)) candidate.state = PageState.IDLE
+                                null
+                            }
+                        } ?: continue
+
+                        try {
+                            decodeReaderPage(page)
+                        } catch (e: CancellationException) {
+                            // Caught below, the loop would park in wait() on a dead scope.
+                            throw e
+                        } catch (e: Exception) {
+                            logcat(LogPriority.ERROR, e) { "decodeReaderPage: ${e.message}" }
+                            synchronized(lock) {
+                                if (pageInCache(page) && !page.isDecoded && !page.imagePage.destroyed) {
+                                    val oldImagePage = page.imagePage
+                                    val errorMessage = e.message ?: "Failed to decode image"
+                                    page.imagePage = ErrorPage(errorMessage, page.spreadPosition, page)
+                                    page.page.markDisplayFailed()
+                                    page.state = PageState.IDLE
+                                    cleanupImage(oldImagePage)
+                                    page.imagePage.invalidate()
+                                } else {
+                                    if (pageInCache(page)) page.state = PageState.IDLE
+                                }
                             }
                         }
                     }
+                } catch (_: InterruptedException) {
+                    // A stray interrupt; destroy() wakes the workers with notifyAll instead.
+                } catch (_: CancellationException) {
+                    // Scope cancelled with the viewer.
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR, e) { "Decode worker died" }
                 }
-            } catch (_: InterruptedException) {
-                // A stray interrupt; destroy() wakes the worker with notifyAll instead.
-            } catch (_: CancellationException) {
-                // Scope cancelled with the viewer.
-            } catch (e: Exception) {
-                logcat(LogPriority.ERROR, e) { "Decode worker died" }
             }
         }
+        // KMK <--
     }
 
     /**
@@ -1585,23 +1601,53 @@ open class WebGpuViewer(
 
                 if (pageCount == 1) {
                     // A page wider than it is tall reads better turned on its side than shrunk to
-                    // fit. A gain map is a second buffer with its own size and would have to turn
-                    // with it, so an HDR page carrying one is left alone rather than torn from it.
+                    // fit. A gain map is a second buffer with its own size, so it turns with the
+                    // base rather than the page being left flat for carrying one.
+                    val gainmapIn = firstFrame.gainmapInput()
+                    // The map is spatially aligned with the base, so the two can only turn
+                    // together. rotateQuarter needs it packed at channels bytes per pixel; if it
+                    // is laid out any other way the page stays as it is, which is what it did
+                    // before, rather than turning out of step with its own map.
+                    val gainmapTurnable = gainmapIn == null ||
+                        gainmapIn.pixels.capacity().toLong() ==
+                        gainmapIn.width.toLong() * gainmapIn.height * gainmapIn.channels
+                    // 90 degrees is clockwise in the standard viewers, and their invert switch
+                    // turns the other way.
+                    val clockwise = !config.dualPageRotateToFitInvert
                     val turn = config.dualPageRotateToFit &&
                         firstFrame.width > firstFrame.height &&
-                        firstFrame.gainmap == null
+                        gainmapTurnable
                     val turned = if (turn) {
                         ImageUtil.rotateQuarter(
                             firstFrame.image,
                             firstFrame.width,
                             firstFrame.height,
                             bytesPerPixel = if (firstFrame.isHdr) 8 else 4,
-                            // 90 degrees is clockwise in the standard viewers, and their invert
-                            // switch turns the other way.
-                            clockwise = !config.dualPageRotateToFitInvert,
+                            clockwise = clockwise,
                         )
                     } else {
                         null
+                    }
+                    val turnedGainmap = if (turned != null && gainmapIn != null) {
+                        GainmapInput(
+                            pixels = ImageUtil.rotateQuarter(
+                                gainmapIn.pixels,
+                                gainmapIn.width,
+                                gainmapIn.height,
+                                bytesPerPixel = gainmapIn.channels,
+                                clockwise = clockwise,
+                            ),
+                            width = gainmapIn.height,
+                            height = gainmapIn.width,
+                            channels = gainmapIn.channels,
+                            gamma = gainmapIn.gamma,
+                            minContentBoost = gainmapIn.minContentBoost,
+                            maxContentBoost = gainmapIn.maxContentBoost,
+                            offsetSdr = gainmapIn.offsetSdr,
+                            offsetHdr = gainmapIn.offsetHdr,
+                        )
+                    } else {
+                        gainmapIn
                     }
 
                     // Only trim when not animated and not in dual page mode
@@ -1624,7 +1670,7 @@ open class WebGpuViewer(
                         backgroundColor = backgroundColor,
                         hdr = firstFrame.isHdr,
                         hdrHeadroom = firstFrame.hdrHeadroom,
-                        gainmap = firstFrame.gainmapInput(),
+                        gainmap = turnedGainmap,
                     )
 
                     // KMK: a page the reader splits keeps its whole image and shows half of it.
@@ -1654,8 +1700,28 @@ open class WebGpuViewer(
 
                     frames.add(Pair(firstImage, firstFrame.duration))
 
+                    // KMK --> every frame is a full-resolution texture with no mipmaps behind it,
+                    // and all of them stay resident for as long as the page is cached: a large
+                    // page with many frames is hundreds of megabytes of GPU memory for one page.
+                    // Past what the device can afford the animation loops over the frames that
+                    // fit, rather than taking the app down for the ones that do not.
+                    val frameBytes =
+                        firstFrame.width.toLong() * firstFrame.height * if (firstFrame.isHdr) 8 else 4
+                    val keepFrames = if (frameBytes <= 0L) {
+                        pageCount
+                    } else {
+                        min(pageCount, (DeviceMemory.animatedPageBytes / frameBytes).toInt().coerceAtLeast(1))
+                    }
+                    if (keepFrames < pageCount) {
+                        logcat(LogPriority.WARN) {
+                            "animated page ${firstFrame.width}x${firstFrame.height} has $pageCount frames, " +
+                                "keeping $keepFrames within ${DeviceMemory.animatedPageBytes / (1024 * 1024)} MB"
+                        }
+                    }
+                    // KMK <--
+
                     try {
-                        for (i in 1 until pageCount) {
+                        for (i in 1 until keepFrames) {
                             // Under lock: a decode this long gives an eviction's cleanup() time to land.
                             val stillWanted = synchronized(lock) {
                                 pageInCache(page).also { inCache ->
