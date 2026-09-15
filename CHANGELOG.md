@@ -10,6 +10,21 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [Unreleased]
+### Fixed
+- Opening a very large E-Hentai gallery no longer kills the app. The page list was built by
+  following the gallery's "next" link one page at a time, and each hop nested inside the one before
+  it, so a gallery spread over enough pages ran the stack out and the process died with no crash
+  dialog and nothing in the log to explain it. A 3803 page gallery now opens instead of taking the
+  app down with it.
+
+### Improved
+- E-Hentai chapters open faster, and the wait no longer grows with how long the gallery is. Every
+  page of thumbnails used to be fetched in turn, one round trip after another, before the reader
+  could draw page one, so a thousand page gallery waited out about fifty of them back to back. The
+  gallery says up front how many pages it has, so they are fetched together now, a few at a time so
+  it is not hammered.
+
 ## [v1.7.4] - 2026-09-15
 ### Fixed
 - Auto scroll works in the high quality reader. It only ever recognised the two older viewers, so
