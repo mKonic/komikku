@@ -10,7 +10,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
-## [Unreleased]
+## [v1.7.4] - 2026-09-15
 ### Fixed
 - Auto scroll works in the high quality reader. It only ever recognised the two older viewers, so
   turning it on with the high quality renderer did nothing at all - no scroll, no page turn, no
