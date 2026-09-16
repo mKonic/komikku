@@ -1052,11 +1052,7 @@
     <!-- KMK: WebGPU reader -->
     <string name="pref_high_quality_renderer">Use high quality renderer</string>
     <string name="pref_high_quality_renderer_summary">Draw pages with the GPU. Smoother zooming and sharper text, and the settings below apply.</string>
-    <string name="pref_webgpu_summary">Renderer, upscaling, transitions, display cutout and long strip layout</string>
-    <string name="pref_upscaling">Upscaling</string>
-    <string name="upscaling_catmull_rom">Standard</string>
-    <string name="upscaling_artcnn">Enhanced (ArtCNN) — experimental</string>
-    <string name="pref_upscaling_summary">Enhanced doubles a zoomed page through a small neural network before filtering. Sharper line art, more GPU work per page. Experimental: on slower GPUs it can make zooming and panning stutter — switch back to Standard if it does.</string>
+    <string name="pref_webgpu_summary">Renderer, transitions, display cutout and long strip layout</string>
     <string name="onboarding_renderer_info">The reader can draw pages with the GPU. Zooming is smoother and text stays sharp, and a few extra settings come with it. Not every device handles it well, so it is off unless you turn it on, and you can change this later under Settings, WebGPU.</string>
     <string name="pref_color_lut">Colour table</string>
     <string name="pref_color_lut_file">Table file</string>

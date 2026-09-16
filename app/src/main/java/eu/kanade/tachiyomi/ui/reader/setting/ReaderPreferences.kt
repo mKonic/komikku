@@ -232,8 +232,6 @@ class ReaderPreferences(
 
     fun continuousGap() = preferenceStore.getInt("webgpu_continuous_gap", 10)
 
-    fun upscaler() = preferenceStore.getEnum("webgpu_upscaler", Upscaling.CATMULL_ROM)
-
     /**
      * Stops of headroom the renderer may give an HDR page's highlights, so 2 is the 4x the library
      * defaults to and 0 reads everything as SDR. A ceiling rather than a target: a page whose
@@ -411,16 +409,5 @@ class ReaderPreferences(
         WIDE(MR.strings.dual_page_view_wide),
     }
 
-    /**
-     * How the renderer resizes a tile that magnifies the page.
-     *
-     * [ARTCNN] runs a small convolutional network before the filter, which costs GPU time per
-     * tile. It reports for itself whether a device can build its pipelines, and the renderer falls
-     * back to [CATMULL_ROM] on its own when it cannot, so choosing it is never fatal.
-     */
-    enum class Upscaling(val titleRes: StringResource) {
-        CATMULL_ROM(MR.strings.upscaling_catmull_rom),
-        ARTCNN(MR.strings.upscaling_artcnn),
-    }
     // KMK <--
 }

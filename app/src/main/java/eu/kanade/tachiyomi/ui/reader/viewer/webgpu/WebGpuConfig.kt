@@ -88,12 +88,6 @@ class WebGpuConfig(
     var longStripGapSmartScale = false
         private set
 
-    var upscaling = ReaderPreferences.Upscaling.CATMULL_ROM
-        private set
-
-    /** Set by the viewer, so a change reaches the tile cache that has already been built. */
-    var upscalingChangedListener: ((ReaderPreferences.Upscaling) -> Unit)? = null
-
     var colorLut = ""
         private set
 
@@ -144,9 +138,6 @@ class WebGpuConfig(
         }
         cropBorders
             .register({ imageCropBorders = it }, { imagePropertyChangedListener?.invoke() })
-
-        readerPreferences.upscaler()
-            .register({ upscaling = it }, { upscalingChangedListener?.invoke(it) })
 
         // The gain map is weighted against this while the page is decoded, so a change only shows
         // once the pages are decoded again - which is what imagePropertyChangedListener arranges.

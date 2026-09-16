@@ -64,15 +64,6 @@ object SettingsWebGpuScreen : SearchableSettings {
                 subtitle = stringResource(MR.strings.pref_high_quality_renderer_summary),
                 enabled = supported == true,
             ),
-            Preference.PreferenceItem.ListPreference(
-                preference = readerPreferences.upscaler(),
-                entries = ReaderPreferences.Upscaling.entries
-                    .associateWith { stringResource(it.titleRes) }
-                    .toImmutableMap(),
-                title = stringResource(MR.strings.pref_upscaling),
-                subtitle = stringResource(MR.strings.pref_upscaling_summary),
-                enabled = active,
-            ),
             hdrPeak(readerPreferences, active),
             colorLutGroup(readerPreferences, active),
             pagedGroup(readerPreferences, active),

@@ -23,8 +23,6 @@ import ca.mpreg.webgpuviewer.filter.Lut3d
 import ca.mpreg.webgpuviewer.renderer.DeviceMemory
 import ca.mpreg.webgpuviewer.renderer.GainmapInput
 import ca.mpreg.webgpuviewer.renderer.Image
-import ca.mpreg.webgpuviewer.renderer.UpscalerArtCnn
-import ca.mpreg.webgpuviewer.renderer.UpscalerCatmullRom
 import ca.mpreg.webgpuviewer.renderer.WebGpuRenderer
 import ca.mpreg.webgpuviewer.transition.TransitionBasic
 import ca.mpreg.webgpuviewer.transition.TransitionCube
@@ -1092,17 +1090,6 @@ open class WebGpuViewer(
     }
 
     // KMK -->
-    /**
-     * ArtCNN reports for itself whether a device can build its pipelines, and [TileRenderer] falls
-     * back to Catmull-Rom when it cannot, so this never has to check anything first.
-     */
-    private fun applyUpscaler(upscaling: ReaderPreferences.Upscaling) {
-        pager.state.upscaler = when (upscaling) {
-            ReaderPreferences.Upscaling.CATMULL_ROM -> UpscalerCatmullRom()
-            ReaderPreferences.Upscaling.ARTCNN -> UpscalerArtCnn()
-        }
-    }
-
     /** The filter is kept across intensity changes, so only picking a new table re-reads a file. */
     private var colorLutFilter: FilterLut3d? = null
 
@@ -1250,12 +1237,7 @@ open class WebGpuViewer(
             }
         }
 
-        // KMK --> the renderer ships two upscalers and nothing chose between them, so every reader
-        // ran the cheap one. Assigning drops the tiles already built, which is why it is also
-        // reapplied on change rather than only at startup.
-        applyUpscaler(config.upscaling)
-        config.upscalingChangedListener = { applyUpscaler(it) }
-
+        // KMK -->
         applyColorLut(config.colorLut, config.colorLutIntensity)
         config.colorLutChangedListener = { applyColorLut(config.colorLut, config.colorLutIntensity) }
 
