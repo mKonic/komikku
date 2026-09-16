@@ -10,7 +10,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
-## [Unreleased]
+## [v1.8.0] - 2026-09-16
 ### Fixed
 - Opening a very large E-Hentai gallery no longer kills the app. The page list was built by
   following the gallery's "next" link one page at a time, and each hop nested inside the one before
@@ -31,6 +31,15 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   could draw page one, so a thousand page gallery waited out about fifty of them back to back. The
   gallery says up front how many pages it has, so they are fetched together now, a few at a time so
   it is not hammered.
+- Chapter transitions, failed pages and loading pages in the high quality reader look the way the
+  standard viewers show them. They were drawn out of plain rectangles and text: a transition was a
+  few centred lines, a failed page's retry button a flat grey box, and a loading page a dot filling
+  up. They now show the same chapter card with its downloaded marks and missing chapter warnings, the
+  same Material buttons, and the same spinning progress indicator, through every page turn animation
+  and in the long strip.
+- Buttons on the high quality reader's pages respond like buttons. Pressing one showed nothing, and a
+  tap only counted once the double tap window had passed. They now ripple the moment they are touched
+  and act as the finger lifts, and a drag that starts on one still turns or scrolls the page.
 
 ### Removed
 - The Enhanced (ArtCNN) upscaling option in the high quality reader. The renderer's own author
@@ -40,6 +49,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   recommends for the pixel density of a phone screen. With one choice left, the setting is gone too.
 
 ### Added
+- A failed page in the high quality reader offers Open in WebView, as the standard viewers do.
+- The high quality reader's chapter transition shows the chapter being turned to loading, or why it
+  failed along with a retry button, as the standard viewers do.
 - Local source chapters take their date from the Year, Month and Day in their ComicInfo.xml, instead
   of only from when the file was last modified. Downloaded chapters write their upload date there
   too, so moving downloads into the local source keeps their dates. A year is enough; a missing
