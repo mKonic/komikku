@@ -16,4 +16,7 @@ dependencies {
     implementation(projects.sourceApi)
 
     implementation(kotlinx.bundles.serialization)
+
+    testImplementation(libs.bundles.test)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }

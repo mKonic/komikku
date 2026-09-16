@@ -5,6 +5,9 @@ import kotlinx.serialization.Serializable
 import nl.adaptivity.xmlutil.serialization.XmlElement
 import nl.adaptivity.xmlutil.serialization.XmlSerialName
 import nl.adaptivity.xmlutil.serialization.XmlValue
+import java.time.DateTimeException
+import java.time.LocalDate
+import java.time.ZoneId
 
 const val COMIC_INFO_FILE = "ComicInfo.xml"
 
@@ -26,6 +29,9 @@ fun SManga.getComicInfo() = ComicInfo(
     letterer = null,
     coverArtist = null,
     tags = null,
+    year = null,
+    month = null,
+    day = null,
     categories = null,
     source = null,
     padding = null,
@@ -63,6 +69,22 @@ fun SManga.copyFromComicInfo(comicInfo: ComicInfo) {
 }
 
 // https://anansi-project.github.io/docs/comicinfo/schemas/v2.0
+/**
+ * The day the file's Year, Month and Day name, as epoch milliseconds at its start in [zone] - the
+ * way a chapter's upload date is shown. A missing month or day means the first; no usable year, or
+ * parts that do not make a real date, give null.
+ */
+fun ComicInfo.dateMillis(zone: ZoneId = ZoneId.systemDefault()): Long? {
+    val y = year?.value?.trim()?.toIntOrNull()?.takeIf { it > 0 } ?: return null
+    val m = month?.value?.trim()?.toIntOrNull() ?: 1
+    val d = day?.value?.trim()?.toIntOrNull() ?: 1
+    return try {
+        LocalDate.of(y, m, d).atStartOfDay(zone).toInstant().toEpochMilli()
+    } catch (_: DateTimeException) {
+        null
+    }
+}
+
 @Suppress("UNUSED")
 @Serializable
 @XmlSerialName("ComicInfo", "", "")
@@ -81,6 +103,9 @@ data class ComicInfo(
     val genre: Genre?,
     val tags: Tags?,
     val web: Web?,
+    val year: Year?,
+    val month: Month?,
+    val day: Day?,
     val publishingStatus: PublishingStatusTachiyomi?,
     val categories: CategoriesTachiyomi?,
     val source: SourceMihon?,
@@ -151,6 +176,20 @@ data class ComicInfo(
     @Serializable
     @XmlSerialName("Web", "", "")
     data class Web(@XmlValue(true) val value: String = "")
+
+    // Kept as text and parsed where they are read, so a malformed date in a file some other tool
+    // wrote cannot fail the whole document and take the title and number down with it.
+    @Serializable
+    @XmlSerialName("Year", "", "")
+    data class Year(@XmlValue(true) val value: String = "")
+
+    @Serializable
+    @XmlSerialName("Month", "", "")
+    data class Month(@XmlValue(true) val value: String = "")
+
+    @Serializable
+    @XmlSerialName("Day", "", "")
+    data class Day(@XmlValue(true) val value: String = "")
 
     // The spec doesn't have a good field for this
     @Serializable

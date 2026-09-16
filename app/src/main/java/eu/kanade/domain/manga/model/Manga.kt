@@ -13,6 +13,8 @@ import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import java.time.Instant
+import java.time.ZoneId
 
 // TODO: move these into the domain model
 val Manga.readingMode: Long
@@ -93,33 +95,42 @@ fun getComicInfo(
     urls: List<String>,
     categories: List<String>?,
     sourceName: String,
-) = ComicInfo(
-    title = ComicInfo.Title(chapter.name),
-    series = ComicInfo.Series(manga.title),
-    number = chapter.chapterNumber.takeIf { it >= 0 }?.let {
-        if ((it.rem(1) == 0.0)) {
-            ComicInfo.Number(it.toInt().toString())
-        } else {
-            ComicInfo.Number(it.toString())
-        }
-    },
-    web = ComicInfo.Web(urls.joinToString(" ")),
-    summary = manga.description?.let { ComicInfo.Summary(it) },
-    writer = manga.author?.let { ComicInfo.Writer(it) },
-    penciller = manga.artist?.let { ComicInfo.Penciller(it) },
-    translator = chapter.scanlator?.let { ComicInfo.Translator(it) },
-    genre = manga.genre?.let { ComicInfo.Genre(it.joinToString()) },
-    publishingStatus = ComicInfo.PublishingStatusTachiyomi(
-        ComicInfoPublishingStatus.toComicInfoValue(manga.status),
-    ),
-    categories = categories?.let { ComicInfo.CategoriesTachiyomi(it.joinToString()) },
-    source = ComicInfo.SourceMihon(sourceName),
-    // SY -->
-    padding = CbzCrypto.createComicInfoPadding()?.let { ComicInfo.PaddingTachiyomiSY(it) },
-    // SY <--
-    inker = null,
-    colorist = null,
-    letterer = null,
-    coverArtist = null,
-    tags = null,
-)
+): ComicInfo {
+    val date = chapter.dateUpload
+        .takeIf { it > 0L }
+        ?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate() }
+
+    return ComicInfo(
+        title = ComicInfo.Title(chapter.name),
+        series = ComicInfo.Series(manga.title),
+        number = chapter.chapterNumber.takeIf { it >= 0 }?.let {
+            if ((it.rem(1) == 0.0)) {
+                ComicInfo.Number(it.toInt().toString())
+            } else {
+                ComicInfo.Number(it.toString())
+            }
+        },
+        web = ComicInfo.Web(urls.joinToString(" ")),
+        summary = manga.description?.let { ComicInfo.Summary(it) },
+        writer = manga.author?.let { ComicInfo.Writer(it) },
+        penciller = manga.artist?.let { ComicInfo.Penciller(it) },
+        translator = chapter.scanlator?.let { ComicInfo.Translator(it) },
+        genre = manga.genre?.let { ComicInfo.Genre(it.joinToString()) },
+        publishingStatus = ComicInfo.PublishingStatusTachiyomi(
+            ComicInfoPublishingStatus.toComicInfoValue(manga.status),
+        ),
+        categories = categories?.let { ComicInfo.CategoriesTachiyomi(it.joinToString()) },
+        source = ComicInfo.SourceMihon(sourceName),
+        // SY -->
+        padding = CbzCrypto.createComicInfoPadding()?.let { ComicInfo.PaddingTachiyomiSY(it) },
+        // SY <--
+        inker = null,
+        colorist = null,
+        letterer = null,
+        coverArtist = null,
+        tags = null,
+        year = date?.let { ComicInfo.Year(it.year.toString()) },
+        month = date?.let { ComicInfo.Month(it.monthValue.toString()) },
+        day = date?.let { ComicInfo.Day(it.dayOfMonth.toString()) },
+    )
+}

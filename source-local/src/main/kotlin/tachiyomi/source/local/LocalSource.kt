@@ -34,6 +34,7 @@ import tachiyomi.core.metadata.comicinfo.COMIC_INFO_FILE
 import tachiyomi.core.metadata.comicinfo.ComicInfo
 import tachiyomi.core.metadata.comicinfo.ComicInfoPublishingStatus
 import tachiyomi.core.metadata.comicinfo.copyFromComicInfo
+import tachiyomi.core.metadata.comicinfo.dateMillis
 import tachiyomi.core.metadata.comicinfo.getComicInfo
 import tachiyomi.core.metadata.tachiyomi.MangaDetails
 import tachiyomi.domain.chapter.service.ChapterRecognition
@@ -408,6 +409,7 @@ class LocalSource(
         comicInfo.title?.let { chapter.name = it.value }
         comicInfo.number?.value?.toFloatOrNull()?.let { chapter.chapter_number = it }
         comicInfo.translator?.let { chapter.scanlator = it.value }
+        comicInfo.dateMillis()?.let { chapter.date_upload = it }
     }
 
     // KMK -->
