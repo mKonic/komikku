@@ -21,6 +21,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   the file with. A file handed back through that other app could come without permission to read
   it, and the restore then called a good backup invalid. The app also asks to keep its permission
   for the picked file, so the restore, which carries on in the background, can still read it.
+- Shizuku can be picked as the extension installer when it is provided by Sui. The app only looked
+  for something the Shizuku app itself declares, and Sui runs without that app, so choosing Shizuku
+  always said to install and start it even though Sui was running and answering.
 
 ### Improved
 - E-Hentai chapters open faster, and the wait no longer grows with how long the gallery is. Every
