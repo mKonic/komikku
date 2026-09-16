@@ -85,11 +85,11 @@ enum class ReadingMode(
             // process, and the standard viewers need nothing from it.
             if (Injekt.get<BasePreferences>().highQualityRenderer().get() && WebGpuRenderer.isAvailable) {
                 return when (fromPreference(preference)) {
-                    LEFT_TO_RIGHT -> WebGpuViewer(activity, isReversed = false, isVertical = false)
-                    RIGHT_TO_LEFT -> WebGpuViewer(activity, isReversed = true, isVertical = false)
-                    VERTICAL -> WebGpuViewer(activity, isReversed = false, isVertical = true)
-                    WEBTOON -> WebGpuViewerContinuous(activity, useGap = false)
-                    CONTINUOUS_VERTICAL -> WebGpuViewerContinuous(activity, useGap = true)
+                    LEFT_TO_RIGHT -> WebGpuViewer(activity, isReversed = false, isVertical = false, seedColor = seedColor)
+                    RIGHT_TO_LEFT -> WebGpuViewer(activity, isReversed = true, isVertical = false, seedColor = seedColor)
+                    VERTICAL -> WebGpuViewer(activity, isReversed = false, isVertical = true, seedColor = seedColor)
+                    WEBTOON -> WebGpuViewerContinuous(activity, useGap = false, seedColor = seedColor)
+                    CONTINUOUS_VERTICAL -> WebGpuViewerContinuous(activity, useGap = true, seedColor = seedColor)
                     DEFAULT -> throw IllegalStateException("Preference value must be resolved: $preference")
                 }
             }

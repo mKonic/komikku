@@ -4,10 +4,13 @@ import android.graphics.Color
 import android.graphics.PointF
 import android.graphics.Rect
 import android.graphics.RectF
+import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import androidx.annotation.ColorInt
+import androidx.compose.animation.core.Spring
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceIn
@@ -46,6 +49,7 @@ import de.stefan_oltmann.kim.android.readMetadata
 import de.stefan_oltmann.kim.format.tiff.constant.TiffTag
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
+import eu.kanade.tachiyomi.ui.reader.model.ChapterTransition
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
@@ -55,6 +59,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView.ZoomStartPositio
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
 import eu.kanade.tachiyomi.ui.reader.viewer.calculateChapterGap
+import eu.kanade.tachiyomi.ui.webview.WebViewActivity
 import eu.kanade.tachiyomi.util.system.createReaderThemeContext
 import eu.kanade.tachiyomi.util.system.readerBackgroundColor
 import kotlinx.coroutines.CancellationException
@@ -79,7 +84,11 @@ import java.util.concurrent.SynchronousQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
+import kotlin.math.exp
+import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.milliseconds
 
 // KMK -->
@@ -104,6 +113,9 @@ open class WebGpuViewer(
     val isReversed: Boolean,
     val isVertical: Boolean,
     val pager: ImageView = ImageView(activity, isVertical = isVertical, isReversed = isReversed),
+    // KMK -->
+    @ColorInt private val seedColor: Int? = null,
+    // KMK <--
 ) : Viewer {
 
     open val isContinuous: Boolean = false
@@ -133,6 +145,31 @@ open class WebGpuViewer(
     ).also { cachedOnBackgroundColor = it }
 
     private val scope = MainScope()
+
+    // KMK -->
+    /** Draws the reader's own views for the pages that are not images - see [WebGpuPageViews]. */
+    private val pageViews by lazy { WebGpuPageViews(activity, seedColor) }
+
+    /** The progress indicator's colours, once the theme has been read. Nothing spins before. */
+    @Volatile
+    private var indicatorColors: IndicatorColors? = null
+
+    private fun loadIndicatorColors() {
+        scope.launch {
+            indicatorColors = try {
+                pageViews.indicatorColors()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e) { "Could not read the progress indicator colours" }
+                null
+            }
+        }
+    }
+
+    /** The page a press is on, from [ImageViewerState.onPress] until it ends. Main thread only. */
+    private var pressedPage: SnapshotPage? = null
+    // KMK <--
 
     // Guards pageCache, decodeQueue, deferredCleanup and chapterPreloadsInFlight.
     private val lock = Object()
@@ -560,22 +597,282 @@ open class WebGpuViewer(
         }
     }
 
-    inner class ErrorPage internal constructor(
-        message: String,
-        private val spreadPosition: SpreadPosition = SpreadPosition.SINGLE,
-        /** The page that failed, so the button below can put it back through the loader. */
-        private val failed: ViewerReaderPage? = null,
-    ) : ImagePage.Render(0, 0) {
-        override val width: Int
-            get() = viewportPageWidth(spreadPosition != SpreadPosition.SINGLE)
-        override val height: Int
-            get() = pager.state.height
-
+    // KMK -->
+    /**
+     * The page types below that draw more than an image: a page still loading, one that failed and a
+     * chapter transition. They are sized to the viewport rather than to anything decoded, never zoom,
+     * and share the Material progress indicator the standard viewers show.
+     */
+    abstract inner class ReaderRenderPage : ImagePage.Render(0, 0) {
         init {
             minScale = 1f
             maxScale = 1f
             homeScale = 1f
         }
+
+        override val backgroundColor: Int = readerBackgroundColor()
+
+        /** When this page's indicator started turning. */
+        private val indicatorStartedAt = SystemClock.uptimeMillis()
+
+        // The determinate arc's spring, render thread only.
+        private var springValue = 0f
+        private var springVelocity = 0f
+        private var springAt = 0L
+
+        private fun dp(value: Float): Float = with(pager.state.density) { value.dp.toPx() }
+
+        /**
+         * Draws [MaterialSpinner] centred on [cx]/[cy]: indeterminate while [progress] is 0, the
+         * turning determinate ring after, as the combined indicator switches between them. It moves
+         * every frame, so it asks for the next one.
+         */
+        protected fun drawIndicator(dst: GPUTexture, cx: Float, cy: Float, scale: Float, progress: Float) {
+            val colors = indicatorColors ?: return invalidate()
+            val stroke = scale * dp(MaterialSpinner.STROKE_DP)
+            // drawArc's rect sits half a stroke inside the indicator's bounds.
+            val radius = scale * (dp(MaterialSpinner.DIAMETER_DP) - dp(MaterialSpinner.STROKE_DP)) / 2f
+            val now = SystemClock.uptimeMillis()
+            val elapsed = now - indicatorStartedAt
+
+            if (progress <= 0f) {
+                springAt = 0L
+                val indicator = MaterialSpinner.indeterminate(elapsed)
+                arc(dst, cx, cy, radius, stroke, indicator.start, indicator.sweep, colors.indicator)
+            } else {
+                val (indicator, track) = MaterialSpinner.determinate(elapsed, animateProgress(progress, now))
+                arc(dst, cx, cy, radius, stroke, track.start, track.sweep, colors.track)
+                arc(dst, cx, cy, radius, stroke, indicator.start, indicator.sweep, colors.indicator)
+            }
+            invalidate()
+        }
+
+        /**
+         * [ProgressIndicatorDefaults.ProgressAnimationSpec]: a spring with no bounce and very low
+         * stiffness, starting from the first progress it is given as animateFloatAsState does.
+         */
+        private fun animateProgress(target: Float, now: Long): Float {
+            if (springAt == 0L) {
+                springAt = now
+                springValue = target
+                springVelocity = 0f
+                return target
+            }
+            val dt = ((now - springAt) / 1000f).coerceIn(0f, 0.1f)
+            springAt = now
+            // Critically damped, stiffness 50 and unit mass.
+            val omega = sqrt(Spring.StiffnessVeryLow)
+            val delta = springValue - target
+            val decay = exp(-omega * dt)
+            val carried = springVelocity + omega * delta
+            springValue = target + (delta + carried * dt) * decay
+            springVelocity = (springVelocity - carried * omega * dt) * decay
+            return springValue
+        }
+    }
+
+    /**
+     * A page showing one of the reader's own views, drawn into a bitmap by [pageViews] so it looks
+     * the way the standard viewers show it, Material buttons included - and those buttons answer a
+     * press as theirs do, through [ImageViewerState.onPress].
+     *
+     * The view is captured on the main thread whenever [captureKey] or the page's width changes, and
+     * handed over to the render thread, which swaps it in and frees the one it replaces: that thread
+     * is the only one drawing them, so it is the only one that can tell a capture is done with.
+     */
+    abstract inner class SnapshotPage : ReaderRenderPage() {
+        /** What the view shows; a change takes a new capture. Read on the render thread. */
+        protected abstract fun captureKey(): Any
+
+        /** Draws the view [width] pixels wide, on the main thread. */
+        protected abstract suspend fun capture(width: Int): PageSnapshot
+
+        /** Drawn over the capture once it is placed at [left]/[top], in [dst]'s pixels. */
+        protected open fun renderOver(dst: GPUTexture, left: Float, top: Float, scale: Float, snapshot: PageSnapshot) {}
+
+        private val captureLock = Any()
+
+        /** The newest capture, not drawn yet. Guarded by [captureLock]. */
+        private var captured: PageSnapshot? = null
+
+        /** What was last captured, or is being. Guarded by [captureLock]. */
+        private var requested: Pair<Any, Int>? = null
+        private var captureJob: Job? = null
+
+        /** The capture being drawn; swapped on the render thread. */
+        @Volatile
+        private var shown: PageSnapshot? = null
+
+        /** How tall the view is at a scale of one, or 0 before the first capture. */
+        protected val snapshotHeight: Int
+            get() = synchronized(captureLock) { captured?.height } ?: shown?.height ?: 0
+
+        /**
+         * Where the buttons were last drawn live, as fractions of the surface - what
+         * [ImageViewerState.onPress] reports. Never from a transition's cache seed, which draws the
+         * page as if at rest rather than where it is.
+         */
+        @Volatile
+        private var hitBoxes: List<SnapshotHitBox> = emptyList()
+
+        @Volatile
+        private var press: SnapshotPress? = null
+
+        private fun requestCapture(width: Int) {
+            if (width <= 0) return
+            val key = captureKey() to width
+            synchronized(captureLock) {
+                if (key == requested || destroyed) return
+                requested = key
+                captureJob?.cancel()
+                captureJob = this@WebGpuViewer.scope.launch {
+                    val snapshot = try {
+                        capture(width)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        logcat(LogPriority.ERROR, e) { "Could not draw a page view" }
+                        return@launch
+                    }
+                    synchronized(captureLock) {
+                        if (destroyed || requested != key) {
+                            snapshot.texture.release()
+                            return@launch
+                        }
+                        // Superseded before it was ever drawn.
+                        captured?.texture?.release()
+                        captured = snapshot
+                    }
+                    invalidate()
+                }
+            }
+        }
+
+        /** True when [x]/[y], fractions of the surface, land on a button this page drew live. */
+        fun pressAt(x: Float, y: Float): Boolean {
+            if (!pager.state.isOnScreen(this)) return false
+            val hit = hitBoxes.firstOrNull { it.bounds.contains(x, y) } ?: return false
+            press = SnapshotPress(hit.button, x, y, SystemClock.uptimeMillis())
+            invalidate()
+            return true
+        }
+
+        /** Ends the press [pressAt] started, running the button's action if it was a click. */
+        fun endPress(clicked: Boolean) {
+            val current = press ?: return
+            current.upAt = SystemClock.uptimeMillis()
+            invalidate()
+            if (clicked) current.button.onClick()
+        }
+
+        override fun render(dst: GPUTexture, x: Float, y: Float, scale: Float) {
+            requestCapture(width)
+            val next = synchronized(captureLock) { captured.also { captured = null } }
+            if (next != null) {
+                shown?.texture?.release()
+                shown = next
+            }
+            val snapshot = shown ?: run {
+                if (drawingLive) hitBoxes = emptyList()
+                return
+            }
+
+            val cx = dst.width * (0.5f + scale * x)
+            val cy = dst.height * (0.5f + scale * y)
+            val drawnWidth = snapshot.width * scale
+            val drawnHeight = snapshot.height * scale
+            val left = cx - drawnWidth / 2f
+            val top = cy - drawnHeight / 2f
+
+            bitmap(
+                snapshot.texture,
+                left / dst.width,
+                top / dst.height,
+                (left + drawnWidth) / dst.width,
+                (top + drawnHeight) / dst.height,
+            )
+            renderOver(dst, left, top, scale, snapshot)
+            drawPress(dst, left, top, scale, snapshot)
+
+            if (drawingLive) {
+                hitBoxes = snapshot.buttons.map { button ->
+                    val b = button.bounds
+                    SnapshotHitBox(
+                        RectF(
+                            (left + b.left * scale) / dst.width,
+                            (top + b.top * scale) / dst.height,
+                            (left + b.right * scale) / dst.width,
+                            (top + b.bottom * scale) / dst.height,
+                        ),
+                        button,
+                    )
+                }
+            }
+        }
+
+        private fun drawPress(dst: GPUTexture, left: Float, top: Float, scale: Float, snapshot: PageSnapshot) {
+            val current = press ?: return
+            // A new capture's buttons are new objects: whatever was pressed is gone.
+            if (current.button !in snapshot.buttons) {
+                press = null
+                return
+            }
+            val now = SystemClock.uptimeMillis()
+            val b = current.button.bounds
+            val bounds = RectF(left + b.left * scale, top + b.top * scale, left + b.right * scale, top + b.bottom * scale)
+            val frame = ButtonRipple.frame(
+                bounds,
+                current.x * dst.width,
+                current.y * dst.height,
+                now - current.downAt,
+                current.upAt.takeIf { it != 0L }?.let { now - it },
+            )
+            if (frame == null) {
+                if (press === current) press = null
+                return
+            }
+            val alpha = ((current.button.rippleColor ushr 24) * frame.opacity).roundToInt()
+            roundRect(
+                dst,
+                bounds.left,
+                bounds.top,
+                bounds.right,
+                bounds.bottom,
+                current.button.cornerRadius * scale,
+                color = 0,
+                rippleX = frame.x,
+                rippleY = frame.y,
+                rippleRadius = frame.radius,
+                rippleColor = (current.button.rippleColor and 0xFFFFFF) or (alpha shl 24),
+            )
+            invalidate()
+        }
+
+        override fun cleanup() {
+            super.cleanup()
+            synchronized(captureLock) {
+                captureJob?.cancel()
+                captured?.texture?.release()
+                captured = null
+            }
+            // Its free waits for the render dispatcher, so a frame drawing it now is unaffected.
+            shown?.texture?.release()
+            hitBoxes = emptyList()
+            press = null
+        }
+    }
+
+    /** A page that failed to load or decode, as `reader_error.xml` shows it in the standard viewers. */
+    inner class ErrorPage internal constructor(
+        message: String,
+        private val spreadPosition: SpreadPosition = SpreadPosition.SINGLE,
+        /** The page that failed, for the retry and web view buttons. */
+        private val failed: ViewerReaderPage? = null,
+    ) : SnapshotPage() {
+        override val width: Int
+            get() = viewportPageWidth(spreadPosition != SpreadPosition.SINGLE)
+        override val height: Int
+            get() = max(pager.state.height, snapshotHeight)
 
         var message: String = message
             set(value) {
@@ -583,99 +880,32 @@ open class WebGpuViewer(
                 invalidate()
             }
 
-        override val backgroundColor: Int = readerBackgroundColor()
+        override fun captureKey(): Any = message
 
-        /**
-         * Where the retry button landed last time it was drawn, as a fraction of the surface -
-         * which is what [ImageViewerState.onTap] reports, not pixels. Written on the render thread
-         * and read on the main thread, hence volatile; null until it has been drawn once, and also
-         * whenever there is nothing to retry.
-         */
-        @Volatile
-        private var retryBounds: RectF? = null
-
-        /** True when the tap was on the button, so the caller knows not to turn the page as well. */
-        fun retryIfHit(x: Float, y: Float): Boolean {
-            val bounds = retryBounds ?: return false
-            if (!bounds.contains(x, y)) return false
-            val page = failed ?: return false
-            retryPage(page)
-            return true
-        }
-
-        override fun render(dst: GPUTexture, x: Float, y: Float, scale: Float) {
-            val padding = with(pager.state.density) { 24.dp.toPx() }
-            val size = scale * with(pager.state.density) { 16.dp.toPx() }
-
-            val cx = dst.width * (0.5f + scale * x)
-            val cy = dst.height * (0.5f + scale * y)
-
-            val foreground = readerOnBackgroundColor()
-            text(
-                dst,
-                activity.baseContext,
-                FontFamily.Default,
-                message,
-                cx,
-                cy,
-                size,
-                color = foreground,
-                align = TextAlign.Center,
-                maxWidth = dst.width - 2f * padding,
-            )
-
-            if (failed == null) {
-                retryBounds = null
-                return
-            }
-
-            // A drawn button rather than a whole-page tap target: tapping elsewhere still turns
-            // the page, which is how a reader gets past a page that will not load at all.
-            val label = activity.stringResource(MR.strings.action_retry)
-            val buttonHeight = scale * with(pager.state.density) { 44.dp.toPx() }
-            val buttonWidth = scale * with(pager.state.density) { 140.dp.toPx() }
-            val top = cy + size * 2f
-            val left = cx - buttonWidth / 2f
-
-            rect(
-                left / dst.width,
-                top / dst.height,
-                (left + buttonWidth) / dst.width,
-                (top + buttonHeight) / dst.height,
-                foreground and 0x33FFFFFF.toInt(),
-            )
-            text(
-                dst,
-                activity.baseContext,
-                FontFamily.Default,
-                label,
-                cx,
-                top + (buttonHeight - size) / 2f,
-                size,
-                color = foreground,
-                align = TextAlign.Center,
-                maxWidth = buttonWidth,
-            )
-            retryBounds = RectF(
-                left / dst.width,
-                top / dst.height,
-                (left + buttonWidth) / dst.width,
-                (top + buttonHeight) / dst.height,
+        override suspend fun capture(width: Int): PageSnapshot {
+            // As PagerPageHolder: offered for any image url, working only for a web one.
+            val imageUrl = failed?.page?.imageUrl
+            return pageViews.error(
+                message = message,
+                width = width,
+                onRetry = failed?.let { page -> { retryPage(page) } },
+                onOpenInWebView = imageUrl?.takeIf { it.startsWith("http", true) }?.let { url -> { openInWebView(url) } },
+                showOpenInWebView = imageUrl != null,
             )
         }
     }
 
-    inner class ProgressPage(foregroundColor: Int = readerOnBackgroundColor()) : ImagePage.Render(0, 0) {
+    private fun openInWebView(url: String) {
+        val sourceId = activity.viewModel.manga?.source
+        activity.startActivity(WebViewActivity.newIntent(activity, url, sourceId))
+    }
+
+    /** A page still loading: the standard viewers' progress indicator, on the reader background. */
+    inner class ProgressPage : ReaderRenderPage() {
         override val width: Int
             get() = viewportPageWidth(isDualPageMode())
         override val height: Int
             get() = pager.state.height
-
-        init {
-            minScale = 1f
-            maxScale = 1f
-            homeScale = 1f
-        }
 
         var progress: Float = 0f
             set(value) {
@@ -683,107 +913,78 @@ open class WebGpuViewer(
                 invalidate()
             }
 
-        var foregroundColor: Int = foregroundColor
-            set(value) {
-                field = value
-                invalidate()
-            }
-
-        override val backgroundColor: Int = readerBackgroundColor()
-
         override fun render(dst: GPUTexture, x: Float, y: Float, scale: Float) {
             // Its own footprint, so the page carries its background wherever a transition puts it.
             fillPage(dst, x, y, scale, backgroundColor)
 
-            val cx = dst.width * (0.5f + scale * x)
-            val cy = dst.height * (0.5f + scale * y)
-
-            // Off this page's own width, not dst's: a spread half would otherwise draw a ring
-            // sized for the whole screen, straight over its partner.
-            val full = width * 0.5f * scale
-
-            circle(cx, cy, full / 2f, 0xAAAAAAAA.toInt())
-
-            val diameter = full * progress.fastCoerceIn(0f, 1f)
-            if (diameter > 0) {
-                circle(cx, cy, diameter / 2f, foregroundColor)
-            }
-        }
-    }
-
-    inner class TransitionPage(val prevChapter: ReaderChapter?, val nextChapter: ReaderChapter?) :
-        ImagePage.Render(0, 0) {
-        /** Square, and never a spread side - [buildSpreadPage] hands it back whole. */
-        override val width: Int
-            get() = min(pager.state.width, pager.state.height)
-        override val height: Int
-            get() = width
-
-        init {
-            minScale = 1f
-            maxScale = 1f
-            homeScale = 1f
-        }
-
-        override val backgroundColor: Int = readerBackgroundColor()
-
-        /**
-         * The same wording the standard viewers use, rather than the hardcoded English this page
-         * carried before: the chapter labels, the "no next chapter" notice at the end of an entry,
-         * and the warning that the source skips a run of chapters.
-         */
-        private fun transitionText(): String {
-            val lines: MutableList<String> = mutableListOf()
-
-            if (prevChapter == null && nextChapter != null) {
-                lines.add(activity.stringResource(MR.strings.transition_no_previous))
-            }
-            prevChapter?.chapter?.let { chapter ->
-                val label = if (nextChapter == null) MR.strings.transition_current else MR.strings.transition_finished
-                lines.add(activity.stringResource(label) + " " + chapter.name)
-            }
-
-            val gap = calculateChapterGap(nextChapter, prevChapter)
-            if (gap > 0) {
-                lines.add(activity.pluralStringResource(MR.plurals.missing_chapters_warning, gap, gap))
-            }
-
-            if (nextChapter == null && prevChapter != null) {
-                lines.add(activity.stringResource(MR.strings.transition_no_next))
-            }
-            nextChapter?.chapter?.let { chapter ->
-                lines.add(activity.stringResource(MR.strings.transition_next) + " " + chapter.name)
-            }
-
-            return lines.joinToString("\n")
-        }
-
-        override fun render(dst: GPUTexture, x: Float, y: Float, scale: Float) {
-            // Its own footprint, so the page carries its background wherever a transition puts it.
-            fillPage(dst, x, y, scale, backgroundColor)
-
-            val text = transitionText()
-
-            val padding = with(pager.state.density) { 24.dp.toPx() }
-            val size = scale * with(pager.state.density) { 16.dp.toPx() }
-
-            val cx = dst.width * (0.5f + scale * x)
-            val cy = dst.height * (0.5f + scale * y)
-
-            text(
+            drawIndicator(
                 dst,
-                activity.baseContext,
-                FontFamily.Default,
-                text,
-                cx,
-                cy,
-                size,
-                readerOnBackgroundColor(),
-                align = TextAlign.Center,
-                maxWidth = dst.width - 2f * padding,
+                dst.width * (0.5f + scale * x),
+                dst.height * (0.5f + scale * y),
+                scale,
+                progress.fastCoerceIn(0f, 1f),
             )
         }
     }
+
+    /**
+     * The page between two chapters, as the standard viewers show it: the chapter transition card,
+     * and below it the chapter being turned to loading, or failing with a retry button.
+     */
+    inner class TransitionPage(val prevChapter: ReaderChapter?, val nextChapter: ReaderChapter?) : SnapshotPage() {
+        /** Square, and never a spread side - [buildSpreadPage] hands it back whole. Taller if the card needs it. */
+        override val width: Int
+            get() = min(pager.state.width, pager.state.height)
+        override val height: Int
+            get() = max(width, snapshotHeight)
+
+        /** Either chapter loading, failing or finishing changes what the page shows. */
+        private val stateJobs = listOfNotNull(prevChapter, nextChapter).map { chapter ->
+            this@WebGpuViewer.scope.launch { chapter.stateFlow.collect { invalidate() } }
+        }
+
+        /**
+         * Which way the transition reads: from the chapter being read. Arriving back from the later
+         * chapter reads as the standard viewers' previous-chapter transition.
+         */
+        private fun transition(): ChapterTransition? = when {
+            prevChapter == null -> nextChapter?.let { ChapterTransition.Prev(it, null) }
+            nextChapter == null -> ChapterTransition.Next(prevChapter, null)
+            viewerChapters?.currChapter === nextChapter -> ChapterTransition.Prev(nextChapter, prevChapter)
+            else -> ChapterTransition.Next(prevChapter, nextChapter)
+        }
+
+        override fun captureKey(): Any {
+            val transition = transition()
+            val state = transition?.to?.state
+            return listOf(
+                transition?.javaClass,
+                transition?.from,
+                transition?.to,
+                state?.javaClass,
+                (state as? ReaderChapter.State.Error)?.error?.message,
+            )
+        }
+
+        override suspend fun capture(width: Int): PageSnapshot {
+            val transition = transition() ?: error("a transition with no chapter either side")
+            return pageViews.transition(transition, width, isContinuous) { chapter ->
+                activity.requestPreloadChapter(chapter)
+            }
+        }
+
+        override fun renderOver(dst: GPUTexture, left: Float, top: Float, scale: Float, snapshot: PageSnapshot) {
+            val center = snapshot.spinnerCenter ?: return
+            if (transition()?.to?.state !is ReaderChapter.State.Loading) return
+            drawIndicator(dst, left + center.x * scale, top + center.y * scale, scale, 0f)
+        }
+
+        override fun cleanup() {
+            stateJobs.forEach { it.cancel() }
+            super.cleanup()
+        }
+    }
+    // KMK <--
 
     abstract class ViewerPage {
         abstract val prevChapter: ReaderChapter?
@@ -1210,13 +1411,20 @@ open class WebGpuViewer(
                 return@fetch buildSpreadPage(page)
             }
 
-            onTap = onTap@{ offset ->
-                // The retry button on a failed page comes first: it is drawn inside whatever
-                // navigation region it happens to land in, and turning the page instead would
-                // make it untappable.
-                val failed = (currentPage as? ViewerReaderPage)?.imagePage as? ErrorPage
-                if (failed?.retryIfHit(offset.x, offset.y) == true) return@onTap
+            // KMK --> a button drawn on a page takes the touch as it lands, before it can become a
+            // tap on whatever navigation region the button sits in - see SnapshotPage.
+            onPress = { offset ->
+                val pages = synchronized(lock) { pageCache.values.map { it.imagePage } }
+                pressedPage = pages.filterIsInstance<SnapshotPage>().firstOrNull { it.pressAt(offset.x, offset.y) }
+                pressedPage != null
+            }
+            onPressEnd = { _, clicked ->
+                pressedPage?.endPress(clicked)
+                pressedPage = null
+            }
+            // KMK <--
 
+            onTap = onTap@{ offset ->
                 when (config.navigator.getAction(PointF(offset.x, offset.y))) {
                     NavigationRegion.MENU -> activity.toggleMenu()
                     NavigationRegion.NEXT -> if (isReversed) moveToPrevious() else moveToNext()
@@ -1238,6 +1446,8 @@ open class WebGpuViewer(
         }
 
         // KMK -->
+        loadIndicatorColors()
+
         applyColorLut(config.colorLut, config.colorLutIntensity)
         config.colorLutChangedListener = { applyColorLut(config.colorLut, config.colorLutIntensity) }
 
@@ -1272,6 +1482,7 @@ open class WebGpuViewer(
             cachedBackgroundColor = null
             cachedOnBackgroundColor = null
             // KMK -->
+            loadIndicatorColors()
             (pager.state as? ImageViewerContinuousState)?.backgroundColor = readerBackgroundColor()
             // KMK <--
 
@@ -1365,6 +1576,9 @@ open class WebGpuViewer(
         // Before the interrupt: taken mid-decode, only the flag stops the worker parking.
         destroyed = true
         scope.cancel()
+        // KMK -->
+        pageViews.destroy()
+        // KMK <--
 
         // KMK: the decode threads are shared, so nothing is shut down; notifyAll below wakes the worker, which sees
         // destroyed and returns its thread to the pool.
@@ -2159,3 +2373,14 @@ open class WebGpuViewer(
         return false
     }
 }
+
+// KMK -->
+/** Where a [WebGpuViewer.SnapshotPage] button was drawn, as fractions of the surface. */
+private class SnapshotHitBox(val bounds: RectF, val button: PageSnapshot.Button)
+
+/** A press on a [WebGpuViewer.SnapshotPage] button, at fractions of the surface, for its ripple. */
+private class SnapshotPress(val button: PageSnapshot.Button, val x: Float, val y: Float, val downAt: Long) {
+    @Volatile
+    var upAt = 0L
+}
+// KMK <--
