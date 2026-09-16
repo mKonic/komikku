@@ -17,6 +17,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   it, so a gallery spread over enough pages ran the stack out and the process died with no crash
   dialog and nothing in the log to explain it. A 3803 page gallery now opens instead of taking the
   app down with it.
+- Restoring a backup opens the system file picker directly instead of first asking which app to pick
+  the file with. A file handed back through that other app could come without permission to read
+  it, and the restore then called a good backup invalid. The app also asks to keep its permission
+  for the picked file, so the restore, which carries on in the background, can still read it.
 
 ### Improved
 - E-Hentai chapters open faster, and the wait no longer grows with how long the gallery is. Every
@@ -24,6 +28,19 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   could draw page one, so a thousand page gallery waited out about fifty of them back to back. The
   gallery says up front how many pages it has, so they are fetched together now, a few at a time so
   it is not hammered.
+
+### Removed
+- The Enhanced (ArtCNN) upscaling option in the high quality reader. The renderer's own author
+  recommends against it for manga: it looks worse at high zoom, and it was only ever added to try out
+  compute shaders. It also cost enough GPU time to make zooming stutter on slower devices. Every
+  reader now uses Catmull-Rom, the option the setting called Standard, which the renderer's author
+  recommends for the pixel density of a phone screen. With one choice left, the setting is gone too.
+
+### Added
+- Local source chapters take their date from the Year, Month and Day in their ComicInfo.xml, instead
+  of only from when the file was last modified. Downloaded chapters write their upload date there
+  too, so moving downloads into the local source keeps their dates. A year is enough; a missing
+  month or day counts as the first, and a date that does not exist is ignored.
 
 ## [v1.7.4] - 2026-09-15
 ### Fixed
