@@ -27,3 +27,6 @@ app/standard/preview/*
 
 # Local AVD checks, run by hand and kept out of the repo for now
 /local-tests/
+
+# The app and aliases the volition CLI drives here - per checkout, not per project.
+/.volition
