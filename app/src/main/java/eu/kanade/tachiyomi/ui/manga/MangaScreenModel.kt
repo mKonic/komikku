@@ -1200,6 +1200,9 @@ class MangaScreenModel(
                     }
                 }
             }
+        } catch (e: CancellationException) {
+            // Leaving the screen, not a failure to tell the reader about.
+            throw e
         } catch (e: Exception) {
             exceptionHandler(e)
         } finally {

@@ -320,14 +320,28 @@ abstract class HttpSource : CatalogueSource {
      * @return the related mangas for the current manga, or empty if a source doesn't support related mangas.
      */
     override suspend fun fetchRelatedMangaList(manga: SManga): List<SManga> {
-        if (!isRelatedMangaListParseAvailable) return emptyList()
+        if (!isRelatedMangaListParseAvailable || relatedMangaListParseRefused) return emptyList()
 
-        return client.newCall(relatedMangaListRequest(manga))
-            .awaitSuccess()
-            .use { response ->
-                relatedMangaListParse(response)
-            }
+        return try {
+            client.newCall(relatedMangaListRequest(manga))
+                .awaitSuccess()
+                .use { response ->
+                    relatedMangaListParse(response)
+                }
+        } catch (e: UnsupportedOperationException) {
+            // Declaring popularMangaParse is not the same as implementing it: plenty of sources declare one
+            // that throws. Every manga opened in such a source spent a request on the same refusal, and on a
+            // rate limited site those requests are taken from the ones the reader needs.
+            relatedMangaListParseRefused = true
+            throw e
+        }
     }
+
+    /**
+     * Set once [relatedMangaListParse] has refused to parse: there is no point asking this source again.
+     */
+    @Volatile
+    private var relatedMangaListParseRefused = false
 
     private val isRelatedMangaListParseAvailable by lazy(LazyThreadSafetyMode.NONE) {
         try {

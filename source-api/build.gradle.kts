@@ -33,4 +33,7 @@ dependencies {
     // Workaround for https://youtrack.jetbrains.com/issue/KT-57605
     implementation(kotlinx.coroutines.android)
     implementation(project.dependencies.platform(kotlinx.coroutines.bom))
+
+    testImplementation(libs.bundles.test)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }

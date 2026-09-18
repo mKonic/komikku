@@ -10,6 +10,18 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [Unreleased]
+### Improved
+- A source that cannot list related manga is asked once instead of once for every manga opened. Any
+  source with a popular listing counts as one that can, and plenty of them answer that request by
+  refusing outright, so opening a manga spent a request learning the same refusal again and wrote an
+  error to the log each time. On a site that rate limits, those were requests the reader needed.
+
+### Fixed
+- Leaving a manga page while its related manga are still being fetched no longer counts as a failure.
+  The cancellation was caught and logged as an error for every search keyword in flight, and could
+  have put an error message on screen on the way out.
+
 ## [v1.8.0] - 2026-09-16
 ### Fixed
 - Opening a very large E-Hentai gallery no longer kills the app. The page list was built by

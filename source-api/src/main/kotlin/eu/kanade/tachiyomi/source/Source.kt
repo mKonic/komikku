@@ -6,6 +6,7 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.SMangaUpdate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -158,11 +159,19 @@ interface Source {
         manga: SManga,
         pushResults: suspend (relatedManga: Pair<String, List<SManga>>, completed: Boolean) -> Unit,
     ) {
-        runCatching { fetchRelatedMangaList(manga) }
-            .onSuccess { if (it.isNotEmpty()) pushResults(Pair("", it), false) }
-            .onFailure { e ->
-                logcat(LogPriority.ERROR, e) { "## getRelatedMangaListByExtension: $e" }
-            }
+        val related = try {
+            fetchRelatedMangaList(manga)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: UnsupportedOperationException) {
+            // The source says it supports this and then refuses to answer. That is the source saying it has
+            // no related list, not something gone wrong, so it is not worth a log line per manga opened.
+            return
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e) { "## getRelatedMangaListByExtension: $e" }
+            return
+        }
+        if (related.isNotEmpty()) pushResults(Pair("", related), false)
     }
 
     /**
@@ -224,13 +233,17 @@ interface Source {
             val filterList = getFilterList()
             words.map { keyword ->
                 launch {
-                    runCatching {
+                    val found = try {
                         getSearchManga(1, keyword.sanitize(), filterList).mangas
+                    } catch (e: CancellationException) {
+                        // Leaving the manga screen cancels this. Swallowing it would log a failure for every
+                        // keyword and leave a cancelled child claiming it finished.
+                        throw e
+                    } catch (e: Exception) {
+                        logcat(LogPriority.ERROR, e) { "## getRelatedMangaListBySearch: $e" }
+                        return@launch
                     }
-                        .onSuccess { if (it.isNotEmpty()) pushResults(Pair(keyword, it), false) }
-                        .onFailure { e ->
-                            logcat(LogPriority.ERROR, e) { "## getRelatedMangaListBySearch: $e" }
-                        }
+                    if (found.isNotEmpty()) pushResults(Pair(keyword, found), false)
                 }
             }
         }
