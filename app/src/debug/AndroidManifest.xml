@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+
+        <!--
+            Lets adb drive the app by name - see DevBridge and local-tests/drive.sh. Debug only, so no other build
+            has the component at all; exported because the shell user is the one calling it.
+        -->
+        <provider
+            android:name="eu.kanade.tachiyomi.debug.bridge.DevBridgeProvider"
+            android:authorities="${applicationId}.devbridge"
+            android:exported="true"
+            tools:ignore="ExportedContentProvider" />
+
+    </application>
+
+</manifest>
