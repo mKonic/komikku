@@ -1,18 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application>
 
         <!--
-            Lets adb drive the app by name - see DevBridge and local-tests/drive.sh. Debug only, so no other build
-            has the component at all; exported because the shell user is the one calling it.
+            Registers this app's map with Volition at process start. Not exported: the component adb calls is
+            Volition's own, which arrives with the debugImplementation artifact.
         -->
         <provider
-            android:name="eu.kanade.tachiyomi.debug.bridge.DevBridgeProvider"
-            android:authorities="${applicationId}.devbridge"
-            android:exported="true"
-            tools:ignore="ExportedContentProvider" />
+            android:name="eu.kanade.tachiyomi.debug.bridge.KomikkuVolitionProvider"
+            android:authorities="${applicationId}.volition.map"
+            android:exported="false" />
 
     </application>
 

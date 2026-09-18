@@ -49,6 +49,21 @@ dependencyResolutionManagement {
             }
             filter { includeModule("ca.mpreg", "webgpuviewer") }
         }
+
+        // KMK --> volition drives this app's debug build from adb by name (mKonic/volition), released
+        // the same way: the AAR and its ivy descriptor as a tag's assets.
+        exclusiveContent {
+            forRepository {
+                ivy("https://github.com/mKonic/volition/releases/download") {
+                    patternLayout {
+                        ivy("v[revision]/ivy-[revision].xml")
+                        artifact("v[revision]/[artifact]-[revision].[ext]")
+                    }
+                    metadataSources { ivyDescriptor() }
+                }
+            }
+            filter { includeModule("dev.mkonic", "volition") }
+        }
         // KMK <--
         mavenCentral()
         google()

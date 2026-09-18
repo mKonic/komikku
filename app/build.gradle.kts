@@ -239,6 +239,9 @@ dependencies {
     implementation(compose.material3.core)
     // KMK --> high quality WebGPU renderer from Mihon
     implementation(libs.webgpuviewer)
+    // Drives this build from adb by name - see eu.kanade.tachiyomi.debug.bridge. Debug only: the
+    // provider it answers on travels with the artifact.
+    debugImplementation(libs.volition)
     // KMK <--
 
     // KMK --> Material Symbols, generated from SVG by Valkyrie
