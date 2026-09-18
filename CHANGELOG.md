@@ -21,6 +21,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Leaving a manga page while its related manga are still being fetched no longer counts as a failure.
   The cancellation was caught and logged as an error for every search keyword in flight, and could
   have put an error message on screen on the way out.
+- Switches in settings now tell a screen reader whether they are on or off. Each switch row was
+  announced as a plain button, because the switch drawn in it takes no input of its own and the row
+  never said which state it showed.
 
 ## [v1.8.0] - 2026-09-16
 ### Fixed
