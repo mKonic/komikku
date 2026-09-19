@@ -135,6 +135,10 @@ class Kitsu(id: Long) : BaseTracker(id, "Kitsu"), DeletableTracker {
         saveCredentials(username, currentUser.id)
     }
 
+    override suspend fun updateUserConfig() {
+        saveDisplayUsername(api.getCurrentUser().attributes.name)
+    }
+
     override fun logout() {
         super.logout()
         interceptor.newAuth(null)

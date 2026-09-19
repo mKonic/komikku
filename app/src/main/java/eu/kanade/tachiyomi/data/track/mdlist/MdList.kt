@@ -157,6 +157,8 @@ class MdList(id: Long) : BaseTracker(id, "MDList") {
 
     override suspend fun login(username: String, password: String): Unit = throw Exception("not used")
 
+    override suspend fun updateUserConfig() = Unit
+
     override fun logout() {
         super.logout()
         trackPreferences.trackToken(this).delete()
