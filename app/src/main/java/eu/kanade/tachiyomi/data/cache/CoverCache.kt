@@ -6,6 +6,7 @@ import tachiyomi.domain.manga.model.Manga
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Class used to create cover cache.
@@ -28,6 +29,27 @@ class CoverCache(private val context: Context) {
     private val cacheDir = getCacheDir(COVERS_DIR)
 
     private val customCoverCacheDir = getCacheDir(CUSTOM_COVERS_DIR)
+
+    /** Per manga, the [Manga.coverLastModified] a custom cover was last looked for at, and what was found. */
+    private val customCoverSeen = ConcurrentHashMap<Long, Pair<Long, Boolean>>()
+
+    /**
+     * Whether the manga has a custom cover, answered from memory once it has been looked for.
+     *
+     * The cover keyers ask this for every cover on screen, on whatever thread is composing, so the plain
+     * [File.exists] behind it was a disk read per cover per frame on the main thread. The answer is remembered
+     * against [coverLastModified], which the paths that add or remove a custom cover update, and which the cover's
+     * own cache key is built from: a memo that outlived a change to it would mean the key had gone stale first.
+     * [setCustomCoverToCache] and [deleteCustomCover] drop their entry as well, for the migration path, which
+     * gives a manga a custom cover without touching its [coverLastModified].
+     */
+    fun hasCustomCover(mangaId: Long?, coverLastModified: Long): Boolean {
+        val id = mangaId ?: return false
+        customCoverSeen[id]?.let { (seenAt, found) -> if (seenAt == coverLastModified) return found }
+        val found = getCustomCoverFile(id).exists()
+        customCoverSeen[id] = coverLastModified to found
+        return found
+    }
 
     /**
      * Returns the cover from cache.
@@ -63,6 +85,7 @@ class CoverCache(private val context: Context) {
         getCustomCoverFile(manga.id).outputStream().use {
             inputStream.copyTo(it)
         }
+        customCoverSeen.remove(manga.id)
     }
 
     /**
@@ -93,6 +116,7 @@ class CoverCache(private val context: Context) {
      * @return whether the cover was deleted.
      */
     fun deleteCustomCover(mangaId: Long?): Boolean {
+        customCoverSeen.remove(mangaId)
         return getCustomCoverFile(mangaId).let {
             it.exists() && it.delete()
         }
