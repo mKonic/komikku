@@ -10,7 +10,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
-## [Unreleased]
+## [v1.9.0] - 2026-09-20
 ### Added
 - Each tracker in settings shows the account it is signed in as, under the tracker's name, so an
   account can be told apart from the tracker it belongs to without opening it.
