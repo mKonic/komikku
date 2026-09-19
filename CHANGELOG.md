@@ -20,6 +20,12 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   do not show the button.
 
 ### Improved
+- Opening the app no longer walks the whole downloads folder when the cached index on disk would
+  have answered. The index is read in the background, but the first screen asking whether a chapter
+  is downloaded did not wait for it and started a full scan of every source, series and chapter
+  folder anyway. On a large downloads folder on slow storage that scan is the app's heaviest piece
+  of startup work, and it was being done for nothing. A scan that had already finished could also be
+  replaced afterwards by the older index it raced.
 - A source that cannot list related manga is asked once instead of once for every manga opened. Any
   source with a popular listing counts as one that can, and plenty of them answer that request by
   refusing outright, so opening a manga spent a request learning the same refusal again and wrote an
