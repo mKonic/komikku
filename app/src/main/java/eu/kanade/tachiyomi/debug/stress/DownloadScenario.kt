@@ -53,25 +53,33 @@ object DownloadScenario : StressScenario {
 
         val limit = chapters.size * MILLIS_PER_CHAPTER
         var remaining: List<Download> = emptyList()
-        val ms = measureTimeMillis {
-            val deadline = System.currentTimeMillis() + limit
-            while (true) {
-                remaining = downloadManager.queueState.value.filter { it.chapter.id in ids }
-                if (remaining.all { it.status == Download.State.ERROR }) break
-                check(System.currentTimeMillis() < deadline) {
-                    "downloading ${chapters.size} chapters was still going after ${limit / 1000} s"
+        try {
+            val ms = measureTimeMillis {
+                val deadline = System.currentTimeMillis() + limit
+                while (true) {
+                    remaining = downloadManager.queueState.value.filter { it.chapter.id in ids }
+                    if (remaining.all { it.status == Download.State.ERROR }) break
+                    check(System.currentTimeMillis() < deadline) {
+                        "downloading ${chapters.size} chapters was still going after ${limit / 1000} s"
+                    }
+                    context.alive()
+                    delay(QUEUE_POLL_MILLIS)
                 }
-                context.alive()
-                delay(QUEUE_POLL_MILLIS)
             }
-        }
-        if (remaining.isNotEmpty()) downloadManager.cancelQueuedDownloads(remaining)
+            if (remaining.isNotEmpty()) downloadManager.cancelQueuedDownloads(remaining)
 
-        val downloaded = chapters.count {
-            downloadManager.isChapterDownloaded(it.name, it.scanlator, it.url, manga.ogTitle, manga.source, skipCache = true)
+            val downloaded = chapters.count {
+                downloadManager.isChapterDownloaded(it.name, it.scanlator, it.url, manga.ogTitle, manga.source, skipCache = true)
+            }
+            context.step("downloaded", mapOf("downloaded" to downloaded, "failed" to remaining.size, "ms" to ms))
+            check(downloaded > 0) { "none of the ${chapters.size} chapters downloaded" }
+        } finally {
+            // The wait above ends by timing out as readily as by finishing, and the scenario is meant to leave the
+            // storage it measures as it found it. Whatever is still queued is cancelled before the delete, or a
+            // download in flight writes its chapter back out after the files have gone.
+            val queued = downloadManager.queueState.value.filter { it.chapter.id in ids }
+            if (queued.isNotEmpty()) downloadManager.cancelQueuedDownloads(queued)
+            downloadManager.deleteChapters(chapters, manga, source, ignoreCategoryExclusion = true)
         }
-        context.step("downloaded", mapOf("downloaded" to downloaded, "failed" to remaining.size, "ms" to ms))
-        downloadManager.deleteChapters(chapters, manga, source, ignoreCategoryExclusion = true)
-        check(downloaded > 0) { "none of the ${chapters.size} chapters downloaded" }
     }
 }
