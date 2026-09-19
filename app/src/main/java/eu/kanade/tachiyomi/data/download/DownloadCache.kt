@@ -95,6 +95,13 @@ class DownloadCache(
     private var lastRenew = 0L
     private var renewalJob: Job? = null
 
+    /**
+     * The read of [diskCacheFile] started in `init`. A renewal waits for it: the disk cache is
+     * what a renewal's filesystem scan exists to avoid, and a query arriving before the read
+     * finishes would otherwise start that scan anyway, with [lastRenew] still at 0.
+     */
+    private var initJob: Job? = null
+
     private val _isInitializing = MutableStateFlow(false)
     val isInitializing = _isInitializing
         .debounce(1000L) // Don't notify if it finishes quickly enough
@@ -108,7 +115,7 @@ class DownloadCache(
 
     init {
         // Attempt to read cache file
-        scope.launch {
+        initJob = scope.launch {
             rootDownloadsDirMutex.withLock {
                 try {
                     if (diskCacheFile.exists()) {
@@ -374,6 +381,7 @@ class DownloadCache(
             // KMK -->
             renewInterval = 0L,
             // KMK <--
+            forced = true,
         )
     }
 
@@ -382,7 +390,7 @@ class DownloadCache(
         lastRenew = 0L
         renewalJob?.cancel()
         diskCacheFile.delete()
-        renewCache()
+        renewCache(forced = true)
     }
     // KMK <--
 
@@ -393,6 +401,7 @@ class DownloadCache(
         // KMK -->
         renewInterval: Long = this.renewInterval,
         // KMK <--
+        forced: Boolean = false,
     ) {
         // Avoid renewing cache if in the process nor too often
         if (lastRenew + renewInterval >= System.currentTimeMillis() ||
@@ -405,6 +414,15 @@ class DownloadCache(
         }
 
         renewalJob = scope.launchIO {
+            // Ordering, not just politeness: the disk read assigns [rootDownloadsDir] under the
+            // same mutex, so without this a scan that won the mutex first would then be replaced
+            // by the older cache. Joining also lets the check below see the read's [lastRenew].
+            initJob?.join()
+            // The disk cache answered while this job was queued, so the scan it was started
+            // for is no longer needed. Never skipped for a forced renewal: the read may have
+            // landed with contents the caller has just declared stale.
+            if (!forced && lastRenew + renewInterval >= System.currentTimeMillis()) return@launchIO
+
             if (lastRenew == 0L) {
                 _isInitializing.emit(true)
             }
