@@ -10,6 +10,12 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [Unreleased]
+### Improved
+- Drawing the library no longer checks the filesystem once per cover on screen. Every cover asked whether its
+  entry had a custom cover, and that question went to disk each time, on the thread doing the drawing. The answer
+  is now remembered until the entry's cover changes.
+
 ## [v1.9.0] - 2026-09-20
 ### Added
 - Each tracker in settings shows the account it is signed in as, under the tracker's name, so an
