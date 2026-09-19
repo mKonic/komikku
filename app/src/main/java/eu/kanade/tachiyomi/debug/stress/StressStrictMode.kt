@@ -61,17 +61,22 @@ internal object StressStrictMode {
 
     private fun report(journal: StressJournal, policy: String, violation: Violation) {
         // The top frames inside the app are what identifies it; the framework above them is the same every time.
-        val appFrames = violation.stackTrace.filter { it.className.startsWith(APP_PACKAGE) }
+        val appFrames = violation.stackTrace.filter { frame -> APP_PACKAGES.any(frame.className::startsWith) }
         // The harnesses do some of their own file work on the main thread: this one reads its journal directory as a
         // run starts, and the reader soak picks its output file. That is test tooling, not the app, and reporting it
         // would put the same lines in every report forever.
         val origin = appFrames.firstOrNull()?.className
         if (origin != null && HARNESS_PACKAGES.any(origin::startsWith)) return
-        val frames = appFrames.take(MAX_FRAMES).joinToString("\n") { "  at $it" }
+        // A leaked stream or cursor is reported where it was allocated, and that can be entirely inside a library
+        // the app only called into. Those used to record "(no app frames)" and, with nothing left to tell them
+        // apart, every one of the same kind collapsed onto a single signature and only the first was ever seen.
+        // The raw frames are less direct but they still say which one this is.
+        val attributed = appFrames.ifEmpty { violation.stackTrace.toList() }
+        val frames = attributed.take(MAX_FRAMES).joinToString("\n") { "  at $it" }
         val kind = violation.javaClass.simpleName
         // By method rather than by line, with a method that calls itself counted once: a recursive walk of a
         // directory reports from a different line each time round, and all of them are the one thing to fix.
-        val methods = appFrames.map { "${it.className}.${it.methodName}" }
+        val methods = attributed.map { "${it.className}.${it.methodName}" }
         val signature = methods
             .filterIndexed { index, method -> index == 0 || methods[index - 1] != method }
             .take(MAX_FRAMES)
@@ -83,12 +88,14 @@ internal object StressStrictMode {
             mapOf(
                 "policy" to policy,
                 "violation" to kind,
-                "where" to frames.ifEmpty { "(no app frames)" },
+                "where" to frames.ifEmpty { "(no stack)" },
+                "attributed" to appFrames.isNotEmpty(),
             ),
         )
     }
 
-    private const val APP_PACKAGE = "eu.kanade"
+    /** Every root this repo's own code lives under - `eu.kanade` alone leaves out most of domain, data and core. */
+    private val APP_PACKAGES = listOf("eu.kanade", "tachiyomi", "mihon", "exh")
     private val HARNESS_PACKAGES = listOf("eu.kanade.tachiyomi.debug.stress", "eu.kanade.tachiyomi.ui.reader.soak")
     private const val MAX_FRAMES = 8
 }
