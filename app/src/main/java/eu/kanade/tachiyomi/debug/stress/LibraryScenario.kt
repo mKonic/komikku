@@ -15,6 +15,7 @@ import mihon.domain.manga.model.toDomainManga
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.library.model.LibrarySort
 import tachiyomi.domain.library.service.LibraryPreferences
+import tachiyomi.domain.manga.interactor.DeleteMangaById
 import tachiyomi.domain.manga.interactor.GetLibraryManga
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.source.service.SourceManager
@@ -136,9 +137,14 @@ object LibraryScenario : StressScenario {
     /**
      * Takes the newest [count] generated series out of the library and deletes their folders, so the next generated
      * series carry on from the highest one left. Returns how many went.
+     *
+     * The row goes with the folder rather than just losing its favourite flag. A local entry is keyed by its folder
+     * name, so once the folder is gone nothing can ever match it again, and a run that shrinks repeatedly would
+     * otherwise leave every series it ever made behind in the database. That grows without bound over an eternal
+     * run and drags on the very library queries this scenario times.
      */
     private suspend fun shrink(context: StressContext, localDir: UniFile, count: Int): Int = withIOContext {
-        val updateManga = Injekt.get<UpdateManga>()
+        val deleteManga = Injekt.get<DeleteMangaById>()
         val newest = Injekt.get<GetLibraryManga>().await()
             .map { it.manga }
             .filter { it.source == LocalSource.ID && it.url.startsWith(PREFIX) }
@@ -146,7 +152,7 @@ object LibraryScenario : StressScenario {
             .sortedByDescending { it.url }
             .take(count)
         newest.forEachIndexed { index, manga ->
-            updateManga.awaitUpdateFavorite(manga.id, false)
+            deleteManga.await(manga.id)
             localDir.findFile(manga.url)?.delete()
             if (index % 25 == 0) context.alive()
         }
