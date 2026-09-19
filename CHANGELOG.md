@@ -11,6 +11,14 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Added
+- Each tracker in settings shows the account it is signed in as, under the tracker's name, so an
+  account can be told apart from the tracker it belongs to without opening it.
+- A tracker's settings row has a refresh button that fetches the account's current profile. The name
+  shown is the one read when you signed in, so a rename on the tracker's side never reached the app,
+  and signing out and back in was the only way to update it. Trackers that sign in through a source
+  do not show the button.
+
 ### Improved
 - A source that cannot list related manga is asked once instead of once for every manga opened. Any
   source with a popular listing counts as one that can, and plenty of them answer that request by
