@@ -1986,6 +1986,12 @@ open class WebGpuViewer(
 
     private fun applyWideZoomIfNeeded(page: ImagePage.ImageSingle): Boolean {
         if (!config.landscapeZoom) return false
+        // Filling the screen with half a wide page is a way of reading a spread one side at a time, and it only
+        // follows from a scale type that was showing the whole page. Fit width means the page's edges sit on the
+        // screen's, and answering that with a page zoomed past them is not fitting the width at all. The standard
+        // viewer gates its landscape zoom on the same list the settings screen greys the toggle out with, and a
+        // toggle left on from an earlier scale type keeps its stored value, so the gate has to be here too.
+        if (config.imageScaleType !in ReaderPreferences.zoomWideImagesAllowedList) return false
 
         val screenW = pager.state.width
         val screenH = pager.state.viewportHeight
