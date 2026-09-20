@@ -11,6 +11,13 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Fixed
+- The high quality renderer no longer zooms into wide pages when the scale type asked them to fit. Landscape zoom
+  fills the screen with half a wide page, which follows from a scale type that was showing the whole page, but it
+  was being applied whatever the scale type said, so fit width drew a spread at twice the width with its edges off
+  screen. The standard viewer has always kept it to the scale types the setting is offered for, and the setting is
+  greyed out under the others, so a toggle left on from earlier could not even be turned off again.
+
 ### Improved
 - Drawing the library no longer checks the filesystem once per cover on screen. Every cover asked whether its
   entry had a custom cover, and that question went to disk each time, on the thread doing the drawing. The answer
