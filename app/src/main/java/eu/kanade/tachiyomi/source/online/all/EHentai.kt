@@ -501,13 +501,6 @@ class EHentai(
             .awaitSuccess()
             .asJsoup()
 
-    private fun galleryPageUrl(galleryUrl: String, page: Int): String =
-        galleryUrl.toHttpUrl().newBuilder()
-            .removeAllQueryParameters("p")
-            .apply { if (page > 0) addQueryParameter("p", page.toString()) }
-            .build()
-            .toString()
-
     /** How many gallery pages the thumbnails are spread over, off the gallery's page nav. */
     private fun galleryPageCount(doc: Document): Int =
         doc.select("table.ptt tbody tr td a").asReversed()
@@ -1534,6 +1527,19 @@ class EHentai(
     companion object {
         /** Gallery pages fetched at once when building a page list. */
         private const val GALLERY_PAGE_PARALLELISM = 5
+
+        /**
+         * Gallery URLs are stored as `/g/<id>/<token>/?nw=always`, and E-Hentai answers `nw=always` with a redirect to
+         * the bare gallery that drops every other parameter, `p` included, so each page would come back as the first.
+         * The content warning is already skipped by the `nw` cookie.
+         */
+        internal fun galleryPageUrl(galleryUrl: String, page: Int): String =
+            galleryUrl.toHttpUrl().newBuilder()
+                .removeAllQueryParameters("nw")
+                .removeAllQueryParameters("p")
+                .apply { if (page > 0) addQueryParameter("p", page.toString()) }
+                .build()
+                .toString()
 
         private const val TR_SUFFIX = "TR"
         private const val REVERSE_PARAM = "TEH_REVERSE"
