@@ -12,6 +12,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 ### Fixed
+- E-Hentai galleries longer than one page of thumbnails no longer open with their pages repeated. Galleries are
+  stored with `?nw=always`, which E-Hentai answers with a redirect that drops the page number, so every page of
+  thumbnails after the first came back as the first, and the real ones were then added after them. A 171 page
+  gallery opened with 331.
 - The high quality renderer no longer zooms into wide pages when the scale type asked them to fit. Landscape zoom
   fills the screen with half a wide page, which follows from a scale type that was showing the whole page, but it
   was being applied whatever the scale type said, so fit width drew a spread at twice the width with its edges off
