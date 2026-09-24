@@ -554,6 +554,7 @@ private fun MangaAndSourceTitlesLarge(
             sourceName = sourceName,
             isStubSource = isStubSource,
             // KMK -->
+            sourceId = manga.source,
             isSourceIncognito = isSourceIncognito,
             // KMK <--
             doSearch = doSearch,
@@ -649,6 +650,7 @@ private fun MangaAndSourceTitlesSmall(
                 sourceName = sourceName,
                 isStubSource = isStubSource,
                 // KMK -->
+                sourceId = manga.source,
                 isSourceIncognito = isSourceIncognito,
                 // KMK <--
                 doSearch = doSearch,
@@ -671,6 +673,7 @@ private fun ColumnScope.MangaContentInfo(
     sourceName: String,
     isStubSource: Boolean,
     // KMK -->
+    sourceId: Long,
     isSourceIncognito: Boolean,
     // KMK <--
     doSearch: (query: String, global: Boolean) -> Unit,
@@ -684,15 +687,22 @@ private fun ColumnScope.MangaContentInfo(
     // KMK -->
     var showMenu by remember { mutableStateOf(false) }
     var tagSelected by remember { mutableStateOf("") }
+    // The source's display name can carry its language ("E-Hentai (🇺🇳)"), which no library entry's source name
+    // contains, so the source is searched by id instead.
+    var libraryQuery by remember { mutableStateOf<String?>(null) }
     DropdownMenu(
         expanded = showMenu,
-        onDismissRequest = { showMenu = false },
+        onDismissRequest = {
+            showMenu = false
+            libraryQuery = null
+        },
     ) {
         DropdownMenuItem(
             text = { Text(text = stringResource(KMR.strings.action_library_search)) },
             onClick = {
-                librarySearch(tagSelected)
+                librarySearch(libraryQuery ?: tagSelected)
                 showMenu = false
+                libraryQuery = null
             },
         )
         DropdownMenuItem(
@@ -700,6 +710,7 @@ private fun ColumnScope.MangaContentInfo(
             onClick = {
                 doSearch(tagSelected, true)
                 showMenu = false
+                libraryQuery = null
             },
         )
         DropdownMenuItem(
@@ -710,6 +721,7 @@ private fun ColumnScope.MangaContentInfo(
                     tagSelected,
                 )
                 showMenu = false
+                libraryQuery = null
             },
         )
     }
@@ -857,6 +869,7 @@ private fun ColumnScope.MangaContentInfo(
                     // KMK -->
                     onLongClick = {
                         tagSelected = sourceName
+                        libraryQuery = "src:$sourceId"
                         showMenu = true
                     },
                     onClick = {
