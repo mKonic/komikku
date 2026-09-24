@@ -1107,9 +1107,11 @@ class ReaderViewModel @JvmOverloads constructor(
                 val currChapter = currChapters.currChapter
                 currChapter.requestedPage = currChapter.chapter.last_page_read
 
+                // Queried outside update, which runs its block again when another update lands in between.
+                val updatedManga = getManga.await(manga.id)
                 mutableState.update {
                     it.copy(
-                        manga = getManga.await(manga.id),
+                        manga = updatedManga,
                         viewerChapters = currChapters,
                     )
                 }
@@ -1143,9 +1145,11 @@ class ReaderViewModel @JvmOverloads constructor(
                 val currChapter = currChapters.currChapter
                 currChapter.requestedPage = currChapter.chapter.last_page_read
 
+                // Queried outside update, which runs its block again when another update lands in between.
+                val updatedManga = getManga.await(manga.id)
                 mutableState.update {
                     it.copy(
-                        manga = getManga.await(manga.id),
+                        manga = updatedManga,
                         viewerChapters = currChapters,
                     )
                 }
