@@ -476,6 +476,14 @@ class Downloader internal constructor(
             // Do after download completes
 
             if (!isDownloadSuccessful(download, tmpDir)) {
+                // The one failure in here that logged nothing at all, and the one a download resumed after the
+                // process died lands in.
+                logcat(LogPriority.ERROR) {
+                    val failed = download.pages.orEmpty().count { it.status is Page.State.Error }
+                    "Download of ${download.chapter.name} incomplete: " +
+                        "${download.downloadedImages}/${download.pages?.size} pages ready, " +
+                        "$failed failed, ${tmpDir.listFiles().orEmpty().size} files in ${tmpDir.name}"
+                }
                 download.status = Download.State.ERROR
                 return
             }
@@ -538,7 +546,7 @@ class Downloader internal constructor(
             }
 
             // When the page is ready, set page path, progress (just in case) and status
-            splitTallImageIfNeeded(page, tmpDir)
+            splitTallImageIfNeeded(page, tmpDir, filename)
 
             page.uri = file.uri
             page.progress = 100
@@ -654,20 +662,29 @@ class Downloader internal constructor(
         return ImageUtil.getExtensionFromMimeType(mime) { file.openInputStream() }
     }
 
-    private fun splitTallImageIfNeeded(page: Page, tmpDir: UniFile) {
+    private fun splitTallImageIfNeeded(page: Page, tmpDir: UniFile, filenamePrefix: String) {
         if (!downloadPreferences.splitTallImages().get()) return
 
         try {
-            val filenamePrefix = "%03d".format(Locale.ENGLISH, page.number)
-            val imageFile = tmpDir.listFiles()?.firstOrNull { it.name.orEmpty().startsWith(filenamePrefix) }
-                ?: error(context.stringResource(MR.strings.download_notifier_split_page_not_found, page.number))
+            // Anchored on what follows the number: "001" is also a prefix of "0010", the way the page number is
+            // padded to the page count. A half-written .tmp is not this page either.
+            val files = tmpDir.listFiles().orEmpty().filter {
+                val name = it.name.orEmpty()
+                !name.endsWith(".tmp") &&
+                    (name.startsWith("$filenamePrefix.") || name.startsWith("${filenamePrefix}__"))
+            }
+            if (files.isEmpty()) {
+                error(context.stringResource(MR.strings.download_notifier_split_page_not_found, page.number))
+            }
 
-            // If the original page was previously split, then skip
-            if (imageFile.name.orEmpty().startsWith("${filenamePrefix}__")) return
+            // splitTallImage deletes the original last, so an original still sitting next to parts means a split
+            // that was interrupted. It deletes existing parts before writing each one, so splitting again is safe.
+            val original = files.firstOrNull { !it.name.orEmpty().startsWith("${filenamePrefix}__") }
+                ?: return
 
             ImageUtil.splitTallImage(
                 tmpDir,
-                imageFile,
+                original,
                 filenamePrefix,
             )
         } catch (e: Exception) {
