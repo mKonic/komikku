@@ -10,6 +10,32 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [v1.10.0] - 2026-09-24
+### Added
+- MangaDex chapters hosted on K Manga and Manga UP! open in the reader. (komikku-app/komikku#1838)
+
+### Fixed
+- MangaDex chapters hosted on Omoi (formerly Azuki), MANGA Plus and NamiComi open again. Each of those sites had
+  changed how it serves pages. (komikku-app/komikku#1838)
+- The Updates tab shows new chapters from every source of a merged entry. The list kept one source of each merge,
+  picked arbitrarily, so chapters from the others never appeared there even though they were fetched and listed on
+  the entry. (komikku-app/komikku#1686)
+- Syncing no longer restores the whole library again and again when nothing changed. Entries were matched by title
+  and author as well as source and address, a synced entry's original title was never saved, and a chapter whose
+  state matched but whose version was newer was skipped, so each device kept finding the other's library changed.
+  A sync also restored every kind of data whatever the sync settings said. (komikku-app/komikku#1640)
+- Syncing a large library no longer runs out of memory while uploading, and when memory does run out the sync says
+  so instead of staying on "running". (komikku-app/komikku#1875)
+- Covers downloaded without a disk cache no longer come out partly drawn. The cover colours were read from the same
+  download the image was being decoded from, and each reader took part of it. (komikku-app/komikku#1627)
+- The updates and lock screen widgets no longer fail when they have only text to show (no recent updates, or the
+  app locked). (komikku-app/komikku#1871)
+- LANraragi entries open again with servers from 0.9.80, which send a field in a different type. The field is no
+  longer read at all, so older servers keep working too. (komikku-app/komikku#1802)
+- Scrolling through a source no longer leaves every entry it passed watching the database for the rest of the
+  visit, and an entry's page no longer risks loading its page previews twice when it opens.
+  (komikku-app/komikku#1819)
+
 ## [v1.9.1] - 2026-09-24
 ### Fixed
 - E-Hentai galleries longer than one page of thumbnails no longer open with their pages repeated. Galleries are
