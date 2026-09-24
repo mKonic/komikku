@@ -2,6 +2,7 @@ package exh.md.handlers
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.content.ContextCompat
@@ -145,6 +146,13 @@ class MangaUpHandler(currentClient: OkHttpClient) {
                         view.destroy()
                     }
                 }
+
+                // Returning true keeps the app alive when the renderer dies; the secret is then just not read.
+                override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail?): Boolean {
+                    latch.countDown()
+                    view.destroy()
+                    return true
+                }
             }
 
             webView.loadDataWithBaseURL("$baseUrl/", " ", "text/html", "utf-8", null)
@@ -175,6 +183,11 @@ class MangaUpHandler(currentClient: OkHttpClient) {
                     view.stopLoading()
                     view.destroy()
                 }
+            }
+
+            override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail?): Boolean {
+                view.destroy()
+                return true
             }
         }
 

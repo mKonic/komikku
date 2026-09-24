@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Rect
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.content.ContextCompat
@@ -185,6 +186,12 @@ class KMangaHandler(currentClient: OkHttpClient) {
                         accountStr = json.decodeFromString<String?>(it)
                         latch.countDown()
                     }
+                }
+
+                // Returning true keeps the app alive when the renderer dies; the account is then just not read.
+                override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+                    latch.countDown()
+                    return true
                 }
             }
 
