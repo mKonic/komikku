@@ -10,7 +10,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
-## [Unreleased]
+## [v1.9.1] - 2026-09-24
 ### Fixed
 - E-Hentai galleries longer than one page of thumbnails no longer open with their pages repeated. Galleries are
   stored with `?nw=always`, which E-Hentai answers with a redirect that drops the page number, so every page of
@@ -21,6 +21,13 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   was being applied whatever the scale type said, so fit width drew a spread at twice the width with its edges off
   screen. The standard viewer has always kept it to the scale types the setting is offered for, and the setting is
   greyed out under the others, so a toggle left on from earlier could not even be turned off again.
+- A chapter downloaded with "Split tall images" no longer stays in error for good when the app is closed part way
+  through splitting a page. The original page is deleted only once its parts are written, so an interrupted split
+  leaves both behind, and the next attempt took any file starting with the page's number as proof the page was
+  already split. The leftover original then counted as an extra page and every retry failed the same way. In a
+  chapter of a thousand pages or more the same lookup could also pick another page's file. (mihonapp/mihon#3990)
+- Library search from a source name's long press menu finds that source's entries. It searched for the name as
+  shown, which can carry the source's language, and no entry's source matched it. (mihonapp/mihon#4002)
 
 ### Improved
 - Drawing the library no longer checks the filesystem once per cover on screen. Every cover asked whether its
