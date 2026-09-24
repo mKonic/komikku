@@ -140,7 +140,7 @@ class Lanraragi(delegate: HttpSource, val context: Context) :
     @Serializable
     data class Archive(
         val arcid: String,
-        val isnew: String,
+        // No isnew: nothing reads it, and servers from 0.9.80 send a boolean where older ones sent a string.
         val tags: String?,
         val summary: String?,
         val title: String,
