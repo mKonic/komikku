@@ -1705,6 +1705,9 @@ open class WebGpuViewer(
                         }
                     }
                 }
+            } catch (e: CancellationException) {
+                // The viewer closing, not a load failing.
+                throw e
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e) { "startPageLoad error" }
                 synchronized(lock) { if (pageInCache(page)) page.state = PageState.IDLE }
