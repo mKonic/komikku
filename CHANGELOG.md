@@ -10,7 +10,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
-## [v1.11.1] - 2026-09-26
+## [v1.11.3] - 2026-09-26
 ### Improved
 - Opening the reader with the high quality renderer no longer decodes its first pages twice. Each reader setting's
   saved value counted as a change the moment the reader opened, which threw away the pages already decoding and
