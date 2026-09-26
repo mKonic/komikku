@@ -2,9 +2,7 @@ package exh.md.handlers
 
 import android.annotation.SuppressLint
 import android.app.Application
-import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.core.content.ContextCompat
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
@@ -135,8 +133,9 @@ class MangaUpHandler(currentClient: OkHttpClient) {
                 blockNetworkImage = true
             }
 
-            webView.webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView, url: String?) {
+            // A dead renderer just leaves the secret unread.
+            webView.webViewClient = OneShotWebViewClient(
+                onFinished = { view ->
                     view.evaluateJavascript("window.localStorage.getItem('secret')") { value ->
                         token = value?.trim('"')
                         if (token == "null" || token.isNullOrBlank()) token = null
@@ -145,15 +144,12 @@ class MangaUpHandler(currentClient: OkHttpClient) {
                         view.stopLoading()
                         view.destroy()
                     }
-                }
-
-                // Returning true keeps the app alive when the renderer dies; the secret is then just not read.
-                override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail?): Boolean {
+                },
+                onGone = { view ->
                     latch.countDown()
                     view.destroy()
-                    return true
-                }
-            }
+                },
+            )
 
             webView.loadDataWithBaseURL("$baseUrl/", " ", "text/html", "utf-8", null)
         }
@@ -176,20 +172,16 @@ class MangaUpHandler(currentClient: OkHttpClient) {
             blockNetworkImage = true
         }
 
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView, url: String?) {
+        webView.webViewClient = OneShotWebViewClient(
+            onFinished = { view ->
                 val script = "if(window.localStorage.getItem('secret')==='$target'){window.localStorage.removeItem('secret');}"
                 view.evaluateJavascript(script) {
                     view.stopLoading()
                     view.destroy()
                 }
-            }
-
-            override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail?): Boolean {
-                view.destroy()
-                return true
-            }
-        }
+            },
+            onGone = { it.destroy() },
+        )
 
         webView.loadDataWithBaseURL("$baseUrl/", " ", "text/html", "utf-8", null)
     }

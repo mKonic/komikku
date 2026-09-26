@@ -6,9 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Rect
-import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import eu.kanade.tachiyomi.network.GET
@@ -180,20 +178,16 @@ class KMangaHandler(currentClient: OkHttpClient) {
                 loadWithOverviewMode = false
             }
 
-            view.webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    view?.evaluateJavascript("localStorage.getItem('account')") {
-                        accountStr = json.decodeFromString<String?>(it)
+            // A dead renderer just leaves the account unread.
+            view.webViewClient = OneShotWebViewClient(
+                onFinished = {
+                    it.evaluateJavascript("localStorage.getItem('account')") { value ->
+                        accountStr = json.decodeFromString<String?>(value)
                         latch.countDown()
                     }
-                }
-
-                // Returning true keeps the app alive when the renderer dies; the account is then just not read.
-                override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
-                    latch.countDown()
-                    return true
-                }
-            }
+                },
+                onGone = { latch.countDown() },
+            )
 
             view.loadDataWithBaseURL(baseUrl, "", "text/html", "UTF-8", null)
         }
