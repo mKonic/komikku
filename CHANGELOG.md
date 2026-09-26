@@ -10,6 +10,22 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [v1.11.0] - 2026-09-26
+### Improved
+- The high quality renderer shows a page from the top as soon as its first rows are in, instead of waiting for the
+  whole image. A page still downloading fills in as the rest arrives, and one already downloaded starts showing
+  about ten times sooner: on a long strip the first rows appear in around 40 ms where the whole page took about
+  400 ms. JPEG, PNG and still WebP pages do this. It is off while border cropping is on, since the crop needs the
+  whole page and would otherwise move it after it appears.
+- Long strip pages under the high quality renderer are complete in about half the time, and appear before their
+  smaller zoomed-out versions are built.
+- Animated pages too large to keep in memory now play every frame, decoding each as it comes due. They used to
+  loop over only the frames that fit.
+
+### Other
+- webgpuviewer 1.5.0, with fixes for GPU objects that leaked or were freed while a frame could still use them.
+- The image decoder is now this fork's build of imagedecoder (1.0.0), which adds the decoding above.
+
 ## [v1.10.0] - 2026-09-24
 ### Added
 - MangaDex chapters hosted on K Manga and Manga UP! open in the reader. (komikku-app/komikku#1838)
