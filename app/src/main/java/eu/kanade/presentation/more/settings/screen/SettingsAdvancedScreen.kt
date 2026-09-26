@@ -302,6 +302,7 @@ object SettingsAdvancedScreen : SearchableSettings {
                                 clearFormData()
                                 clearHistory()
                                 clearSslPreferences()
+                                destroy()
                             }
                             WebStorage.getInstance().deleteAllData()
                             context.applicationInfo?.dataDir?.let {
