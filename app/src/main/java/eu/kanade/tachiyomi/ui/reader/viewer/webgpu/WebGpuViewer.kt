@@ -1782,6 +1782,13 @@ open class WebGpuViewer(
                 )
             }
 
+            // KMK --> an SDR page's smaller levels are built after it is on screen, since the
+            // resize is a fifth of a tall strip's decode and the page is drawn at or above
+            // full size until zoomed out. HDR pixels are transformed inside Image, so those keep
+            // building them up front from what the decoder handed over.
+            var deferredMips: Pair<Image, java.nio.ByteBuffer>? = null
+            // KMK <--
+
             // KMK --> closed here rather than by the finalizer: the decoder keeps the encoded page in
             // native memory the collector cannot see, and a reader decodes page after page.
             // The decoded pixels are Java direct buffers, so they outlive it.
@@ -1856,11 +1863,13 @@ open class WebGpuViewer(
                         null
                     }
 
+                    val pixels = turned ?: firstFrame.image
+                    val deferMips = !firstFrame.isHdr && turnedGainmap == null
                     val firstImage = Image(
-                        turned ?: firstFrame.image,
+                        pixels,
                         if (turned != null) firstFrame.height else firstFrame.width,
                         if (turned != null) firstFrame.width else firstFrame.height,
-                        createMipMaps = true,
+                        createMipMaps = !deferMips,
                         trimColors = trimColors,
                         trimThreshold = 0.15f,
                         backgroundColor = backgroundColor,
@@ -1873,6 +1882,7 @@ open class WebGpuViewer(
                     // The renderer already draws only an image's trim rect, so the two halves are
                     // a crop each rather than two smaller decodes.
                     applySplitTrim(page, firstImage)
+                    if (deferMips) deferredMips = firstImage to pixels
 
                     ImagePage.ImageSingle(firstImage)
                 } else {
@@ -1979,8 +1989,20 @@ open class WebGpuViewer(
                 } else {
                     if (pageInCache(page)) page.state = PageState.IDLE
                     imagePage.cleanup()
+                    deferredMips = null
                 }
             }
+
+            // KMK --> an eviction can clean the image up meanwhile, which createMipMaps reports by
+            // throwing; the page is gone then and needs no levels.
+            deferredMips?.let { (image, pixels) ->
+                try {
+                    image.createMipMaps(pixels)
+                } catch (e: IllegalStateException) {
+                    logcat(LogPriority.DEBUG) { "mipmaps skipped: ${e.message}" }
+                }
+            }
+            // KMK <--
         }
     }
 
