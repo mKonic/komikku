@@ -1,6 +1,7 @@
 package tachiyomi.core.common
 
 object Constants {
+    const val SPONSOR = "https://ko-fi.com/mrkonic"
 
     const val URL_HELP = "https://komikku-app.github.io/docs/guides/troubleshooting/"
     const val URL_HELP_UPCOMING = "https://komikku-app.github.io/docs/faq/updates/upcoming"
