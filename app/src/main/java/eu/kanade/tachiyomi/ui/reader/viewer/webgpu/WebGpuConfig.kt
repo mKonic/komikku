@@ -16,6 +16,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import tachiyomi.core.common.preference.Preference
 import kotlin.math.pow
 
 /**
@@ -111,22 +112,39 @@ class WebGpuConfig(
     var pinchZoom = true
         private set
 
+    /**
+     * As [register], for a value the decoded pages are built from. [imagePropertyChangedListener]
+     * decodes every page again, so it runs only when the value really changes: [register] also
+     * hands over the stored value once as the viewer opens, and treating that as a change threw
+     * away the pages already decoding. Assigned here at once, not on that first emission, so the
+     * first pages are built from the reader's settings rather than the defaults above.
+     */
+    private fun <T> Preference<T>.registerImage(assign: (T) -> Unit, onChanged: (T) -> Unit = {}) {
+        var applied = get()
+        assign(applied)
+        register({ value ->
+            assign(value)
+            if (value != applied) {
+                applied = value
+                imagePropertyChangedListener?.invoke()
+                onChanged(value)
+            }
+        })
+    }
+
     init {
         readerPreferences.readerTheme()
-            .register(
-                {
-                    theme = it
-                    automaticBackground = it == 3
-                    pageCanvasColor = themeToCanvasColor(it)
-                },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({
+                theme = it
+                automaticBackground = it == 3
+                pageCanvasColor = themeToCanvasColor(it)
+            })
 
         readerPreferences.imageScaleType()
-            .register({ imageScaleType = it }, { imagePropertyChangedListener?.invoke() })
+            .registerImage({ imageScaleType = it })
 
         readerPreferences.zoomStart()
-            .register({ zoomTypeFromPreference(it) }, { imagePropertyChangedListener?.invoke() })
+            .registerImage({ zoomTypeFromPreference(it) })
 
         // Border trimming is a per-mode setting in the standard viewers, and a strip is not a
         // paged view: reading the paged one in every mode meant turning trimming on for pages also
@@ -137,15 +155,12 @@ class WebGpuConfig(
             else -> readerPreferences.cropBordersWebtoon()
         }
         cropBorders
-            .register({ imageCropBorders = it }, { imagePropertyChangedListener?.invoke() })
+            .registerImage({ imageCropBorders = it })
 
         // The gain map is weighted against this while the page is decoded, so a change only shows
         // once the pages are decoded again - which is what imagePropertyChangedListener arranges.
         readerPreferences.hdrPeakStops()
-            .register(
-                { Hdr.maxPeakValue = 2f.pow(it) },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({ Hdr.maxPeakValue = 2f.pow(it) })
 
         // The standard viewers get these from a hardware layer paint on the reader's container.
         // That cannot reach the renderer, which draws into a SurfaceView the view hierarchy only
@@ -166,7 +181,7 @@ class WebGpuConfig(
             .register({ navigateToPan = it })
 
         readerPreferences.landscapeZoom()
-            .register({ landscapeZoom = it }, { imagePropertyChangedListener?.invoke() })
+            .registerImage({ landscapeZoom = it })
 
         // A continuous strip is read like the long strip viewer, not like a paged one, so it takes
         // that viewer's tap zones and inversion. Reading both modes off the paged preferences meant
@@ -209,82 +224,43 @@ class WebGpuConfig(
         }
 
         splitPref
-            .register(
-                { dualPageSplit = it },
-                {
-                    imagePropertyChangedListener?.invoke()
-                    dualPageSplitChangedListener?.invoke(it)
-                },
-            )
+            .registerImage({ dualPageSplit = it }) { dualPageSplitChangedListener?.invoke(it) }
 
         invertPref
-            .register({ dualPageInvert = it }, { imagePropertyChangedListener?.invoke() })
+            .registerImage({ dualPageInvert = it })
 
         rotatePref
-            .register(
-                { dualPageRotateToFit = it },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({ dualPageRotateToFit = it })
 
         rotateInvertPref
-            .register(
-                { dualPageRotateToFitInvert = it },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({ dualPageRotateToFitInvert = it })
 
         readerPreferences.transitionAnimation()
-            .register(
-                { transitionAnimation = it },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({ transitionAnimation = it })
 
         readerPreferences.transitionAnimationDual()
-            .register(
-                { transitionAnimationDual = it },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({ transitionAnimationDual = it })
 
         readerPreferences.cutoutMode()
-            .register(
-                { cutoutMode = it },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({ cutoutMode = it })
 
         readerPreferences.cutoutModeDual()
-            .register(
-                { cutoutModeDual = it },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({ cutoutModeDual = it })
 
         readerPreferences.dualPageView()
-            .register(
-                { dualPageView = it },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({ dualPageView = it })
 
         readerPreferences.continuousMinWidth()
-            .register(
-                { continuousMinWidth = it },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({ continuousMinWidth = it })
 
         readerPreferences.webtoonScaleType()
-            .register(
-                { webtoonScaleType = it },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({ webtoonScaleType = it })
 
         readerPreferences.longStripGapSmartScale()
-            .register(
-                { longStripGapSmartScale = it },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({ longStripGapSmartScale = it })
 
         readerPreferences.webtoonDisableZoomOut()
-            .register(
-                { zoomOutDisabled = it },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({ zoomOutDisabled = it })
 
         // Per mode, as in the standard viewers: a strip reads the long strip switches.
         val doubleTapPref = if (strip) {
@@ -293,19 +269,16 @@ class WebGpuConfig(
             readerPreferences.pagedDoubleTapZoomEnabled()
         }
         doubleTapPref
-            .register({ doubleTapZoom = it }, { imagePropertyChangedListener?.invoke() })
+            .registerImage({ doubleTapZoom = it })
 
         // Only the long strip viewer offers this, so a paged read keeps pinch zoom either way.
         if (strip) {
             readerPreferences.webtoonPinchToZoomEnabled()
-                .register({ pinchZoom = it }, { imagePropertyChangedListener?.invoke() })
+                .registerImage({ pinchZoom = it })
         }
 
         readerPreferences.continuousGap()
-            .register(
-                { continuousGap = it },
-                { imagePropertyChangedListener?.invoke() },
-            )
+            .registerImage({ continuousGap = it })
     }
 
     private fun zoomTypeFromPreference(value: Int) {
