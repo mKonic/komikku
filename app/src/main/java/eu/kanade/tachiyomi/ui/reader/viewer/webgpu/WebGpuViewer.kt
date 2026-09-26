@@ -17,6 +17,7 @@ import androidx.compose.ui.util.fastCoerceIn
 import androidx.core.net.toUri
 import androidx.webgpu.GPUTexture
 import ca.mpreg.imagedecoder.ImageDecoder
+import ca.mpreg.imagedecoder.RowDecoder
 import ca.mpreg.webgpuviewer.ImageUtil
 import ca.mpreg.webgpuviewer.ImageView
 import ca.mpreg.webgpuviewer.closeTo
@@ -49,6 +50,7 @@ import de.stefan_oltmann.kim.android.readMetadata
 import de.stefan_oltmann.kim.format.tiff.constant.TiffTag
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
+import eu.kanade.tachiyomi.ui.reader.loader.PageBytes
 import eu.kanade.tachiyomi.ui.reader.model.ChapterTransition
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
@@ -69,6 +71,8 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -106,6 +110,12 @@ private val decodeDispatcher = ThreadPoolExecutor(0, Int.MAX_VALUE, 5L, TimeUnit
  * block has why more of them would cost the page being read rather than help it.
  */
 private val decodeWorkers = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 3)
+
+// KMK --> rows decoded per call when a page fills from the top, and how often the rows so far go
+// up: a strip is about a quarter of a megabyte, and every update is an upload the renderer does.
+private const val ROW_STRIP_BYTES = 256 * 1024
+private const val ROW_UPDATE_NS = 50_000_000L
+// KMK <--
 // KMK <--
 
 open class WebGpuViewer(
@@ -1635,6 +1645,11 @@ open class WebGpuViewer(
 
         scope.launch {
             try {
+                // KMK --> the bytes show up once the response starts, after DownloadImage.
+                val bytesJob = launch {
+                    page.page.bytesFlow.filterNotNull().first().let { decodeWhileDownloading(page, it) }
+                }
+                // KMK <--
                 val downloadProgressJob = launch {
                     page.page.progressFlow.collect { value ->
                         // Set under the lookup's lock, or an eviction's cleanup() lands between.
@@ -1677,6 +1692,7 @@ open class WebGpuViewer(
                 }.collect {}
 
                 downloadProgressJob.cancel()
+                bytesJob.cancel()
 
                 synchronized(lock) {
                     if (pageInCache(page) && page.state == PageState.LOADING) {
@@ -1766,244 +1782,427 @@ open class WebGpuViewer(
                 }
             }
 
-            // The decoder hands the map over unapplied - see ImageDecoder.Gainmap - because how
-            // much of it to use depends on the display, so the viewer applies it.
-            fun ImageDecoder.DecodeResult.gainmapInput(): GainmapInput? = gainmap?.let {
-                GainmapInput(
-                    pixels = it.pixels,
-                    width = it.width,
-                    height = it.height,
-                    channels = it.channels,
-                    gamma = it.gamma,
-                    minContentBoost = it.minContentBoost,
-                    maxContentBoost = it.maxContentBoost,
-                    offsetSdr = it.offsetSdr,
-                    offsetHdr = it.offsetHdr,
-                )
-            }
+            val source = bytes?.inputStream() ?: input
 
-            // KMK --> an SDR page's smaller levels are built after it is on screen, since the
-            // resize is a fifth of a tall strip's decode and the page is drawn at or above
-            // full size until zoomed out. HDR pixels are transformed inside Image, so those keep
-            // building them up front from what the decoder handed over.
-            var deferredMips: Pair<Image, java.nio.ByteBuffer>? = null
+            // KMK --> a still page decodes top first, its first rows on screen before the rest
+            // are done (see decodeRows); anything else opens whole, as it always did.
+            if (bytes == null && rowsAllowed()) {
+                when (val opened = ImageDecoder.open(source)) {
+                    is ImageDecoder.Opened.Rows -> opened.use { decodeRows(page, it.decoder, fromDownload = false) }
+                    is ImageDecoder.Opened.Whole -> opened.use { decodeWhole(page, it.decoder) }
+                }
+                return
+            }
             // KMK <--
 
             // KMK --> closed here rather than by the finalizer: the decoder keeps the encoded page in
             // native memory the collector cannot see, and a reader decodes page after page.
             // The decoded pixels are Java direct buffers, so they outlive it.
-            val imagePage = ImageDecoder.new(bytes?.inputStream() ?: input).use { dec ->
-                // KMK <--
-                val pageCount = dec.pages
-
-                if (pageCount == 0) throw Exception("No frames decoded")
-
-                val backgroundColor = if (config.automaticBackground) null else readerBackgroundColor()
-
-                val firstFrame = dec.decodeNext()
-
-                if (pageCount == 1) {
-                    // A page wider than it is tall reads better turned on its side than shrunk to
-                    // fit. A gain map is a second buffer with its own size, so it turns with the
-                    // base rather than the page being left flat for carrying one.
-                    val gainmapIn = firstFrame.gainmapInput()
-                    // The map is spatially aligned with the base, so the two can only turn
-                    // together. rotateQuarter needs it packed at channels bytes per pixel; if it
-                    // is laid out any other way the page stays as it is, which is what it did
-                    // before, rather than turning out of step with its own map.
-                    val gainmapTurnable = gainmapIn == null ||
-                        gainmapIn.pixels.capacity().toLong() ==
-                        gainmapIn.width.toLong() * gainmapIn.height * gainmapIn.channels
-                    // 90 degrees is clockwise in the standard viewers, and their invert switch
-                    // turns the other way.
-                    val clockwise = !config.dualPageRotateToFitInvert
-                    val turn = config.dualPageRotateToFit &&
-                        firstFrame.width > firstFrame.height &&
-                        gainmapTurnable
-                    val turned = if (turn) {
-                        ImageUtil.rotateQuarter(
-                            firstFrame.image,
-                            firstFrame.width,
-                            firstFrame.height,
-                            bytesPerPixel = if (firstFrame.isHdr) 8 else 4,
-                            clockwise = clockwise,
-                        )
-                    } else {
-                        null
-                    }
-                    val turnedGainmap = if (turned != null && gainmapIn != null) {
-                        GainmapInput(
-                            pixels = ImageUtil.rotateQuarter(
-                                gainmapIn.pixels,
-                                gainmapIn.width,
-                                gainmapIn.height,
-                                bytesPerPixel = gainmapIn.channels,
-                                clockwise = clockwise,
-                            ),
-                            width = gainmapIn.height,
-                            height = gainmapIn.width,
-                            channels = gainmapIn.channels,
-                            gamma = gainmapIn.gamma,
-                            minContentBoost = gainmapIn.minContentBoost,
-                            maxContentBoost = gainmapIn.maxContentBoost,
-                            offsetSdr = gainmapIn.offsetSdr,
-                            offsetHdr = gainmapIn.offsetHdr,
-                        )
-                    } else {
-                        gainmapIn
-                    }
-
-                    // Only trim when not animated and not in dual page mode
-                    val trimColors = if (config.imageCropBorders && !isDualPageMode()) {
-                        listOf(
-                            floatArrayOf(1f, 1f, 1f),
-                            floatArrayOf(0f, 0f, 0f),
-                        )
-                    } else {
-                        null
-                    }
-
-                    val pixels = turned ?: firstFrame.image
-                    val deferMips = !firstFrame.isHdr && turnedGainmap == null
-                    val firstImage = Image(
-                        pixels,
-                        if (turned != null) firstFrame.height else firstFrame.width,
-                        if (turned != null) firstFrame.width else firstFrame.height,
-                        createMipMaps = !deferMips,
-                        trimColors = trimColors,
-                        trimThreshold = 0.15f,
-                        backgroundColor = backgroundColor,
-                        hdr = firstFrame.isHdr,
-                        hdrHeadroom = firstFrame.hdrHeadroom,
-                        gainmap = turnedGainmap,
-                    )
-
-                    // KMK: a page the reader splits keeps its whole image and shows half of it.
-                    // The renderer already draws only an image's trim rect, so the two halves are
-                    // a crop each rather than two smaller decodes.
-                    applySplitTrim(page, firstImage)
-                    if (deferMips) deferredMips = firstImage to pixels
-
-                    ImagePage.ImageSingle(firstImage)
-                } else {
-                    val frames = ArrayList<Pair<Image, Int>>(pageCount)
-
-                    // Built frames hold uploaded textures, and ImageSingle owns the only teardown.
-                    fun discardFrames() {
-                        if (frames.isNotEmpty()) ImagePage.ImageSingle(frames).cleanup()
-                    }
-
-                    val firstImage = Image(
-                        firstFrame.image,
-                        firstFrame.width,
-                        firstFrame.height,
-                        createMipMaps = false,
-                        backgroundColor = backgroundColor,
-                        hdr = firstFrame.isHdr,
-                        hdrHeadroom = firstFrame.hdrHeadroom,
-                        gainmap = firstFrame.gainmapInput(),
-                    )
-
-                    frames.add(Pair(firstImage, firstFrame.duration))
-
-                    // KMK --> every frame is a full-resolution texture with no mipmaps behind it,
-                    // and all of them stay resident for as long as the page is cached: a large
-                    // page with many frames is hundreds of megabytes of GPU memory for one page.
-                    // Past what the device can afford the animation loops over the frames that
-                    // fit, rather than taking the app down for the ones that do not.
-                    val frameBytes =
-                        firstFrame.width.toLong() * firstFrame.height * if (firstFrame.isHdr) 8 else 4
-                    val keepFrames = if (frameBytes <= 0L) {
-                        pageCount
-                    } else {
-                        min(pageCount, (DeviceMemory.animatedPageBytes / frameBytes).toInt().coerceAtLeast(1))
-                    }
-                    if (keepFrames < pageCount) {
-                        logcat(LogPriority.WARN) {
-                            "animated page ${firstFrame.width}x${firstFrame.height} has $pageCount frames, " +
-                                "keeping $keepFrames within ${DeviceMemory.animatedPageBytes / (1024 * 1024)} MB"
-                        }
-                    }
-                    // KMK <--
-
-                    try {
-                        for (i in 1 until keepFrames) {
-                            // Under lock: a decode this long gives an eviction's cleanup() time to land.
-                            val stillWanted = synchronized(lock) {
-                                pageInCache(page).also { inCache ->
-                                    if (inCache) {
-                                        (page.imagePage as? ProgressPage)?.progress = i.toFloat() / pageCount
-                                    }
-                                }
-                            }
-
-                            // Scrolled past: the frames left are work nothing will draw.
-                            if (!stillWanted) {
-                                discardFrames()
-                                return
-                            }
-
-                            val frame = dec.decodeNext()
-                            val image = Image(
-                                frame.image,
-                                frame.width,
-                                frame.height,
-                                createMipMaps = false,
-                                backgroundColor = firstImage.backgroundColor,
-                                hdr = frame.isHdr,
-                                hdrHeadroom = frame.hdrHeadroom,
-                                gainmap = frame.gainmapInput(),
-                            )
-                            frames.add(Pair(image, frame.duration))
-                        }
-                    } catch (e: Throwable) {
-                        discardFrames()
-                        throw e
-                    }
-
-                    ImagePage.ImageSingle(frames)
-                }
-            }
-
-            synchronized(lock) {
-                if (pageInCache(page) && !page.isDecoded && !page.imagePage.destroyed) {
-                    val oldImagePage = page.imagePage
-                    page.imagePage = imagePage
-                    // KMK -->
-                    page.page.markDisplayed()
-                    // KMK <--
-                    noteIfLone(page)
-                    page.state = PageState.IDLE
-                    cleanupImage(oldImagePage)
-                    // Fade up from the placeholder's colour, if that placeholder was on screen -
-                    // one that decoded out of view has nothing left to fade from.
-                    if (oldImagePage.isOnScreen) imagePage.fadeIn()
-                    if (!isDualPageMode()) {
-                        (page.imagePage as? ImagePage.ImageSingle)?.let {
-                            if (!applyWideZoomIfNeeded(it)) {
-                                applyFitModeAnchor(it)
-                            }
-                        }
-                    }
-                    pager.state.invalidate()
-                } else {
-                    if (pageInCache(page)) page.state = PageState.IDLE
-                    imagePage.cleanup()
-                    deferredMips = null
-                }
-            }
-
-            // KMK --> an eviction can clean the image up meanwhile, which createMipMaps reports by
-            // throwing; the page is gone then and needs no levels.
-            deferredMips?.let { (image, pixels) ->
-                try {
-                    image.createMipMaps(pixels)
-                } catch (e: IllegalStateException) {
-                    logcat(LogPriority.DEBUG) { "mipmaps skipped: ${e.message}" }
-                }
-            }
+            ImageDecoder.new(source).use { decodeWhole(page, it) }
             // KMK <--
         }
+    }
+
+    /** Builds [page]'s image from [dec], which holds the whole file, and puts it on the page. */
+    private suspend fun decodeWhole(page: ViewerReaderPage, dec: ImageDecoder) {
+        // KMK --> an SDR page's smaller levels are built after it is on screen, since the
+        // resize is a fifth of a tall strip's decode and the page is drawn at or above
+        // full size until zoomed out. HDR pixels are transformed inside Image, so those keep
+        // building them up front from what the decoder handed over.
+        var deferredMips: Pair<Image, java.nio.ByteBuffer>? = null
+        // KMK <--
+
+        val imagePage: ImagePage = run {
+            val pageCount = dec.pages
+
+            if (pageCount == 0) throw Exception("No frames decoded")
+
+            val backgroundColor = if (config.automaticBackground) null else readerBackgroundColor()
+
+            val firstFrame = dec.decodeNext()
+
+            if (pageCount == 1) {
+                buildSingle(
+                    page,
+                    firstFrame.image,
+                    firstFrame.width,
+                    firstFrame.height,
+                    firstFrame.isHdr,
+                    firstFrame.hdrHeadroom,
+                    firstFrame.gainmapInput(),
+                    backgroundColor,
+                ).also { deferredMips = it.second }.first
+            } else {
+                val frames = ArrayList<Pair<Image, Int>>(pageCount)
+
+                // Built frames hold uploaded textures, and ImageSingle owns the only teardown.
+                fun discardFrames() {
+                    if (frames.isNotEmpty()) ImagePage.ImageSingle(frames).cleanup()
+                }
+
+                val firstImage = Image(
+                    firstFrame.image,
+                    firstFrame.width,
+                    firstFrame.height,
+                    createMipMaps = false,
+                    backgroundColor = backgroundColor,
+                    hdr = firstFrame.isHdr,
+                    hdrHeadroom = firstFrame.hdrHeadroom,
+                    gainmap = firstFrame.gainmapInput(),
+                )
+
+                frames.add(Pair(firstImage, firstFrame.duration))
+
+                // KMK --> every frame is a full-resolution texture with no mipmaps behind it,
+                // and all of them stay resident for as long as the page is cached: a large
+                // page with many frames is hundreds of megabytes of GPU memory for one page.
+                // Past what the device can afford the animation loops over the frames that
+                // fit, rather than taking the app down for the ones that do not.
+                val frameBytes =
+                    firstFrame.width.toLong() * firstFrame.height * if (firstFrame.isHdr) 8 else 4
+                val keepFrames = if (frameBytes <= 0L) {
+                    pageCount
+                } else {
+                    min(pageCount, (DeviceMemory.animatedPageBytes / frameBytes).toInt().coerceAtLeast(1))
+                }
+                if (keepFrames < pageCount) {
+                    logcat(LogPriority.WARN) {
+                        "animated page ${firstFrame.width}x${firstFrame.height} has $pageCount frames, " +
+                            "keeping $keepFrames within ${DeviceMemory.animatedPageBytes / (1024 * 1024)} MB"
+                    }
+                }
+                // KMK <--
+
+                try {
+                    for (i in 1 until keepFrames) {
+                        // Under lock: a decode this long gives an eviction's cleanup() time to land.
+                        val stillWanted = synchronized(lock) {
+                            pageInCache(page).also { inCache ->
+                                if (inCache) {
+                                    (page.imagePage as? ProgressPage)?.progress = i.toFloat() / pageCount
+                                }
+                            }
+                        }
+
+                        // Scrolled past: the frames left are work nothing will draw.
+                        if (!stillWanted) {
+                            discardFrames()
+                            return
+                        }
+
+                        val frame = dec.decodeNext()
+                        val image = Image(
+                            frame.image,
+                            frame.width,
+                            frame.height,
+                            createMipMaps = false,
+                            backgroundColor = firstImage.backgroundColor,
+                            hdr = frame.isHdr,
+                            hdrHeadroom = frame.hdrHeadroom,
+                            gainmap = frame.gainmapInput(),
+                        )
+                        frames.add(Pair(image, frame.duration))
+                    }
+                } catch (e: Throwable) {
+                    discardFrames()
+                    throw e
+                }
+
+                ImagePage.ImageSingle(frames)
+            }
+        }
+
+        if (!installImage(page, imagePage)) deferredMips = null
+
+        // KMK --> an eviction can clean the image up meanwhile, which createMipMaps reports by
+        // throwing; the page is gone then and needs no levels.
+        deferredMips?.let { (image, pixels) ->
+            try {
+                image.createMipMaps(pixels)
+            } catch (e: IllegalStateException) {
+                logcat(LogPriority.DEBUG) { "mipmaps skipped: ${e.message}" }
+            }
+        }
+        // KMK <--
+    }
+
+    /**
+     * Swaps [imagePage] in for [page]'s placeholder, unless the page was evicted or decoded
+     * meanwhile - then it is cleaned up and this returns false.
+     */
+    private fun installImage(page: ViewerReaderPage, imagePage: ImagePage): Boolean = synchronized(lock) {
+        if (pageInCache(page) && !page.isDecoded && !page.imagePage.destroyed) {
+            val oldImagePage = page.imagePage
+            page.imagePage = imagePage
+            // KMK -->
+            page.page.markDisplayed()
+            // KMK <--
+            noteIfLone(page)
+            page.state = PageState.IDLE
+            cleanupImage(oldImagePage)
+            // Fade up from the placeholder's colour, if that placeholder was on screen -
+            // one that decoded out of view has nothing left to fade from.
+            if (oldImagePage.isOnScreen) imagePage.fadeIn()
+            if (!isDualPageMode()) {
+                (page.imagePage as? ImagePage.ImageSingle)?.let {
+                    if (!applyWideZoomIfNeeded(it)) {
+                        applyFitModeAnchor(it)
+                    }
+                }
+            }
+            pager.state.invalidate()
+            true
+        } else {
+            if (pageInCache(page)) page.state = PageState.IDLE
+            imagePage.cleanup()
+            false
+        }
+    }
+
+    // KMK -->
+    /**
+     * Whether a page may show its top rows before the rest have decoded. Not while the reader
+     * crops borders - the crop needs the whole page and would move it once found - and not where
+     * a dual-page read needs the file's spread tag before anything decodes.
+     */
+    private fun rowsAllowed(): Boolean =
+        (isContinuous || config.dualPageView == ReaderPreferences.DualPageView.NEVER) &&
+            !(config.imageCropBorders && !isDualPageMode())
+
+    /**
+     * Decodes [rows] top first, the page on screen from its first strip and filled in as the rest
+     * decode. [fromDownload] means the rows wait on a download: then a failure hands the page back
+     * to its placeholder for the finished file to decode, where one from a file on disk is the
+     * page's decode error.
+     *
+     * The page draws without the tile cache until complete, which a strip landing would otherwise
+     * re-cut every time; the background probe and smaller levels wait for the last row.
+     */
+    private suspend fun decodeRows(page: ViewerReaderPage, rows: RowDecoder, fromDownload: Boolean) {
+        val width = rows.width
+        val height = rows.height
+        val strip = (ROW_STRIP_BYTES / (width * 4)).coerceAtLeast(16)
+
+        // Turned on its side it cannot fill from the top, so it decodes whole and builds as ever.
+        if (config.dualPageRotateToFit && width > height) {
+            while (!rows.isComplete) {
+                if (!synchronized(lock) { pageInCache(page) && !page.isDecoded }) return
+                rows.decodeRows(strip)
+            }
+            val background = if (config.automaticBackground) null else readerBackgroundColor()
+            val (single, deferred) = buildSingle(page, rows.image, width, height, false, 0f, null, background)
+            if (installImage(page, single)) deferred?.let { (image, pixels) -> buildMipsQuietly(image, pixels) }
+            return
+        }
+
+        rows.decodeRows(strip)
+        if (!synchronized(lock) { pageInCache(page) && !page.isDecoded }) return
+
+        val image = Image(
+            rows.image,
+            width,
+            height,
+            createMipMaps = false,
+            backgroundColor = readerBackgroundColor(),
+            validRows = rows.rowsDecoded,
+        )
+        applySplitTrim(page, image)
+        val single = ImagePage.ImageSingle(image).apply { highQuality = false }
+        if (!installImage(page, single)) return
+
+        fun stillShown() = synchronized(lock) { pageInCache(page) && page.imagePage === single && !single.destroyed }
+
+        try {
+            var uploaded = rows.rowsDecoded
+            var lastUpdate = System.nanoTime()
+            while (!rows.isComplete) {
+                if (!stillShown()) return
+                rows.decodeRows(strip)
+                val now = System.nanoTime()
+                if (rows.isComplete || now - lastUpdate >= ROW_UPDATE_NS) {
+                    if (!image.update(rows.image, Rect(0, uploaded, width, rows.rowsDecoded))) return
+                    uploaded = rows.rowsDecoded
+                    lastUpdate = now
+                    pager.state.invalidate()
+                }
+            }
+
+            if (config.automaticBackground) image.measure(rows.image)
+            image.createMipMaps(rows.image)
+            single.highQuality = true
+            pager.state.invalidate()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IllegalStateException) {
+            // createMipMaps, when an eviction cleaned the image up under it.
+            logcat(LogPriority.DEBUG) { "rows abandoned: ${e.message}" }
+        } catch (e: Exception) {
+            if (!fromDownload) throw e
+            logcat(LogPriority.WARN, e) { "decoding a page as it downloads failed; waiting for the file" }
+            synchronized(lock) {
+                if (pageInCache(page) && page.imagePage === single) {
+                    page.imagePage = ProgressPage()
+                    cleanupImage(single)
+                    // Ready already went by while the partial page stood in, so nothing else
+                    // will queue the decode.
+                    if (page.page.status == Page.State.Ready) {
+                        page.state = PageState.IDLE
+                        queueForDecode(page, prioritize = currentPage === page)
+                    } else {
+                        page.state = PageState.LOADING
+                    }
+                    page.imagePage.invalidate()
+                }
+            }
+        }
+    }
+
+    private suspend fun buildMipsQuietly(image: Image, pixels: java.nio.ByteBuffer) {
+        try {
+            image.createMipMaps(pixels)
+        } catch (e: IllegalStateException) {
+            logcat(LogPriority.DEBUG) { "mipmaps skipped: ${e.message}" }
+        }
+    }
+
+    /**
+     * Starts decoding [page] from [bytes] while they download, off the decode workers: this waits
+     * on the network, and those are for pages whose files are in.
+     */
+    private fun decodeWhileDownloading(page: ViewerReaderPage, bytes: PageBytes) {
+        if (!rowsAllowed()) return
+        scope.launch(decodeDispatcher) {
+            val unwanted = { destroyed || synchronized(lock) { !pageInCache(page) } }
+            try {
+                bytes.open(unwanted).use { input ->
+                    when (val opened = ImageDecoder.open(input)) {
+                        is ImageDecoder.Opened.Rows -> opened.use { decodeRows(page, it.decoder, fromDownload = true) }
+                        // Needs the whole file anyway: the decode queued once it is Ready does it.
+                        is ImageDecoder.Opened.Whole -> opened.close()
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Before the first rows went up nothing changed; the Ready decode takes over.
+                logcat(LogPriority.DEBUG) { "decode while downloading gave up: ${e.message}" }
+            }
+        }
+    }
+    // KMK <--
+
+    /**
+     * One still image as the page shows it: turned on its side if it is wide and the reader asks,
+     * trimmed if borders are cropped. Returns it with the pixels its smaller levels are built from
+     * once it is on screen, or null when it builds them itself (HDR).
+     */
+    private suspend fun buildSingle(
+        page: ViewerReaderPage,
+        pixelsIn: java.nio.ByteBuffer,
+        width: Int,
+        height: Int,
+        isHdr: Boolean,
+        hdrHeadroom: Float,
+        gainmap: GainmapInput?,
+        backgroundColor: Int?,
+    ): Pair<ImagePage.ImageSingle, Pair<Image, java.nio.ByteBuffer>?> {
+        // A page wider than it is tall reads better turned on its side than shrunk to
+        // fit. A gain map is a second buffer with its own size, so it turns with the
+        // base rather than the page being left flat for carrying one.
+        val gainmapIn = gainmap
+        // The map is spatially aligned with the base, so the two can only turn
+        // together. rotateQuarter needs it packed at channels bytes per pixel; if it
+        // is laid out any other way the page stays as it is, which is what it did
+        // before, rather than turning out of step with its own map.
+        val gainmapTurnable = gainmapIn == null ||
+            gainmapIn.pixels.capacity().toLong() ==
+            gainmapIn.width.toLong() * gainmapIn.height * gainmapIn.channels
+        // 90 degrees is clockwise in the standard viewers, and their invert switch
+        // turns the other way.
+        val clockwise = !config.dualPageRotateToFitInvert
+        val turn = config.dualPageRotateToFit &&
+            width > height &&
+            gainmapTurnable
+        val turned = if (turn) {
+            ImageUtil.rotateQuarter(
+                pixelsIn,
+                width,
+                height,
+                bytesPerPixel = if (isHdr) 8 else 4,
+                clockwise = clockwise,
+            )
+        } else {
+            null
+        }
+        val turnedGainmap = if (turned != null && gainmapIn != null) {
+            GainmapInput(
+                pixels = ImageUtil.rotateQuarter(
+                    gainmapIn.pixels,
+                    gainmapIn.width,
+                    gainmapIn.height,
+                    bytesPerPixel = gainmapIn.channels,
+                    clockwise = clockwise,
+                ),
+                width = gainmapIn.height,
+                height = gainmapIn.width,
+                channels = gainmapIn.channels,
+                gamma = gainmapIn.gamma,
+                minContentBoost = gainmapIn.minContentBoost,
+                maxContentBoost = gainmapIn.maxContentBoost,
+                offsetSdr = gainmapIn.offsetSdr,
+                offsetHdr = gainmapIn.offsetHdr,
+            )
+        } else {
+            gainmapIn
+        }
+
+        // Only trim when not animated and not in dual page mode
+        val trimColors = if (config.imageCropBorders && !isDualPageMode()) {
+            listOf(
+                floatArrayOf(1f, 1f, 1f),
+                floatArrayOf(0f, 0f, 0f),
+            )
+        } else {
+            null
+        }
+
+        val pixels = turned ?: pixelsIn
+        val deferMips = !isHdr && turnedGainmap == null
+        val firstImage = Image(
+            pixels,
+            if (turned != null) height else width,
+            if (turned != null) width else height,
+            createMipMaps = !deferMips,
+            trimColors = trimColors,
+            trimThreshold = 0.15f,
+            backgroundColor = backgroundColor,
+            hdr = isHdr,
+            hdrHeadroom = hdrHeadroom,
+            gainmap = turnedGainmap,
+        )
+
+        // KMK: a page the reader splits keeps its whole image and shows half of it.
+        // The renderer already draws only an image's trim rect, so the two halves are
+        // a crop each rather than two smaller decodes.
+        applySplitTrim(page, firstImage)
+
+        return ImagePage.ImageSingle(firstImage) to if (deferMips) firstImage to pixels else null
+    }
+
+    // The decoder hands the map over unapplied - see ImageDecoder.Gainmap - because how
+    // much of it to use depends on the display, so the viewer applies it.
+    private fun ImageDecoder.DecodeResult.gainmapInput(): GainmapInput? = gainmap?.let {
+        GainmapInput(
+            pixels = it.pixels,
+            width = it.width,
+            height = it.height,
+            channels = it.channels,
+            gamma = it.gamma,
+            minContentBoost = it.minContentBoost,
+            maxContentBoost = it.maxContentBoost,
+            offsetSdr = it.offsetSdr,
+            offsetHdr = it.offsetHdr,
+        )
     }
 
     private fun applyWideZoomIfNeeded(page: ImagePage.ImageSingle): Boolean {
