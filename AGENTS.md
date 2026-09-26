@@ -12,11 +12,11 @@ Komikku is an Android manga reader (min SDK 26, target SDK 36, JVM 17 / Kotlin) 
 
 | Rule | Required behavior |
 |------|-------------------|
-| Remote | Push to **`fork`** (`mKonic/komikku`) only. `origin` is upstream `komikku-app/komikku` and is not ours to push to. |
+| Remote | `origin` is this repository (`mKonic/komikku`); push there. `komikku` (`komikku-app/komikku`) and `mihon` are upstreams to cherry-pick from: fetched without their tags, push disabled. |
 | Branch | A feature branch for anything substantial; small fixes may land on `master`, which is this fork's working branch. |
 | Commit | One-line messages in the form `area: what changed`. No body, no attribution trailers. |
 
-Before `git push`, confirm the remote is `fork` (`git remote -v`).
+Before `git push`, confirm the remote is `origin` (`git remote -v`).
 
 ### Internationalization (strings)
 
