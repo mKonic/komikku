@@ -50,6 +50,21 @@ dependencyResolutionManagement {
             filter { includeModule("ca.mpreg", "webgpuviewer") }
         }
 
+        // KMK --> imagedecoder too (mKonic/imagedecoder-libvips, branch komikku): it decodes a page
+        // top first while it downloads. Released the same way.
+        exclusiveContent {
+            forRepository {
+                ivy("https://github.com/mKonic/imagedecoder-libvips/releases/download") {
+                    patternLayout {
+                        ivy("v[revision]/ivy-[revision].xml")
+                        artifact("v[revision]/[artifact]-[revision].[ext]")
+                    }
+                    metadataSources { ivyDescriptor() }
+                }
+            }
+            filter { includeModule("ca.mpreg", "imagedecoder") }
+        }
+
         // KMK --> volition drives this app's debug build from adb by name (mKonic/volition), released
         // the same way: the AAR and its ivy descriptor as a tag's assets.
         exclusiveContent {
