@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.reader.model
 
 import eu.kanade.tachiyomi.source.model.Page
+import eu.kanade.tachiyomi.ui.reader.loader.PageBytes
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,5 +49,20 @@ open class ReaderPage(
     }
 
     enum class DisplayState { Pending, Displayed, Failed }
+
+    private val _bytes = MutableStateFlow<PageBytes?>(null)
+
+    /**
+     * The image's bytes while they download, for a viewer that decodes as they arrive. Null
+     * outside a download; once [status] is Ready, [stream] reads the finished file instead. Set
+     * only once the response has started, a moment after [status] turns DownloadImage.
+     */
+    val bytesFlow: StateFlow<PageBytes?> = _bytes.asStateFlow()
+
+    var bytes: PageBytes?
+        get() = _bytes.value
+        set(value) {
+            _bytes.value = value
+        }
     // KMK <--
 }

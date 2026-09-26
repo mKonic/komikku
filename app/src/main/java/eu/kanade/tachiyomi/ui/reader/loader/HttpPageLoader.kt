@@ -22,12 +22,18 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.suspendCancellableCoroutine
+import okhttp3.Response
+import okhttp3.ResponseBody
+import okio.Buffer
+import okio.ForwardingSource
+import okio.buffer
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withIOContext
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
 import java.io.IOException
+import java.io.OutputStream
 import java.util.concurrent.PriorityBlockingQueue
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -276,18 +282,67 @@ internal class HttpPageLoader(
      */
     private suspend fun downloadImage(page: ReaderPage, imageUrl: String) {
         val response = source.getImage(page, dataSaver)
-        when (val result = parallelDownloader?.fetch(response, page) ?: ParallelImageDownloader.Result.Declined) {
-            is ParallelImageDownloader.Result.Success ->
-                try {
-                    chapterCache.putImageToCache(imageUrl, result.file)
-                } finally {
-                    result.file.delete()
-                }
-            ParallelImageDownloader.Result.Declined ->
-                chapterCache.putImageToCache(imageUrl, response)
-            ParallelImageDownloader.Result.Failed ->
-                chapterCache.putImageToCache(imageUrl, source.getImage(page, dataSaver))
+        val length = response.body.contentLength()
+        // A viewer can decode the top of the page while the rest downloads, from these.
+        val bytes = if (length <= PageBytes.MAX_LENGTH) PageBytes(length) else null
+        page.bytes = bytes
+        try {
+            when (
+                val result = parallelDownloader?.fetch(response, page, bytes)
+                    ?: ParallelImageDownloader.Result.Declined
+            ) {
+                is ParallelImageDownloader.Result.Success ->
+                    try {
+                        chapterCache.putImageToCache(imageUrl, result.file)
+                    } finally {
+                        result.file.delete()
+                    }
+                ParallelImageDownloader.Result.Declined ->
+                    chapterCache.putImageToCache(imageUrl, response.teeTo(bytes))
+                // The refetch writes the same bytes at the same offsets, so readers carry on.
+                ParallelImageDownloader.Result.Failed ->
+                    chapterCache.putImageToCache(imageUrl, source.getImage(page, dataSaver).teeTo(bytes))
+            }
+            bytes?.complete()
+        } catch (e: Throwable) {
+            bytes?.fail(e)
+            throw e
+        } finally {
+            page.bytes = null
         }
+    }
+
+    /** This response, with every byte read from its body also written, in order, to [bytes]. */
+    private fun Response.teeTo(bytes: PageBytes?): Response {
+        if (bytes == null) return this
+        val body = body
+        val out = object : OutputStream() {
+            private var position = 0L
+
+            override fun write(b: Int) = write(byteArrayOf(b.toByte()), 0, 1)
+
+            override fun write(b: ByteArray, off: Int, len: Int) {
+                bytes.write(position, b, off, len)
+                position += len
+            }
+        }
+        val teed = object : ForwardingSource(body.source()) {
+            override fun read(sink: Buffer, byteCount: Long): Long {
+                val read = super.read(sink, byteCount)
+                if (read > 0) sink.copyTo(out, sink.size - read, read)
+                return read
+            }
+        }.buffer()
+        return newBuilder()
+            .body(
+                object : ResponseBody() {
+                    override fun contentType() = body.contentType()
+                    override fun contentLength() = body.contentLength()
+                    override fun source() = teed
+                    override fun close() = body.close()
+                },
+            )
+            .build()
     }
     // KMK <--
 

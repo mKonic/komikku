@@ -72,7 +72,8 @@ internal class ParallelImageDownloader(
         }
     }
 
-    suspend fun fetch(response: Response, page: Page): Result {
+    /** [bytes], when given, receives every chunk at its offset as it lands. */
+    suspend fun fetch(response: Response, page: Page, bytes: PageBytes? = null): Result {
         val contentLength = response.body.contentLength()
         if (!supportsRanges(response, contentLength)) return Result.Declined
 
@@ -91,9 +92,9 @@ internal class ParallelImageDownloader(
                 chunks.mapIndexed { index, range ->
                     async(Dispatchers.IO) {
                         if (index == 0) {
-                            writeChunk(firstChunkSource(response), file, range, downloaded, contentLength, page)
+                            writeChunk(firstChunkSource(response), file, range, downloaded, contentLength, page, bytes)
                         } else {
-                            fetchChunk(response, file, range, downloaded, contentLength, page)
+                            fetchChunk(response, file, range, downloaded, contentLength, page, bytes)
                         }
                     }
                 }.awaitAll()
@@ -161,6 +162,7 @@ internal class ParallelImageDownloader(
         downloaded: AtomicLong,
         contentLength: Long,
         page: Page,
+        bytes: PageBytes?,
     ) {
         // Reuse the request that produced the original response so per-request headers the
         // extension set -- auth, referer, one-shot tokens -- carry over unchanged.
@@ -181,7 +183,7 @@ internal class ParallelImageDownloader(
                     )
             }
             withContext(Dispatchers.IO) {
-                writeChunk(chunkResponse.body.source(), file, range, downloaded, contentLength, page)
+                writeChunk(chunkResponse.body.source(), file, range, downloaded, contentLength, page, bytes)
             }
         }
     }
@@ -197,9 +199,11 @@ internal class ParallelImageDownloader(
         downloaded: AtomicLong,
         contentLength: Long,
         page: Page,
+        bytes: PageBytes?,
     ) {
         RandomAccessFile(file, "rw").use { out ->
             out.seek(range.first)
+            var position = range.first
 
             val buffer = ByteArray(BUFFER_SIZE)
             var remaining = range.last - range.first + 1
@@ -207,6 +211,8 @@ internal class ParallelImageDownloader(
                 val read = source.read(buffer, 0, minOf(remaining, BUFFER_SIZE.toLong()).toInt())
                 if (read == -1) throw IOException("Stream ended $remaining bytes short of the requested range")
                 out.write(buffer, 0, read)
+                bytes?.write(position, buffer, 0, read)
+                position += read
                 remaining -= read
                 page.update(downloaded.addAndGet(read.toLong()), contentLength, false)
             }
