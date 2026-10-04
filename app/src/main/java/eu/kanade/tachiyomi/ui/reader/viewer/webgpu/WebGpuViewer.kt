@@ -429,15 +429,17 @@ open class WebGpuViewer(
     /**
      * Evicts the page farthest from reference. Must be called while holding lock.
      *
-     * Never evicts [reference], [currentPage] or what [pinnedFromPage] draws. Returns false when
-     * nothing was evictable, so a trim loop stops instead of spinning.
+     * Never evicts [reference], [keep], [currentPage] or what [pinnedFromPage] draws. Returns false
+     * when nothing was evictable, so a trim loop stops instead of spinning.
      *
      * @param reference The page to use as reference (defaults to currentPage)
+     * @param keep A page about to be handed out: evicted, it would be drawn destroyed.
      */
-    private fun evictFarthestPage(reference: ViewerPage? = null): Boolean {
+    private fun evictFarthestPage(reference: ViewerPage? = null, keep: ViewerPage? = null): Boolean {
         val current = reference ?: currentPage ?: return false
-        val candidates =
-            pageCache.values.filter { it !== current && it !== currentPage && !isPinned(it) }.toMutableSet()
+        val candidates = pageCache.values
+            .filter { it !== current && it !== keep && it !== currentPage && !isPinned(it) }
+            .toMutableSet()
         if (candidates.isEmpty()) return false
 
         // Read once - the getter measures the viewport.
@@ -537,7 +539,7 @@ open class WebGpuViewer(
                 pageCache[key] = newPage
                 val limit = cacheSize
                 while (pageCache.size > limit) {
-                    if (!evictFarthestPage(referencePage ?: newPage)) break
+                    if (!evictFarthestPage(referencePage ?: newPage, keep = newPage)) break
                 }
             }
         }
@@ -554,7 +556,7 @@ open class WebGpuViewer(
                 pageCache[key] = newPage
                 val limit = cacheSize
                 while (pageCache.size > limit) {
-                    if (!evictFarthestPage(referencePage ?: newPage)) break
+                    if (!evictFarthestPage(referencePage ?: newPage, keep = newPage)) break
                 }
             }
         }
