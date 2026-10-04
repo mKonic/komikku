@@ -14,6 +14,32 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 ### Added
 - Sponsor button on the More screen, linking to Ko-fi.
 
+### Improved
+- Animated pages under the high quality renderer hold two frames in GPU memory however long the animation is,
+  decoding each frame as it comes due, and pause while off screen.
+- Border cropping now works in the long strip modes under the high quality renderer: each page is cut to its
+  content and the next one follows straight after.
+
+### Fixed
+- Under the high quality renderer, transition animation, cutout handling, double tap and pinch zoom, the long strip
+  width, the zoom out lock and the page gap only took effect after a reader setting was changed (since v1.11.1).
+- Long strip modes under the high quality renderer read the paged reader's border crop, tap navigation and tap
+  inversion settings instead of their own.
+- In a right-to-left book under the high quality renderer, auto scroll and Ctrl+arrow keys went backwards.
+- Under the high quality renderer, a page could be dropped from the cache as it was created and shown blank.
+- Opening a chapter from a notification or link failed when the scanlator filter hid it.
+- "Skip duplicate chapters" merged every chapter without a number, such as one-shots in a merged entry, into one.
+- Restoring a backup counted reading time more than once for a chapter listed twice, and overlapping reader saves
+  could count a session twice.
+- Restoring a backup over an existing track paired the backup's remote entry with the stored one's title and link.
+- Global search and recommendations could drop a source's results when several finished at once.
+- Entries tracked with a tracker that sets no remote id were all marked as duplicates of each other.
+- Tapping around the buttons in tracker search changed the selected result.
+- The chapter header showed a missing chapter count with missing chapter indicators hidden.
+- Download error notifications kept the first one's time and the previous warning's text.
+- The webtoon reader left a gap after zooming in a resized window.
+- An entry's categories and the updates list could come back out of order.
+
 ## [v1.11.1] - 2026-09-26
 ### Improved
 - Opening the reader with the high quality renderer no longer decodes its first pages twice. Each reader setting's
