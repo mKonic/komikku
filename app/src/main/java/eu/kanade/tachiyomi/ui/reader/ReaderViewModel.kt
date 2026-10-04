@@ -300,11 +300,18 @@ class ReaderViewModel @JvmOverloads constructor(
         // KMK <--
 
         // SY -->
-        val (chapters, mangaMap) = if (manga.source == MERGED_SOURCE_ID) {
+        val (filtered, mangaMap) = if (manga.source == MERGED_SOURCE_ID) {
             getMergedChaptersByMangaId.await(manga.id, applyFilter = true) to
                 state.value.mergedManga
         } else {
             getChaptersByMangaId.await(manga.id, applyFilter = true) to null
+        }
+        // A chapter opened directly (a deep link, a notification) still opens when the
+        // scanlator filter left it out.
+        val chapters = if (filtered.any { it.id == chapterId }) {
+            filtered
+        } else {
+            filtered + unfilteredChapterList.filter { it.id == chapterId }
         }
         fun isChapterDownloaded(chapter: Chapter): Boolean {
             val chapterManga = mangaMap?.get(chapter.mangaId) ?: manga
