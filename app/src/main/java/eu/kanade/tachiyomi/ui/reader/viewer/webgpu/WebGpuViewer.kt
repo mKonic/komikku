@@ -127,12 +127,12 @@ open class WebGpuViewer(
     // KMK -->
     @ColorInt private val seedColor: Int? = null,
     // KMK <--
-) : Viewer {
-
-    open val isContinuous: Boolean = false
-
+    // KMK: constructor values, not overridden properties - a subclass's own fields are still unset
+    // while this constructor builds the config, which reads both.
+    val isContinuous: Boolean = false,
     /** Whether a continuous strip leaves a gap between pages; false for a paged viewer. */
-    open val useGap: Boolean = false
+    val useGap: Boolean = false,
+) : Viewer {
 
     // KMK --> komikku resolves dependencies through Injekt
     val readerPreferences by lazy { Injekt.get<ReaderPreferences>() }
