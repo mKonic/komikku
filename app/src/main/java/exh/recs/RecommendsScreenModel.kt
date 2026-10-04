@@ -128,10 +128,11 @@ open class RecommendsScreenModel(
     }
 
     private fun updateItem(source: RecommendationPagingSource, result: RecommendationItemResult) {
-        val newItems = state.value.items.mutate {
-            it[source] = result
+        // In the update: sources finish in parallel, and a result added to a stale map is lost.
+        mutableState.update {
+            val items = it.items.mutate { map -> map[source] = result }
+            it.copy(items = items.toSortedMap(sortComparator(items)).toPersistentMap())
         }
-        updateItems(newItems)
     }
 
     @Immutable
