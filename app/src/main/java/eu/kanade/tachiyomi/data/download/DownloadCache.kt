@@ -92,6 +92,8 @@ class DownloadCache(
     /**
      * The last time the cache was refreshed.
      */
+    // KMK: written by the disk read and renewals on IO threads, read by callers on any thread.
+    @Volatile
     private var lastRenew = 0L
     private var renewalJob: Job? = null
 
@@ -404,9 +406,11 @@ class DownloadCache(
         forced: Boolean = false,
     ) {
         // Avoid renewing cache if in the process nor too often
-        if (lastRenew + renewInterval >= System.currentTimeMillis() ||
-            // KMK -->
-            renewInterval < 0L ||
+        // KMK --> a forced renewal skips the time check: the disk read can set [lastRenew] between a
+        // caller's reset to 0 and this check, and in the same millisecond that read the reset as
+        // a fresh cache, dropping the scan the caller asked for.
+        val tooSoon = !forced && (lastRenew + renewInterval >= System.currentTimeMillis() || renewInterval < 0L)
+        if (tooSoon ||
             // KMK <--
             renewalJob?.isActive == true
         ) {

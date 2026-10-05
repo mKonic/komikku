@@ -39,6 +39,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Download error notifications kept the first one's time and the previous warning's text.
 - The webtoon reader left a gap after zooming in a resized window.
 - An entry's categories and the updates list could come back out of order.
+- Refreshing the download index right as the app started could skip the rescan and keep the stale index.
 
 ## [v1.11.1] - 2026-09-26
 ### Improved
