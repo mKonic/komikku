@@ -30,3 +30,6 @@ app/standard/preview/*
 
 # The app and aliases the volition CLI drives here - per checkout, not per project.
 /.volition
+
+# My bookkeeping
+/PLAN.md
