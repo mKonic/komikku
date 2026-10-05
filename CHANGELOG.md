@@ -10,6 +10,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [Unreleased]
+### Fixed
+- A fresh install no longer opens the "what's new" dialog as if it had just been updated.
+
 ## [v1.12.0] - 2026-10-05
 ### Added
 - Sponsor button on the More screen, linking to Ko-fi.
