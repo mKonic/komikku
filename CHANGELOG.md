@@ -11,8 +11,22 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Improved
+- Lists showing the same cover on several rows, like Updates, load it once instead of once per row.
+- Download progress no longer polls every queued chapter while waiting for its page list.
+- Settings search also finds settings by the heading of the group they are in.
+
 ### Fixed
 - A fresh install no longer opens the "what's new" dialog as if it had just been updated.
+- Under the high quality renderer, every page of a CBZ or other archive failed to load in the paged modes
+  (since v1.11.0).
+- Under the high quality renderer, closing the reader after a page failed to load kept the reader in memory.
+- Restoring a backup lost the names of sources that are not installed, so later backups and the restore warning
+  showed them by number.
+- A damaged compiled copy of the app could make it crash on every launch until the next update (before Android 17).
+- Selecting a range in the library crashed when the last selected entry was in another category.
+- Restoring the app after it was closed in the background could crash with "Key ... was used multiple times".
+- Adding a tracker to an entry with reading history could set the start date a day off, depending on the timezone.
 
 ## [v1.12.0] - 2026-10-05
 ### Added
