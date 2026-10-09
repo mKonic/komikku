@@ -10,7 +10,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
-## [Unreleased]
+## [v1.13.0] - 2026-10-09
 ### Improved
 - Lists showing the same cover on several rows, like Updates, load it once instead of once per row.
 - Download progress no longer polls every queued chapter while waiting for its page list.
