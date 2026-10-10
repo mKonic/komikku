@@ -105,25 +105,26 @@ class SyncChaptersWithSource(
         // to a higher value than newer chapters
         var maxSeenUploadDate = 0L
 
-        for (sourceChapter in sourceChapters) {
-            var chapter = sourceChapter
-
-            // Update metadata from source if necessary.
-            if (source is HttpSource) {
+        // Update metadata from source if necessary.
+        val preparedChapters = if (source is HttpSource) {
+            val sManga = manga.toSManga()
+            sourceChapters.map { chapter ->
                 val sChapter = chapter.toSChapter()
                 @Suppress("DEPRECATION")
-                source.prepareNewChapter(sChapter, manga.toSManga())
-                chapter = chapter.copyFromSChapter(sChapter)
+                source.prepareNewChapter(sChapter, sManga)
+                chapter.copyFromSChapter(sChapter)
+            }
+        } else {
+            sourceChapters
+        }
+
+        // Recognize chapter numbers, from the whole list since names alone don't always tell.
+        val recognizedChapters = preparedChapters
+            .zip(ChapterRecognition.parseChapterNumbers(manga.title, preparedChapters)) { chapter, numbering ->
+                chapter.copy(chapterNumber = numbering.chapter?.let(ChapterRecognition::toDouble) ?: -1.0)
             }
 
-            // Recognize chapter number for the chapter.
-            val chapterNumber = ChapterRecognition.parseChapterNumber(
-                manga.title,
-                chapter.name,
-                chapter.chapterNumber,
-            )
-            chapter = chapter.copy(chapterNumber = chapterNumber)
-
+        for (chapter in recognizedChapters) {
             val dbChapter = dbChapters.find { it.url == chapter.url }
 
             if (dbChapter == null) {
@@ -131,7 +132,7 @@ class SyncChaptersWithSource(
                     val altDateUpload = if (maxSeenUploadDate == 0L) nowMillis else maxSeenUploadDate
                     chapter.copy(dateUpload = altDateUpload)
                 } else {
-                    maxSeenUploadDate = max(maxSeenUploadDate, sourceChapter.dateUpload)
+                    maxSeenUploadDate = max(maxSeenUploadDate, chapter.dateUpload)
                     chapter
                 }
                 newChapters.add(toAddChapter)
