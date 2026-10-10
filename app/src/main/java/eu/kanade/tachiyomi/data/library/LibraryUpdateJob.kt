@@ -246,6 +246,8 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                 .filter {
                     it.manga.id in targetMangaIds &&
                         when {
+                            // Entries added without opening them have no details yet
+                            !it.manga.initialized -> true
                             // Apply update restrictions even for targeted updates
                             it.manga.updateStrategy == UpdateStrategy.ONLY_FETCH_ONCE && it.totalChapters > 0L -> false
                             // Skip other restrictions for targeted updates to allow forced refresh
@@ -323,6 +325,9 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
             // SY <--
             .filter {
                 when {
+                    // Entries added without opening them have no details yet
+                    !it.manga.initialized -> true
+
                     it.manga.updateStrategy == UpdateStrategy.ONLY_FETCH_ONCE && it.totalChapters > 0L -> {
                         skippedUpdates.add(
                             it.manga to
@@ -546,7 +551,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
         val update = updateMangaFromRemote(
             source = source,
             manga = manga,
-            fetchDetails = libraryPreferences.autoUpdateMetadata().get(),
+            fetchDetails = !manga.initialized || libraryPreferences.autoUpdateMetadata().get(),
             fetchChapters = true,
             fetchWindow = fetchWindow,
         )
