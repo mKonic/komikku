@@ -195,7 +195,7 @@ class ReaderViewModel @JvmOverloads constructor(
     fun handleDownloadAction(chapter: Chapter, action: ChapterDownloadAction) {
         when (action) {
             ChapterDownloadAction.START -> downloadChapter(chapter)
-            ChapterDownloadAction.START_NOW -> downloadManager.startDownloadNow(chapter.id)
+            ChapterDownloadAction.START_NOW -> viewModelScope.launch { downloadManager.startDownloadNow(chapter.id) }
             ChapterDownloadAction.CANCEL -> cancelDownload(chapter.id)
             ChapterDownloadAction.DELETE -> deleteChapter(chapter)
         }
