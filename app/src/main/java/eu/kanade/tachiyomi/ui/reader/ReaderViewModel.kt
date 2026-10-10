@@ -841,20 +841,31 @@ class ReaderViewModel @JvmOverloads constructor(
         // If chapter is completely read, no need to download it
         chapterToDownload = null
 
-        if (chapterToDelete != null) {
-            enqueueDeleteReadChapters(chapterToDelete)
-        }
+        if (chapterToDelete == null || !chapterToDelete.chapter.read) return
+        enqueueDeleteReadChapters(chapterToDelete)
+
+        // KMK --> Slot 0 is deleteDupChapterIfNeeded's. Further back, the duplicates marked read along with
+        // chapterToDelete may not be in the filtered chapterList at all (mihonapp/mihon#3030)
+        if (removeAfterReadSlots == 0) return
+        val markDuplicateAsRead = libraryPreferences.markDuplicateReadChapterAsRead().get()
+            .contains(LibraryPreferences.MARK_DUPLICATE_CHAPTER_READ_EXISTING)
+        if (!markDuplicateAsRead) return
+        unfilteredChapterList
+            .filter {
+                it.id != chapterToDelete.chapter.id &&
+                    it.isRecognizedNumber &&
+                    it.chapterNumber.toFloat() == chapterToDelete.chapter.chapter_number
+            }
+            // The list is loaded once, before these were marked read along with chapterToDelete
+            .forEach { enqueueDeleteReadChapters(ReaderChapter(it.copy(read = true))) }
+        // KMK <--
     }
 
     // KMK -->
     /**
      * Deletes duplicate chapters when `removeAfterReadSlots` = "Last read chapter" (0).
      *
-     * Ignore the case where `removeAfterReadSlots` > 0 while `skipDupe` = true as we don't know
-     * where the chapters to be deleted are in the filtered [chapterList].
-     *
-     * For the case where `skipDupe` = false, chapters at should be deleted normally by [deleteChapterIfNeeded]
-     * based on the `removeAfterReadSlots` offset while the user is reading sequentially.
+     * Duplicates further back are deleted along with the chapter at that offset by [deleteChapterIfNeeded].
      */
     private fun deleteDupChapterIfNeeded(chapterToDelete: ReaderChapter) {
         val removeAfterReadSlots = downloadPreferences.removeAfterReadSlots().get()
