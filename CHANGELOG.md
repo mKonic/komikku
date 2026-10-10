@@ -10,6 +10,23 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [Unreleased]
+### Improved
+- Chapter numbers are recognized from the whole chapter list: a number every chapter name shares (like a group
+  number) is no longer taken as the chapter number, volumes and seasons are no longer read as chapter numbers, and
+  chapters without a number are numbered from the chapters around them.
+- Starting a download right away no longer reads the database on the main thread.
+
+### Fixed
+- Downloading new chapters after a refresh cleared the chapters selected on the entry screen.
+- An entry with a blank title was listed as a duplicate of every library entry.
+- A download stopped just after it finished was downloaded again, leaving a second copy next to it.
+- Entries added to the library without being opened never got their details from a library update, and were
+  marked as having them.
+- The downloads index could be left half written if the app was killed while saving it.
+- Delete after read left the downloads of duplicate chapters marked read along with an older chapter.
+- Kitsu and Shikimori could refresh an expired login twice when several requests found it expired at once.
+
 ## [v1.13.0] - 2026-10-09
 ### Improved
 - Lists showing the same cover on several rows, like Updates, load it once instead of once per row.
