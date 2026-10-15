@@ -82,6 +82,7 @@ class UpdateMangaFromRemote(
         fetchChapters: Boolean = false,
         manualFetch: Boolean = false,
         fetchWindow: Pair<Long, Long> = Pair(0, 0),
+        siblingReadChapterNumbers: Set<Double> = emptySet(),
         // SY -->
         throttleFunc: suspend () -> Unit = {},
         // SY <--
@@ -124,6 +125,7 @@ class UpdateMangaFromRemote(
                         source = source,
                         manualFetch = manualFetch,
                         fetchWindow = fetchWindow,
+                        siblingReadChapterNumbers = siblingReadChapterNumbers,
                     )
                 }
                 val updatedManga = mangaRepository.getMangaById(manga.id)
@@ -191,7 +193,7 @@ class UpdateMangaFromRemote(
                 memo = remoteManga.memo,
             ),
         )
-        if (success && title != null) {
+        if (success && title != null && !localManga.isLocal()) {
             downloadManager.renameManga(localManga, title)
         }
         return success

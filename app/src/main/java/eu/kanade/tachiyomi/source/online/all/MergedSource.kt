@@ -20,7 +20,9 @@ import mihon.domain.chapter.interactor.FilterChaptersForDownload
 import mihon.domain.source.interactor.UpdateMangaFromRemote
 import okhttp3.Response
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.interactor.GetMergedReferencesById
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
@@ -37,6 +39,8 @@ class MergedSource : HttpSource() {
     private val sourceManager: SourceManager by injectLazy()
     private val downloadManager: DownloadManager by injectLazy()
     private val filterChaptersForDownload: FilterChaptersForDownload by injectLazy()
+    private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId by injectLazy()
+    private val libraryPreferences: LibraryPreferences by injectLazy()
 
     override val id: Long = MERGED_SOURCE_ID
 
@@ -102,6 +106,17 @@ class MergedSource : HttpSource() {
             "Manga references are empty, chapters unavailable, merge is likely corrupted"
         }
 
+        val siblingReadChapterNumbers = if (
+            LibraryPreferences.MARK_DUPLICATE_CHAPTER_READ_NEW in libraryPreferences.markDuplicateReadChapterAsRead().get()
+        ) {
+            getMergedChaptersByMangaId.await(manga.id, dedupe = false, applyFilter = false)
+                .mapNotNullTo(mutableSetOf()) { chapter ->
+                    if (chapter.read && chapter.isRecognizedNumber) chapter.chapterNumber else null
+                }
+        } else {
+            emptySet()
+        }
+
         val semaphore = Semaphore(5)
         var exception: Exception? = null
         return supervisorScope {
@@ -119,6 +134,7 @@ class MergedSource : HttpSource() {
                                             source = source,
                                             manga = loadedManga,
                                             fetchChapters = true,
+                                            siblingReadChapterNumbers = siblingReadChapterNumbers,
                                         ).getOrThrow().newChapters
 
                                         if (downloadChapters && reference.downloadChapters) {
