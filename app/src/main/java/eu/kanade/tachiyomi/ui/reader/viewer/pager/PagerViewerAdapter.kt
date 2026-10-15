@@ -40,7 +40,7 @@ class PagerViewerAdapter(
     /**
      * Holds preprocessed items so they don't get removed when changing chapter
      */
-    private var preprocessed: MutableMap<Int, InsertPage> = mutableMapOf()
+    private var preprocessed: List<InsertPage> = emptyList()
 
     var nextTransition: ChapterTransition.Next? = null
         private set
@@ -91,17 +91,15 @@ class PagerViewerAdapter(
 
             val lastPage = pages.last()
 
-            // Insert preprocessed pages into current page list
-            preprocessed.keys.sortedDescending()
-                .forEach { key ->
-                    if (lastPage.index == key) {
-                        insertPageLastPage = preprocessed[key]
+            // Adjacent chapters can share page indices; keep each split with its own chapter.
+            preprocessed.filter { it.chapter.chapter.id == chapters.currChapter.chapter.id }
+                .sortedByDescending { it.index }
+                .forEach { page ->
+                    if (lastPage.index == page.index) {
+                        insertPageLastPage = page
                     }
-                    // A split kept for an adjacent chapter can point past the end of a shorter one.
-                    preprocessed[key]?.let {
-                        if (key + 1 <= pages.size) {
-                            pages.add(key + 1, it)
-                        }
+                    if (page.index + 1 <= pages.size) {
+                        pages.add(page.index + 1, page)
                     }
                 }
 
@@ -127,7 +125,8 @@ class PagerViewerAdapter(
         // Resets double-page splits, else insert pages get misplaced
         subItems.filterIsInstance<InsertPage>().also { subItems.removeAll(it) }
 
-        preprocessed = mutableMapOf()
+        val adjacentChapterIds = setOfNotNull(chapters.prevChapter?.chapter?.id, chapters.nextChapter?.chapter?.id)
+        preprocessed = preprocessed.filter { it.chapter.chapter.id in adjacentChapterIds }
         subItems = newItems.toMutableList()
 
         var useSecondPage = false
@@ -201,9 +200,12 @@ class PagerViewerAdapter(
 
         val currentIndex = joinedItems.indexOfFirst { it.first == currentPage }
 
-        // Put aside preprocessed pages for next chapter so they don't get removed when changing chapter
+        // Keep a split of the adjacent chapter until it becomes current.
         if (currentPage.chapter.chapter.id != currentChapter?.chapter?.id) {
-            preprocessed[newPage.index] = newPage
+            val chapterId = newPage.chapter.chapter.id
+            if (preprocessed.none { it.chapter.chapter.id == chapterId && it.index == newPage.index }) {
+                preprocessed = preprocessed + newPage
+            }
             return
         }
 
