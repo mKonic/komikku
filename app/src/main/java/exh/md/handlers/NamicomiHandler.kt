@@ -1,21 +1,19 @@
 package exh.md.handlers
 
 import eu.kanade.tachiyomi.network.GET
-import eu.kanade.tachiyomi.network.awaitSuccess
+import eu.kanade.tachiyomi.network.HttpException
+import eu.kanade.tachiyomi.network.await
+import eu.kanade.tachiyomi.network.parseAs
 import eu.kanade.tachiyomi.source.model.Page
 import exh.md.dto.NamicomiPageListDto
 import kotlinx.serialization.json.Json
 import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Response
+import uy.kohesive.injekt.injectLazy
 
 class NamicomiHandler(currentClient: OkHttpClient, userAgent: String) {
-    private val json by lazy {
-        Json {
-            encodeDefaults = true
-            ignoreUnknownKeys = true
-        }
-    }
+    private val json by injectLazy<Json>()
 
     private val apiUrl = "https://api.namicomi.com"
 
@@ -32,11 +30,19 @@ class NamicomiHandler(currentClient: OkHttpClient, userAgent: String) {
                 "$apiUrl/images/chapter/$chapterId?newQualities=true",
                 headers,
             )
-        return pageListParse(client.newCall(request).awaitSuccess(), chapterId, dataSaver)
+        val response = client.newCall(request).await()
+        if (!response.isSuccessful) {
+            response.close()
+            throw when (response.code) {
+                402 -> Exception("This chapter requires a purchase on NamiComi")
+                else -> HttpException(response.code)
+            }
+        }
+        return pageListParse(response, chapterId, dataSaver)
     }
 
     private fun pageListParse(response: Response, chapterId: String, dataSaver: Boolean): List<Page> {
-        val data = json.decodeFromString<NamicomiPageListDto>(response.body.string()).data
+        val data = with(json) { response.parseAs<NamicomiPageListDto>() }.data
             ?: throw Exception("error getting images")
 
         /* Available quality levels: source, high, medium, low */

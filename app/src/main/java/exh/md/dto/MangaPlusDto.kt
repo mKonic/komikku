@@ -61,7 +61,7 @@ enum class MangaPlusLanguage(val code: Int, val clang: String) {
 
 fun String.toMangaPlusLanguage(): MangaPlusLanguage = when (this) {
     "en" -> MangaPlusLanguage.ENGLISH
-    "es" -> MangaPlusLanguage.SPANISH
+    "es", "es-419", "es-la" -> MangaPlusLanguage.SPANISH
     "fr" -> MangaPlusLanguage.FRENCH
     "id" -> MangaPlusLanguage.INDONESIAN
     "pt-BR" -> MangaPlusLanguage.PORTUGESE_BR

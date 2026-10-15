@@ -6,6 +6,7 @@ import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import exh.log.xLogD
+import exh.log.xLogE
 import exh.md.dto.AtHomeDto
 import exh.md.service.MangaDexService
 import exh.md.utils.MdApi
@@ -43,7 +44,7 @@ class PageHandler(
                     chapter.scanlator.equals("mangaplus", true) -> mangaPlusHandler.fetchPageList(
                         chapterResponse.data.attributes.externalUrl,
                         dataSaver = dataSaver,
-                        mangadex.lang,
+                        chapterResponse.data.attributes.translatedLanguage,
                     )
                     /*chapter.scanlator.equals("comikey", true) -> comikeyHandler.fetchPageList(
                         chapterResponse.data.attributes.externalUrl
@@ -52,7 +53,8 @@ class PageHandler(
                         chapterResponse.data.attributes.externalUrl,
                         chapterResponse.data.attributes.chapter.toString(),
                     )
-                    chapter.scanlator.equals("azuki manga", true) -> azukiHandler.fetchPageList(
+                    chapter.scanlator.equals("azuki manga", true) ||
+                        azukiHandler.isChapterUrl(chapterResponse.data.attributes.externalUrl) -> azukiHandler.fetchPageList(
                         chapterResponse.data.attributes.externalUrl,
                     )
                     chapter.scanlator.equals("mangahot", true) -> mangaHotHandler.fetchPageList(
@@ -67,7 +69,7 @@ class PageHandler(
                     )
                     chapter.scanlator.equals("Manga UP!", true) -> mangaUpHandler.fetchPageList(
                         chapterResponse.data.attributes.externalUrl,
-                        mangadex.lang,
+                        chapterResponse.data.attributes.translatedLanguage,
                     )
                     else -> throw Exception("${chapter.scanlator} not supported")
                 }
@@ -89,17 +91,21 @@ class PageHandler(
 
     @Suppress("UNCHECKED_CAST")
     private val tokenTracker: HashMap<String, Long>? by lazy {
-        // The helper property now appears in the current class
-        val helperProperty = mangadex::class.declaredMemberProperties.find { it.name == "helper" }
-            ?: mangadex::class.superclasses.first().declaredMemberProperties.find { it.name == "helper" }
-            ?: return@lazy null
-        helperProperty.isAccessible = true
-        val helper = helperProperty.call(mangadex) ?: return@lazy null
+        // Changing extension internals must not prevent pages from loading.
+        runCatching {
+            val helperProperty = mangadex::class.declaredMemberProperties.find { it.name == "helper" }
+                ?: mangadex::class.superclasses.first().declaredMemberProperties.find { it.name == "helper" }
+                ?: return@lazy null
+            helperProperty.isAccessible = true
+            val helper = helperProperty.call(mangadex) ?: return@lazy null
 
-        val tokenTrackerProperty = helper::class.declaredMemberProperties.find { it.name == "tokenTracker" }
-            ?: return@lazy null
-        tokenTrackerProperty.isAccessible = true
-        tokenTrackerProperty.call(helper) as? HashMap<String, Long>
+            val tokenTrackerProperty = helper::class.declaredMemberProperties.find { it.name == "tokenTracker" }
+                ?: return@lazy null
+            tokenTrackerProperty.isAccessible = true
+            tokenTrackerProperty.call(helper) as? HashMap<String, Long>
+        }
+            .onFailure { xLogE("Unable to access the MangaDex extension token tracker", it) }
+            .getOrNull()
     }
 
     private fun updateExtensionVariable(atHomeRequestUrl: String) {
@@ -127,7 +133,7 @@ class PageHandler(
     fun getImageCall(page: Page): Call? {
         xLogD(page.imageUrl)
         return when {
-            page.imageUrl?.contains("tokyo-cdn.com", true) == true -> {
+            mangaPlusHandler.isImageUrl(page.imageUrl) -> {
                 mangaPlusHandler.client.newCachelessCallWithProgress(
                     GET(
                         page.imageUrl!!,
@@ -146,7 +152,7 @@ class PageHandler(
             page.imageUrl?.contains("/bfs/comic/", true) == true -> {
                 bilibiliHandler.client.newCachelessCallWithProgress(GET(page.imageUrl!!, bilibiliHandler.headers), page)
             }
-            page.imageUrl?.contains("azuki", true) == true -> {
+            page.imageUrl?.contains("azuki", true) == true || azukiHandler.isImageUrl(page.imageUrl) -> {
                 azukiHandler.client.newCachelessCallWithProgress(GET(page.imageUrl!!, azukiHandler.headers), page)
             }
             page.imageUrl?.contains("mangahot", true) == true -> {
@@ -155,7 +161,7 @@ class PageHandler(
             page.imageUrl?.contains("namicomi", true) == true -> {
                 namicomiHandler.client.newCachelessCallWithProgress(GET(page.imageUrl!!, namicomiHandler.headers), page)
             }
-            page.imageUrl?.contains("kmanga", true) == true -> {
+            kMangaHandler.isImageUrl(page.imageUrl) -> {
                 kMangaHandler.client.newCachelessCallWithProgress(GET(page.imageUrl!!, kMangaHandler.headers), page)
             }
             page.imageUrl?.contains("manga-up", true) == true -> {

@@ -10,12 +10,13 @@ class MangaUpViewerResponse(
 
 @Serializable
 class MangaUpPageBlock(
+    @ProtoNumber(1) val chapterId: Int? = null,
     @ProtoNumber(3) val pages: List<MangaUpMangaPage>,
 )
 
 @Serializable
 class MangaUpMangaPage(
     @ProtoNumber(1) val url: String,
-    @ProtoNumber(5) val key: String?,
-    @ProtoNumber(6) val iv: String?,
+    @ProtoNumber(5) val key: String? = null,
+    @ProtoNumber(6) val iv: String? = null,
 )

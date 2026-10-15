@@ -11,6 +11,7 @@ import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
@@ -31,6 +32,11 @@ class MangaPlusHandler(currentClient: OkHttpClient) {
         .rateLimitHost(API_URL.toHttpUrl(), 1)
         .rateLimitHost(WEB_URL.toHttpUrl(), 2)
         .build()
+
+    fun isImageUrl(url: String?): Boolean {
+        val host = url?.toHttpUrlOrNull()?.host ?: return false
+        return host == IMAGE_HOST_SUFFIX || host.endsWith(".$IMAGE_HOST_SUFFIX", true)
+    }
 
     suspend fun fetchPageList(chapterId: String, dataSaver: Boolean, lang: String): List<Page> {
         val response = client.newCall(pageListRequest(chapterId.substringAfterLast("/"), dataSaver, lang)).awaitSuccess()
@@ -108,5 +114,6 @@ class MangaPlusHandler(currentClient: OkHttpClient) {
         private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
         private const val API_URL = "https://jumpg-webapi.tokyo-cdn.com/api"
+        private const val IMAGE_HOST_SUFFIX = "tokyo-cdn.com"
     }
 }
