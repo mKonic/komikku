@@ -11,6 +11,8 @@ import eu.kanade.tachiyomi.extension.api.ExtensionUpdateNotifier
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.extension.model.InstallStep
 import eu.kanade.tachiyomi.extension.model.LoadResult
+import eu.kanade.tachiyomi.extension.model.findListing
+import eu.kanade.tachiyomi.extension.model.findUpdate
 import eu.kanade.tachiyomi.extension.util.ExtensionInstallReceiver
 import eu.kanade.tachiyomi.extension.util.ExtensionInstaller
 import eu.kanade.tachiyomi.extension.util.ExtensionLoader
@@ -85,6 +87,9 @@ class ExtensionManager(
 
     private val untrustedExtensionMapFlow = MutableStateFlow(emptyMap<String, Extension.Untrusted>())
     val untrustedExtensionsFlow = untrustedExtensionMapFlow.mapExtensionsOnceInitialized()
+
+    private val failedExtensionMapFlow = MutableStateFlow(emptyMap<String, Extension.Failed>())
+    val failedExtensionsFlow = failedExtensionMapFlow.mapExtensionsOnceInitialized()
 
     init {
         // KMK -->
@@ -163,6 +168,11 @@ class ExtensionManager(
             .filterNotBlacklisted()
         // SY <--
 
+        failedExtensionMapFlow.value = extensions
+            .filterIsInstance<LoadResult.Failed>()
+            .associate { it.extension.pkgName to it.extension }
+            .filterNotBlacklisted()
+
         isInitialized.value = true
     }
 
@@ -205,13 +215,14 @@ class ExtensionManager(
 
         enableAdditionalSubLanguages(extensions)
 
-        availableExtensionMapFlow.value = extensions.associateBy {
-            it.pkgName +
-                // KMK -->
-                "_${it.signatureHash}"
-            // KMK <--
-        }
-        updatedInstalledExtensionsStatuses(extensions)
+        // KMK -->
+        availableExtensionMapFlow.value = extensions
+            .groupBy { "${it.pkgName}_${it.signatureHash}" }
+            .mapValues { (_, listings) ->
+                listings.maxWith(compareBy<Extension.Available> { it.versionCode }.thenBy { it.libVersion })
+            }
+        // KMK <--
+        updatedInstalledExtensionsStatuses(availableExtensionMapFlow.value.values.toList())
         setupAvailableExtensionsSourcesDataMap(extensions)
     }
 
@@ -245,55 +256,23 @@ class ExtensionManager(
         subLanguagesEnabledOnFirstRun = true
     }
 
-    /**
-     * Sets the update field of the installed extensions with the given [availableExtensions].
-     *
-     * @param availableExtensions The list of extensions given by the [api].
-     */
+    /** Updates both loaded extensions and installed APKs whose sources could not load. */
     private fun updatedInstalledExtensionsStatuses(availableExtensions: List<Extension.Available>) {
-        val installedExtensionsMap = installedExtensionMapFlow.value.toMutableMap()
-        var changed = false
-        for ((pkgName, extension) in installedExtensionsMap) {
-            val availableExt = availableExtensions.find {
-                // KMK -->
-                it.signatureHash == extension.signatureHash &&
-                    // KMK <--
-                    it.pkgName == pkgName
-            }
-
-            if (availableExt == null &&
-                (!extension.isObsolete || /* KMK --> */ extension.hasUpdate /* KMK <-- */)
-            ) {
-                // Ext not found: Set isObsolete & clear hasUpdate
-                installedExtensionsMap[pkgName] = extension.copy(
-                    isObsolete = true,
-                    // KMK -->
-                    hasUpdate = false,
-                    // KMK <--
-                )
-                changed = true
-                // SY -->
-            } else if (extension.isBlacklisted() && !extension.isRedundant) {
-                installedExtensionsMap[pkgName] = extension.copy(isRedundant = true)
-                changed = true
-                // SY <--
-            } else if (availableExt != null) {
-                // Ext found: Update installed extensions with new information from repo
-                // Also clear isObsolete and set new repo Name if needed
-                val hasUpdate = extension.updateExists(availableExt)
-                // KMK -->
-                installedExtensionsMap[pkgName] = extension.copy(
-                    hasUpdate = hasUpdate,
-                    store = availableExt.store,
-                    isObsolete = false,
-                    storeName = extension.storeName ?: availableExt.storeName,
-                )
-                // KMK <--
-                changed = true
-            }
+        installedExtensionMapFlow.value = installedExtensionMapFlow.value.mapValues { (_, extension) ->
+            val listing = extension.findListing(availableExtensions)
+            extension.copy(
+                hasUpdate = extension.findUpdate(availableExtensions) != null,
+                isObsolete = listing == null,
+                isRedundant = extension.isRedundant || extension.isBlacklisted(),
+                store = listing?.store ?: extension.store,
+                storeName = extension.storeName ?: listing?.storeName,
+            )
         }
-        if (changed) {
-            installedExtensionMapFlow.value = installedExtensionsMap
+        untrustedExtensionMapFlow.value = untrustedExtensionMapFlow.value.mapValues { (_, extension) ->
+            extension.copy(hasUpdate = extension.findUpdate(availableExtensions) != null)
+        }
+        failedExtensionMapFlow.value = failedExtensionMapFlow.value.mapValues { (_, extension) ->
+            extension.copy(hasUpdate = extension.findUpdate(availableExtensions) != null)
         }
         updatePendingUpdatesCount()
     }
@@ -316,13 +295,8 @@ class ExtensionManager(
      *
      * @param extension The extension to be updated.
      */
-    fun updateExtension(extension: Extension.Installed): Flow<InstallStep> {
-        val availableExt = availableExtensionMapFlow.value[
-            extension.pkgName +
-                // KMK -->
-                "_${extension.signatureHash}",
-            // KMK <--
-        ] ?: return emptyFlow()
+    fun updateExtension(extension: Extension.OnDevice): Flow<InstallStep> {
+        val availableExt = extension.findUpdate(availableExtensionMapFlow.value.values) ?: return emptyFlow()
         // A privately installed extension can only be replaced by the private installer, whatever
         // the user picked in Settings -> Advanced -> Installer (mihonapp/mihon#3614).
         return installer.downloadAndInstall(
@@ -333,12 +307,10 @@ class ExtensionManager(
     }
 
     fun cancelInstallUpdateExtension(extension: Extension) {
-        installer.cancelInstall(
-            extension.pkgName +
-                // KMK -->
-                "_${extension.signatureHash}",
-            // KMK <--
-        )
+        val signature = (extension as? Extension.OnDevice)
+            ?.findUpdate(availableExtensionMapFlow.value.values)
+            ?.signatureHash ?: extension.signatureHash
+        installer.cancelInstall("${extension.pkgName}_$signature")
     }
 
     /**
@@ -374,11 +346,12 @@ class ExtensionManager(
 
         trustExtension.trust(extension.pkgName, extension.versionCode, extension.signatureHash)
 
-        untrustedExtensionMapFlow.value -= extension.pkgName
-
-        ExtensionLoader.loadExtensionFromPkgName(context, extension.pkgName)
-            .let { it as? LoadResult.Success }
-            ?.let { registerNewExtension(it.extension) }
+        when (val result = ExtensionLoader.loadExtensionFromPkgName(context, extension.pkgName)) {
+            is LoadResult.Success -> registerNewExtension(result.extension.withUpdateCheck())
+            is LoadResult.Failed -> registerFailedExtension(result.extension)
+            else -> return
+        }
+        updatePendingUpdatesCount()
     }
 
     /**
@@ -394,7 +367,18 @@ class ExtensionManager(
         }
         // SY <--
 
+        untrustedExtensionMapFlow.value -= extension.pkgName
+        failedExtensionMapFlow.value -= extension.pkgName
         installedExtensionMapFlow.value += extension
+    }
+
+    private fun registerFailedExtension(extension: Extension.Failed) {
+        installedExtensionMapFlow.value -= extension.pkgName
+        untrustedExtensionMapFlow.value -= extension.pkgName
+        if (extension.isBlacklisted()) return
+        failedExtensionMapFlow.value += extension.copy(
+            hasUpdate = extension.findUpdate(availableExtensionMapFlow.value.values) != null,
+        )
     }
 
     /**
@@ -404,14 +388,7 @@ class ExtensionManager(
      * @param extension The extension to be registered.
      */
     private fun registerUpdatedExtension(extension: Extension.Installed) {
-        // SY -->
-        if (extension.isBlacklisted()) {
-            xLogD("Removing blacklisted extension: (name: %s, pkgName: %s)!", extension.name, extension.pkgName)
-            return
-        }
-        // SY <--
-
-        installedExtensionMapFlow.value += extension
+        registerNewExtension(extension)
     }
 
     /**
@@ -423,6 +400,7 @@ class ExtensionManager(
     private fun unregisterExtension(pkgName: String) {
         installedExtensionMapFlow.value -= pkgName
         untrustedExtensionMapFlow.value -= pkgName
+        failedExtensionMapFlow.value -= pkgName
     }
 
     /**
@@ -442,7 +420,17 @@ class ExtensionManager(
 
         override fun onExtensionUntrusted(extension: Extension.Untrusted) {
             installedExtensionMapFlow.value -= extension.pkgName
-            untrustedExtensionMapFlow.value += extension
+            failedExtensionMapFlow.value -= extension.pkgName
+            if (!extension.isBlacklisted()) {
+                untrustedExtensionMapFlow.value += extension.copy(
+                    hasUpdate = extension.findUpdate(availableExtensionMapFlow.value.values) != null,
+                )
+            }
+            updatePendingUpdatesCount()
+        }
+
+        override fun onExtensionFailed(extension: Extension.Failed) {
+            registerFailedExtension(extension)
             updatePendingUpdatesCount()
         }
 
@@ -453,27 +441,13 @@ class ExtensionManager(
         }
     }
 
-    /**
-     * Extension method to set the update field of an installed extension.
-     */
-    private fun Extension.Installed.withUpdateCheck(): Extension.Installed {
-        return if (updateExists()) {
-            copy(hasUpdate = true)
-        } else {
-            this
-        }
-    }
-
-    private fun Extension.Installed.updateExists(availableExtension: Extension.Available? = null): Boolean {
-        val availableExt = availableExtension
-            ?: availableExtensionMapFlow.value[pkgName]
-            ?: return false
-
-        return (availableExt.versionCode > versionCode || availableExt.libVersion > libVersion)
-    }
+    private fun Extension.Installed.withUpdateCheck(): Extension.Installed =
+        copy(hasUpdate = findUpdate(availableExtensionMapFlow.value.values) != null)
 
     private fun updatePendingUpdatesCount() {
-        val pendingUpdateCount = installedExtensionMapFlow.value.values.count { it.hasUpdate }
+        val pendingUpdateCount = installedExtensionMapFlow.value.values.count { it.hasUpdate } +
+            untrustedExtensionMapFlow.value.values.count { it.hasUpdate } +
+            failedExtensionMapFlow.value.values.count { it.hasUpdate }
         preferences.extensionUpdatesCount().set(pendingUpdateCount)
         if (pendingUpdateCount == 0) {
             ExtensionUpdateNotifier(context).dismiss()
