@@ -319,8 +319,7 @@ abstract class PagerViewer(
         // If we don't the size change could put us on a new chapter
         pager.removeOnPageChangeListener(pagerListener)
 
-        val forceTransition = config.alwaysShowChapterTransition ||
-            adapter.joinedItems.getOrNull(pager.currentItem)?.first is ChapterTransition
+        val forceTransition = config.alwaysShowChapterTransition
         adapter.setChapters(chapters, forceTransition)
 
         // Layout the pager once a chapter is being set
