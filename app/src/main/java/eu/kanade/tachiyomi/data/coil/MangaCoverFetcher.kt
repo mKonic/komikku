@@ -97,7 +97,9 @@ class MangaCoverFetcher(
         // diskCacheKey is thumbnail_url
         if (url == null) error("No cover specified")
         return when (getResourceType(url)) {
-            Type.File -> fileLoader(File(url.substringAfter("file://")))
+            Type.File -> fileLoader(
+                if (url.startsWith("file://")) File(url.toUri().path!!) else File(url),
+            )
             Type.URI -> fileUriLoader(url)
             // Requests for the same cover at different sizes or through Manga and MangaCover would each download it
             Type.URL -> concurrentRequests.apply(diskCacheKey) { httpLoader() }
