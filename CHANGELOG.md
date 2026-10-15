@@ -10,7 +10,11 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
-## [Unreleased]
+## [v1.14.0] - 2026-10-15
+### Added
+- Extensions that fail to load are listed under Installed with the reason, and can be updated from their store,
+  which is often what makes them load again.
+
 ### Improved
 - Chapter numbers are recognized from the whole chapter list: a number every chapter name shares (like a group
   number) is no longer taken as the chapter number, volumes and seasons are no longer read as chapter numbers, and
@@ -26,6 +30,30 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - The downloads index could be left half written if the app was killed while saving it.
 - Delete after read left the downloads of duplicate chapters marked read along with an older chapter.
 - Kitsu and Shikimori could refresh an expired login twice when several requests found it expired at once.
+- A chapter refresh that failed partway could leave the chapter list half updated.
+- Opening a link to a chapter the app had not loaded yet could fail to find the chapter.
+- Restoring a backup that listed a chapter twice could lose its read, bookmark or progress state.
+- Chapter numbers could be misread with the device set to a language that writes decimals with a comma, and a chapter
+  name holding "#" could crash number recognition.
+- Sites that put a Cloudflare challenge on a request other than a page load (like a search) were never solved.
+- A source filter or setting whose saved choice no longer exists crashed the screen.
+- Installing several extensions at once could drop some installs, and a device with no install confirmation screen
+  crashed instead of failing the install.
+- Updates were offered from a store signed with a different key than the installed extension, which cannot replace it.
+- An extension store removed while the stores were refreshing came back.
+- Some Samsung devices on Android 9 to 11 crashed at startup.
+- On tablets, the empty area beside the chapter selection actions blocked taps.
+- Local entries whose folder name holds special characters showed no cover.
+- With "mark duplicate chapters read" on, new chapters of a merged entry ignored chapters read in its other entries.
+- In the paged reader, a wide page split near a chapter boundary could be inserted into the wrong chapter.
+- The chapter transition page was shown even with "always show chapter transition" off.
+- Zooming in the long strip with side padding could not pan to the page edges.
+- Tapping the long strip as the reader closed could crash.
+- MangaDex chapters hosted on Omoi (formerly Azuki), MANGA Plus, NamiComi, K Manga and Manga UP! failed to load.
+- Shikimori stopped working after the site moved to shikimori.io.
+- Pages of a chapter being downloaded could show up in gallery apps.
+- Chapter count badges on library covers were cut off at larger font sizes.
+- Deleting a category used in the Updates filter left the filter active with nothing to uncheck.
 
 ## [v1.13.0] - 2026-10-09
 ### Improved
