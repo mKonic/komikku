@@ -10,7 +10,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
-## [Unreleased]
+## [v1.15.0] - 2026-10-19
 ### Added
 - Game controller support in the reader: the bumpers turn pages, X/Y, the triggers and the right stick zoom, the
   left stick pans a zoomed page (and scrolls a long strip), Start opens the menu, Select the chapter list, and B closes
