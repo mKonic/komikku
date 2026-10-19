@@ -13,6 +13,7 @@ import android.view.animation.DecelerateInterpolator
 import androidx.core.animation.doOnEnd
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import eu.kanade.tachiyomi.ui.reader.viewer.GamepadInput
 import eu.kanade.tachiyomi.ui.reader.viewer.GestureDetectorWithLongTap
 import kotlin.math.abs
 
@@ -236,6 +237,41 @@ class WebtoonRecyclerView @JvmOverloads constructor(
         requestLayout()
     }
 
+    // KMK -->
+    /** Whether the strip is zoomed past its resting width, for [GamepadInput]. */
+    fun isZoomedIn(): Boolean = currentScale > DEFAULT_RATE * 1.01f
+
+    /**
+     * One animated zoom step, for [GamepadInput]. Not gated on [pinchToZoom]: that guards against a
+     * stray gesture, and a button press is deliberate - as double tap has its own setting.
+     */
+    fun zoomStep(zoomIn: Boolean) {
+        if (isZooming) return
+        val factor = if (zoomIn) ZOOM_STEP else 1 / ZOOM_STEP
+        val to = (currentScale * factor).coerceIn(minRate, MAX_SCALE_RATE)
+        if (to == currentScale) return
+        isZooming = true
+        ValueAnimator.ofFloat(currentScale, to).apply {
+            duration = ANIMATOR_DURATION_TIME.toLong()
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { scaleTo(it.animatedValue as Float) }
+            doOnEnd { isZooming = false }
+            start()
+        }
+    }
+
+    /** Zooms by [factor] at once, for [GamepadInput]'s held zoom. */
+    fun zoomBy(factor: Float) {
+        if (isZooming) return
+        scaleTo(currentScale * factor)
+    }
+
+    /** Pans by fractions of the view, for [GamepadInput]; positive shows more of the right/bottom. */
+    fun panBy(dx: Float, dy: Float) {
+        zoomScrollBy(-(width * dx).toInt(), -(height * dy).toInt())
+    }
+    // KMK <--
+
     fun onScaleBegin() {
         if (detector.isDoubleTapping) {
             detector.isQuickScaling = true
@@ -381,3 +417,8 @@ private const val ANIMATOR_DURATION_TIME = 200
 private const val MIN_RATE = 0.5f
 private const val DEFAULT_RATE = 1f
 private const val MAX_SCALE_RATE = 3f
+
+// KMK -->
+/** [WebtoonRecyclerView.zoomStep] factor. */
+private const val ZOOM_STEP = 1.25f
+// KMK <--

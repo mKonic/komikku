@@ -618,8 +618,28 @@ class ReaderActivity : BaseActivity() {
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val handled = viewModel.state.value.viewer?.handleKeyEvent(event) ?: false
-        return handled || super.dispatchKeyEvent(event)
+        return handled || /* KMK --> */ handleGamepadButton(event) || /* KMK <-- */ super.dispatchKeyEvent(event)
     }
+
+    // KMK -->
+    /**
+     * A controller's Start toggles the menu, Select opens the chapter list, and B closes the menu
+     * before it goes back. Acting on the release, as the viewers do; both halves are consumed so
+     * Android does not also send the buttons' fallback keys (Select's is MENU, B's is BACK).
+     */
+    private fun handleGamepadButton(event: KeyEvent): Boolean {
+        val action: () -> Unit = when (event.keyCode) {
+            KeyEvent.KEYCODE_BUTTON_START -> ::toggleMenu
+            KeyEvent.KEYCODE_BUTTON_SELECT -> viewModel::openChapterListDialog
+            KeyEvent.KEYCODE_BUTTON_B -> {
+                { if (viewModel.state.value.menuVisible) hideMenu() else onBackPressedDispatcher.onBackPressed() }
+            }
+            else -> return false
+        }
+        if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) action()
+        return true
+    }
+    // KMK <--
 
     /**
      * Dispatches a generic motion event. If the viewer doesn't handle it, call the default

@@ -11,6 +11,7 @@ import android.view.MotionEvent
 import android.view.View
 import androidx.annotation.ColorInt
 import androidx.compose.animation.core.Spring
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceIn
@@ -58,6 +59,8 @@ import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences.TransitionAnimation
+import eu.kanade.tachiyomi.ui.reader.viewer.DPAD_KEYS
+import eu.kanade.tachiyomi.ui.reader.viewer.GamepadInput
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView.ZoomStartPosition
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
@@ -116,6 +119,9 @@ private val decodeWorkers = (Runtime.getRuntime().availableProcessors() / 2).coe
 // up: a strip is about a quarter of a megabyte, and every update is an upload the renderer does.
 private const val ROW_STRIP_BYTES = 256 * 1024
 private const val ROW_UPDATE_NS = 50_000_000L
+
+/** A gamepad zoom step's factor, as the standard viewers'. */
+private const val ZOOM_STEP = 1.25f
 // KMK <--
 // KMK <--
 
@@ -156,6 +162,46 @@ open class WebGpuViewer(
     ).also { cachedOnBackgroundColor = it }
 
     private val scope = MainScope()
+
+    // KMK -->
+    private val gamepad by lazy {
+        GamepadInput(scope, gamepadTarget(), isMenuVisible = { activity.viewModel.state.value.menuVisible })
+    }
+
+    /**
+     * Zoom and pan for [GamepadInput] on the spread showing, through the page's own position: x/y are
+     * fractions of the screen over the scale, larger values showing more of the left/top.
+     */
+    protected open fun gamepadTarget(): GamepadInput.Target = object : GamepadInput.Target {
+        private val page get() = pager.state.getPage(0)
+
+        override fun isZoomedIn() = page?.let { it.scale > it.homeScale * 1.01f } == true
+
+        override fun zoomStep(zoomIn: Boolean) {
+            val page = page ?: return
+            val scale = page.animationTargetScale ?: page.scale
+            page.animateTo(origin = Offset(0.5f, 0.5f), targetScale = scale * if (zoomIn) ZOOM_STEP else 1 / ZOOM_STEP)
+        }
+
+        override fun zoomBy(factor: Float) {
+            val page = page ?: return
+            val scale = (page.scale * factor).fastCoerceIn(page.minScale, page.maxScale)
+            page.setPos(
+                page.x.fastCoerceIn(page.minX(scale), page.maxX(scale)),
+                page.y.fastCoerceIn(page.minY(scale), page.maxY(scale)),
+                scale,
+            )
+        }
+
+        override fun panBy(dx: Float, dy: Float) {
+            val page = page ?: return
+            page.setPos(
+                (page.x - dx / page.scale).fastCoerceIn(page.minX(page.scale), page.maxX(page.scale)),
+                (page.y - dy / page.scale).fastCoerceIn(page.minY(page.scale), page.maxY(page.scale)),
+            )
+        }
+    }
+    // KMK <--
 
     // KMK -->
     /** Draws the reader's own views for the pages that are not images - see [WebGpuPageViews]. */
@@ -2589,6 +2635,9 @@ open class WebGpuViewer(
     override fun handleKeyEvent(event: KeyEvent): Boolean {
         val isUp = event.action == KeyEvent.ACTION_UP
         val ctrlPressed = event.metaState.and(KeyEvent.META_CTRL_ON) > 0
+        // KMK --> with the menu open, the D-pad moves focus between its buttons (a controller's A clicks).
+        if (activity.viewModel.state.value.menuVisible && event.keyCode in DPAD_KEYS) return false
+        // KMK <--
         when (event.keyCode) {
             KeyEvent.KEYCODE_VOLUME_DOWN -> {
                 if (!config.volumeKeysEnabled || activity.viewModel.state.value.menuVisible) {
@@ -2613,7 +2662,11 @@ open class WebGpuViewer(
             KeyEvent.KEYCODE_PAGE_DOWN -> if (isUp) moveDown()
             KeyEvent.KEYCODE_PAGE_UP -> if (isUp) moveUp()
             KeyEvent.KEYCODE_MENU -> if (isUp) activity.toggleMenu()
-            else -> return false
+            // KMK --> one page left/right without panning first; a strip scrolls instead.
+            KeyEvent.KEYCODE_BUTTON_L1 -> if (isUp) if (isContinuous) moveLeft() else navigateSpread(if (isReversed) 1 else -1)
+            KeyEvent.KEYCODE_BUTTON_R1 -> if (isUp) if (isContinuous) moveRight() else navigateSpread(if (isReversed) -1 else 1)
+            else -> return gamepad.handleKeyEvent(event)
+            // KMK <--
         }
         return true
     }
@@ -2635,7 +2688,9 @@ open class WebGpuViewer(
                 }
             }
         }
-        return false
+        // KMK -->
+        return gamepad.handleGenericMotionEvent(event)
+        // KMK <--
     }
 }
 

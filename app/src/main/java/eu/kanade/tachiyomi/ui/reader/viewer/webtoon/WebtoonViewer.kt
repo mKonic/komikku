@@ -20,6 +20,8 @@ import eu.kanade.tachiyomi.ui.reader.model.ChapterTransition
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
+import eu.kanade.tachiyomi.ui.reader.viewer.DPAD_KEYS
+import eu.kanade.tachiyomi.ui.reader.viewer.GamepadInput
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
 import kotlinx.coroutines.MainScope
@@ -73,6 +75,21 @@ class WebtoonViewer(
      * Configuration used by this viewer, like allow taps, or crop image borders.
      */
     val config = WebtoonConfig(scope)
+
+    // KMK -->
+    private val gamepad = GamepadInput(
+        scope,
+        object : GamepadInput.Target {
+            override val isStrip get() = true
+            override fun isZoomedIn() = recycler.isZoomedIn()
+            override fun zoomStep(zoomIn: Boolean) = recycler.zoomStep(zoomIn)
+            override fun zoomBy(factor: Float) = recycler.zoomBy(factor)
+            override fun panBy(dx: Float, dy: Float) = recycler.panBy(dx, dy)
+            override fun scrollBy(dy: Float) = recycler.scrollBy(0, (recycler.height * dy).toInt())
+        },
+        isMenuVisible = { activity.viewModel.state.value.menuVisible },
+    )
+    // KMK <--
 
     /**
      * Adapter of the recycler view.
@@ -398,6 +415,9 @@ class WebtoonViewer(
     override fun handleKeyEvent(event: KeyEvent): Boolean {
         val isUp = event.action == KeyEvent.ACTION_UP
 
+        // KMK --> with the menu open, the D-pad moves focus between its buttons (a controller's A clicks).
+        if (activity.viewModel.state.value.menuVisible && event.keyCode in DPAD_KEYS) return false
+        // KMK <--
         when (event.keyCode) {
             KeyEvent.KEYCODE_VOLUME_DOWN -> {
                 if (!config.volumeKeysEnabled || activity.viewModel.state.value.menuVisible) {
@@ -424,7 +444,12 @@ class WebtoonViewer(
             KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_PAGE_DOWN,
             -> if (isUp) scrollDown()
-            else -> return false
+
+            // KMK -->
+            KeyEvent.KEYCODE_BUTTON_L1 -> if (isUp) scrollUp()
+            KeyEvent.KEYCODE_BUTTON_R1 -> if (isUp) scrollDown()
+            else -> return gamepad.handleKeyEvent(event)
+            // KMK <--
         }
         return true
     }
@@ -434,7 +459,9 @@ class WebtoonViewer(
      * return true if the event was handled, false otherwise.
      */
     override fun handleGenericMotionEvent(event: MotionEvent): Boolean {
-        return false
+        // KMK -->
+        return gamepad.handleGenericMotionEvent(event)
+        // KMK <--
     }
 
     /**

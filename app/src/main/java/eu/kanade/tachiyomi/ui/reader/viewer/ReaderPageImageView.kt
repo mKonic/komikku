@@ -274,6 +274,42 @@ open class ReaderPageImageView @JvmOverloads constructor(
         }
     }
 
+    // KMK -->
+    /** Whether the image is zoomed past its minimum scale, for [GamepadInput]. */
+    fun isZoomedIn(): Boolean {
+        val view = pageView as? SubsamplingScaleImageView ?: return false
+        return view.isReady && view.scale > view.minScale * 1.01f
+    }
+
+    /** One animated zoom step about the centre, for [GamepadInput]. */
+    fun zoomStep(zoomIn: Boolean) {
+        val view = pageView as? SubsamplingScaleImageView ?: return
+        if (!view.isReady || !view.isZoomEnabled) return
+        val factor = if (zoomIn) ZOOM_STEP else 1 / ZOOM_STEP
+        (view.animateScale((view.scale * factor).coerceIn(view.minScale, view.maxScale)) ?: return)
+            .withEasing(EASE_OUT_QUAD)
+            .withDuration(200)
+            .withInterruptible(true)
+            .start()
+    }
+
+    /** Zooms by [factor] about the centre at once, for [GamepadInput]'s held zoom. */
+    fun zoomBy(factor: Float) {
+        val view = pageView as? SubsamplingScaleImageView ?: return
+        if (!view.isZoomEnabled) return
+        val center = view.center ?: return
+        view.setScaleAndCenter((view.scale * factor).coerceIn(view.minScale, view.maxScale), center)
+    }
+
+    /** Pans by fractions of the view at once, for [GamepadInput]'s stick; the view clamps it. */
+    fun panBy(dx: Float, dy: Float) {
+        val view = pageView as? SubsamplingScaleImageView ?: return
+        val center = view.center ?: return
+        center.offset(view.width * dx / view.scale, view.height * dy / view.scale)
+        view.setScaleAndCenter(view.scale, center)
+    }
+    // KMK <--
+
     private fun prepareNonAnimatedImageView() {
         if (pageView is SubsamplingScaleImageView) return
         removeView(pageView)
@@ -500,3 +536,6 @@ open class ReaderPageImageView @JvmOverloads constructor(
 }
 
 private const val MAX_ZOOM_SCALE = 5F
+
+/** KMK: [ReaderPageImageView.zoomStep] factor. */
+private const val ZOOM_STEP = 1.25F

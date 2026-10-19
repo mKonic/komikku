@@ -20,6 +20,8 @@ import eu.kanade.tachiyomi.ui.reader.model.InsertPage
 import eu.kanade.tachiyomi.ui.reader.model.ReaderItem
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
+import eu.kanade.tachiyomi.ui.reader.viewer.DPAD_KEYS
+import eu.kanade.tachiyomi.ui.reader.viewer.GamepadInput
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
 import kotlinx.coroutines.MainScope
@@ -53,6 +55,26 @@ abstract class PagerViewer(
      * Configuration used by the pager, like allow taps, scale mode on images, page transitions...
      */
     val config = PagerConfig(this, scope)
+
+    // KMK -->
+    private val gamepad = GamepadInput(
+        scope,
+        object : GamepadInput.Target {
+            private val holder get() = (currentPage as? ReaderPage)?.let(::getPageHolder)
+            override fun isZoomedIn() = holder?.isZoomedIn() == true
+            override fun zoomStep(zoomIn: Boolean) {
+                holder?.zoomStep(zoomIn)
+            }
+            override fun zoomBy(factor: Float) {
+                holder?.zoomBy(factor)
+            }
+            override fun panBy(dx: Float, dy: Float) {
+                holder?.panBy(dx, dy)
+            }
+        },
+        isMenuVisible = { activity.viewModel.state.value.menuVisible },
+    )
+    // KMK <--
 
     /**
      * Adapter of the pager.
@@ -421,6 +443,18 @@ abstract class PagerViewer(
         }
     }
 
+    // KMK -->
+    /** Turns to the page on the left (-1) or right (1) without panning first, for the gamepad's bumpers. */
+    private fun turnPage(direction: Int) {
+        val target = pager.currentItem + direction
+        if (target in 0..<adapter.count) {
+            pager.setCurrentItem(target, config.usePageTransitions)
+        } else {
+            onEdgeTransition()
+        }
+    }
+    // KMK <--
+
     /**
      * A page turn hit the last item and cannot scroll. When that item is a chapter transition whose
      * chapter simply has not loaded yet - the reader got there before the preload did - the turn
@@ -481,6 +515,9 @@ abstract class PagerViewer(
         val isUp = event.action == KeyEvent.ACTION_UP
         val ctrlPressed = event.metaState.and(KeyEvent.META_CTRL_ON) > 0
 
+        // KMK --> with the menu open, the D-pad moves focus between its buttons (a controller's A clicks).
+        if (activity.viewModel.state.value.menuVisible && event.keyCode in DPAD_KEYS) return false
+        // KMK <--
         when (event.keyCode) {
             KeyEvent.KEYCODE_VOLUME_DOWN -> {
                 if (!config.volumeKeysEnabled || activity.viewModel.state.value.menuVisible) {
@@ -511,7 +548,11 @@ abstract class PagerViewer(
             KeyEvent.KEYCODE_PAGE_DOWN -> if (isUp) moveDown()
             KeyEvent.KEYCODE_PAGE_UP -> if (isUp) moveUp()
             KeyEvent.KEYCODE_MENU -> if (isUp) activity.toggleMenu()
-            else -> return false
+            // KMK -->
+            KeyEvent.KEYCODE_BUTTON_L1 -> if (isUp) turnPage(-1)
+            KeyEvent.KEYCODE_BUTTON_R1 -> if (isUp) turnPage(1)
+            else -> return gamepad.handleKeyEvent(event)
+            // KMK <--
         }
         return true
     }
@@ -533,7 +574,9 @@ abstract class PagerViewer(
                 }
             }
         }
-        return false
+        // KMK -->
+        return gamepad.handleGenericMotionEvent(event)
+        // KMK <--
     }
 
     fun onPageSplit(currentPage: ReaderPage, newPage: InsertPage) {

@@ -1,11 +1,17 @@
 package eu.kanade.tachiyomi.ui.reader.viewer.webgpu
 
 import androidx.annotation.ColorInt
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.util.fastCoerceIn
 import ca.mpreg.webgpuviewer.ImageViewContinuous
 import ca.mpreg.webgpuviewer.viewer.ImagePage
 import ca.mpreg.webgpuviewer.viewer.ImageViewerContinuousState
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
+import eu.kanade.tachiyomi.ui.reader.viewer.GamepadInput
+import kotlinx.coroutines.launch
 import kotlin.math.max
 
 class WebGpuViewerContinuous(
@@ -71,6 +77,66 @@ class WebGpuViewerContinuous(
         state.animateScroll(state.height.toFloat())
     }
 
+    // KMK -->
+    /**
+     * The strip's zoom about the centre of the screen and its horizontal pan, as the library's own
+     * gestures move them: [ImageViewerContinuousState.offsetX] is a fraction of the width, larger
+     * showing more of the left, and the scroll is in unscaled pixels.
+     */
+    override fun gamepadTarget(): GamepadInput.Target = object : GamepadInput.Target {
+        override val isStrip get() = true
+
+        override fun isZoomedIn() = state.scale > 1.01f
+
+        override fun zoomStep(zoomIn: Boolean) {
+            val from = state.scale
+            val to = (from * if (zoomIn) ZOOM_STEP else 1 / ZOOM_STEP).fastCoerceIn(state.minScale, state.maxScale)
+            state.animationJob?.cancel()
+            // The library's scope: animate needs the frame clock its composition provides.
+            state.animationJob = state.scope?.launch {
+                state.isScaleAnimating = true
+                try {
+                    animate(from, to, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { value, _ ->
+                        zoomTo(value)
+                    }
+                } finally {
+                    state.isScaleAnimating = false
+                    state.invalidate()
+                }
+            }
+        }
+
+        override fun zoomBy(factor: Float) {
+            if (state.isScaleAnimating) return
+            zoomTo(state.scale * factor)
+        }
+
+        override fun panBy(dx: Float, dy: Float) {
+            val maxOffsetX = max(0f, (state.scale - 1f) / (2f * state.scale))
+            state.offsetX = (state.offsetX - dx / state.scale).fastCoerceIn(-maxOffsetX, maxOffsetX)
+            state.invalidate()
+        }
+
+        override fun scrollBy(dy: Float) {
+            state.scrollBy(dy * state.height / state.scale)
+            state.invalidate()
+        }
+    }
+
+    /** Sets the scale about the centre of the screen, as the library's pinch does about its focus. */
+    private fun zoomTo(target: Float) {
+        val scale = target.fastCoerceIn(state.minScale, state.maxScale)
+        if (scale == state.scale) return
+        val diff = 1f / scale - 1f / state.scale
+        val maxOffsetX = max(0f, (scale - 1f) / (2f * scale))
+        state.scale = scale
+        state.offsetX = state.offsetX.fastCoerceIn(-maxOffsetX, maxOffsetX)
+        // The camera hangs from the top of the screen, so holding the centre moves the scroll.
+        state.scrollBy(-0.5f * diff * state.height)
+        state.invalidate()
+    }
+    // KMK <--
+
     override fun moveRight() = scrollByHalfPage(1)
 
     override fun moveLeft() = scrollByHalfPage(-1)
@@ -85,3 +151,6 @@ class WebGpuViewerContinuous(
         state.animateSlideIn(direction)
     }
 }
+
+/** A gamepad zoom step's factor, as the standard viewers'. */
+private const val ZOOM_STEP = 1.25f
