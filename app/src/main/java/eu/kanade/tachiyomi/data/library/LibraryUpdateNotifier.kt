@@ -83,6 +83,8 @@ class LibraryUpdateNotifier(
             setLargeIcon(notificationBitmap)
             setOngoing(true)
             setOnlyAlertOnce(true)
+            // KMK: an Android 16 Live Update - a status bar chip and a lock screen card (after Yokai).
+            setRequestPromotedOngoing(true)
             addAction(R.drawable.ic_close_24dp, context.stringResource(MR.strings.action_cancel), cancelIntent)
         }
     }
@@ -95,13 +97,18 @@ class LibraryUpdateNotifier(
      * @param total the total progress.
      */
     suspend fun showProgressNotification(manga: List<Manga>, current: Int, total: Int) {
+        // KMK -->
+        val percent = percentFormatter.format(current.toFloat() / total)
+        // KMK <--
         progressNotificationBuilder
             .setContentTitle(
                 context.stringResource(
                     MR.strings.notification_updating_progress,
-                    percentFormatter.format(current.toFloat() / total),
+                    percent,
                 ),
             )
+            // KMK: the Live Update's status bar chip.
+            .setShortCriticalText(percent)
 
         // KMK -->
         libraryUpdateStatus.updateProgress(current.toFloat() / total)
