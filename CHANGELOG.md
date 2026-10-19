@@ -10,6 +10,19 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [Unreleased]
+### Added
+- Game controller support in the reader: the bumpers turn pages, X/Y, the triggers and the right stick zoom, the
+  left stick pans a zoomed page (and scrolls a long strip), Start opens the menu, Select the chapter list, and B closes
+  the menu before leaving. With the menu open, the D-pad moves between its buttons and A presses them.
+- On Android 16 a library update shows as a Live Update, with its progress in the status bar and on the lock screen.
+
+### Fixed
+- A library update that found new chapters for many entries could freeze the app while it posted their notifications.
+- The in-app WebView sent a source's request headers to every site a page loaded, not only the source.
+- Downloads were not found for a source sharing its name with another installed or uninstalled source.
+- WebDAV sync did not notice when the server rejected an upload.
+
 ## [v1.14.0] - 2026-10-15
 ### Added
 - Extensions that fail to load are listed under Installed with the reason, and can be updated from their store,
