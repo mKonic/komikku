@@ -137,9 +137,20 @@ class PagerConfig(
 
         readerPreferences.dualPageSplitPaged()
             .register(
-                { dualPageSplit = it },
+                {
+                    dualPageSplit = it
+                    // A paired holder renders only its first page in split mode, dropping the other
+                    if (!autoDoublePages) {
+                        doublePages = readerPreferences.pageLayout().get() == PageLayout.DOUBLE_PAGES && !it
+                    }
+                },
                 {
                     imagePropertyChangedListener?.invoke()
+                    if (!autoDoublePages) {
+                        doublePages = readerPreferences.pageLayout().get() == PageLayout.DOUBLE_PAGES && !it
+                    }
+                    // doublePages was already recomputed above, so rejoin unconditionally like a layout change
+                    reloadChapterListener?.invoke(doublePages)
                     dualPageSplitChangedListener?.invoke(it)
                 },
             )
