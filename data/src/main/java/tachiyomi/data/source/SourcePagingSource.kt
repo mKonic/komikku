@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.source.model.MetadataMangasPage
 import exh.log.xLogE
 import exh.metadata.metadata.RaisedSearchMetadata
 import exh.source.isEhBasedSource
+import kotlinx.coroutines.CancellationException
 import mihon.domain.manga.model.toDomainManga
 import tachiyomi.core.common.util.QuerySanitizer.sanitize
 import tachiyomi.core.common.util.lang.withIOContext
@@ -80,6 +81,8 @@ abstract class BaseSourcePagingSource(
             // SY -->
             getPageLoadResult(source, params, mangasPage)
             // SY <--
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             xLogE("${this::class.simpleName}: Failed to load paging source", e)
             LoadResult.Error(e)
