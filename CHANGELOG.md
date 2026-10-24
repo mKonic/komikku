@@ -10,7 +10,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
-## [Unreleased]
+## [v1.16.0] - 2026-10-24
 ### Added
 - WebGPU reader: user shaders (WGSL, in mpv's user shader format) as image filters, run once per image, or tile
   filters, run per high quality tile, each list reorderable in WebGPU settings.
