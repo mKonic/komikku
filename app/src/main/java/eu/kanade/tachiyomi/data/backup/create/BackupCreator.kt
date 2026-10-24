@@ -94,7 +94,7 @@ class BackupCreator(
             // SY -->
             val mergedManga = getMergedManga.await()
             // SY <--
-            val mangas = getFavorites.await() + nonFavoriteManga /* SY --> */ + mergedManga /* SY <-- */
+            val mangas = (getFavorites.await() + nonFavoriteManga /* SY --> */ + mergedManga).distinctBy { it.id } /* SY <-- */
 
             // KMK --> written an entry at a time, so a large library never sits in memory whole (mihonapp/mihon#3850)
             val rest = Backup(
