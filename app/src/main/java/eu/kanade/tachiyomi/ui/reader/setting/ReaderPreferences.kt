@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.BlendMode
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuShaders
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.getEnum
 import tachiyomi.i18n.MR
@@ -231,6 +232,25 @@ class ReaderPreferences(
     fun continuousMinWidth() = preferenceStore.getInt("webgpu_continuous_minwidth", 100)
 
     fun continuousGap() = preferenceStore.getInt("webgpu_continuous_gap", 10)
+
+    /** Off, a tap fires on lift instead of waiting out the double tap window. */
+    fun disableDoubleTapGestures() = preferenceStore.getBoolean("webgpu_disable_double_tap_gestures", false)
+
+    /** User shaders run once per image, in run order. */
+    fun imageFilters() = preferenceStore.getObjectFromString(
+        "webgpu_image_filters",
+        emptyList(),
+        WebGpuShaders::serialize,
+        WebGpuShaders::deserialize,
+    )
+
+    /** User shaders run per high quality tile, in run order. */
+    fun tileFilters() = preferenceStore.getObjectFromString(
+        "webgpu_tile_filters",
+        emptyList(),
+        WebGpuShaders::serialize,
+        WebGpuShaders::deserialize,
+    )
 
     /**
      * Stops of headroom the renderer may give an HDR page's highlights, so 2 is the 4x the library

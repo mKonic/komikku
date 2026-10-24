@@ -1069,6 +1069,13 @@
     <string name="webgpu_viewer">WebGPU</string>
     <string name="pref_continuous_minwidth">Min width</string>
     <string name="pref_continuous_gap">Gap</string>
+    <string name="pref_shaders">Shaders</string>
+    <string name="pref_image_filters">Image filters</string>
+    <string name="pref_tile_filters">Tile filters</string>
+    <string name="pref_disable_double_tap_gestures">Disable double tap gestures</string>
+    <string name="pref_disable_double_tap_gestures_summary">Taps act on lift instead of waiting to see if a second one follows</string>
+    <string name="action_add_shader">Add shader</string>
+    <string name="image_filter_invalid">Couldn\'t add shader</string>
     <string name="pref_disable_page_swipe">Disable swiping between pages</string>
     <string name="pref_history_resume_last_page">Open history entries at the last page read</string>
     <string name="pref_transition_animation">Transition animation</string>

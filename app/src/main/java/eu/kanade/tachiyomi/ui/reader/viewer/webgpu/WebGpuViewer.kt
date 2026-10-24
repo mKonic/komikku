@@ -1358,6 +1358,21 @@ open class WebGpuViewer(
 
     private var colorLutJob: Job? = null
 
+    private var imageFiltersJob: Job? = null
+    private var tileFiltersJob: Job? = null
+
+    /** Fresh instances: one belongs to one viewer and one chain. Skips any that fail to load. */
+    private suspend fun loadFilters(shaders: List<WebGpuShader>) = withContext(Dispatchers.IO) {
+        shaders.mapNotNull { shader ->
+            try {
+                WebGpuShaders.load(activity, shader)
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e) { "filter ${shader.name}" }
+                null
+            }
+        }
+    }
+
     /**
      * The table is a document the user picked, which can be gone, unreadable or not a `.cube` at
      * all by the time we open it, so a failure drops the filter rather than taking the reader down.
@@ -1513,6 +1528,22 @@ open class WebGpuViewer(
         applyTone(config.grayscale, config.invertedColors)
         config.toneChangedListener = { applyTone(config.grayscale, config.invertedColors) }
 
+        config.gesturesChangedListener = { pager.state.doubleTapGesturesEnabled = config.doubleTapGestures }
+
+        // Each load replaces the last, or an older, slower one could land after it.
+        val applyImageFilters = {
+            imageFiltersJob?.cancel()
+            val shaders = config.imageFilters
+            imageFiltersJob = scope.launch { pager.state.imageFilters = loadFilters(shaders) }
+        }
+        val applyTileFilters = {
+            tileFiltersJob?.cancel()
+            val shaders = config.tileFilters
+            tileFiltersJob = scope.launch { pager.state.tileFilters = loadFilters(shaders) }
+        }
+        config.imageFiltersChangedListener = applyImageFilters
+        config.tileFiltersChangedListener = applyTileFilters
+
         // blank space in the long strip clears to the reader background rather than black
         (pager.state as? ImageViewerContinuousState)?.backgroundColor = readerBackgroundColor()
 
@@ -1632,6 +1663,7 @@ open class WebGpuViewer(
 
             doubleTapZoomEnabled = config.doubleTapZoom
             pinchZoomEnabled = config.pinchZoom
+            doubleTapGesturesEnabled = config.doubleTapGestures
 
             (this as? ImageViewerContinuousState)?.let {
                 minScale = if (config.zoomOutDisabled) 0f else 0.1f

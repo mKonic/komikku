@@ -112,6 +112,20 @@ class WebGpuConfig(
     var pinchZoom = true
         private set
 
+    var doubleTapGestures = true
+        private set
+
+    var imageFilters = emptyList<WebGpuShader>()
+        private set
+
+    var tileFilters = emptyList<WebGpuShader>()
+        private set
+
+    /** Applied to the viewer state directly: none of these change what a page decodes to. */
+    var gesturesChangedListener: (() -> Unit)? = null
+    var imageFiltersChangedListener: (() -> Unit)? = null
+    var tileFiltersChangedListener: (() -> Unit)? = null
+
     /**
      * As [register], for a value the decoded pages are built from. [imagePropertyChangedListener]
      * decodes every page again, so it runs only when the value really changes: [register] also
@@ -279,6 +293,15 @@ class WebGpuConfig(
 
         readerPreferences.continuousGap()
             .registerImage({ continuousGap = it })
+
+        readerPreferences.disableDoubleTapGestures()
+            .register({ doubleTapGestures = !it }, { gesturesChangedListener?.invoke() })
+
+        readerPreferences.imageFilters()
+            .register({ imageFilters = it }, { imageFiltersChangedListener?.invoke() })
+
+        readerPreferences.tileFilters()
+            .register({ tileFilters = it }, { tileFiltersChangedListener?.invoke() })
     }
 
     private fun zoomTypeFromPreference(value: Int) {
