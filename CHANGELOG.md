@@ -10,6 +10,30 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [Unreleased]
+### Added
+- WebGPU reader: user shaders (WGSL, in mpv's user shader format) as image filters, run once per image, or tile
+  filters, run per high quality tile, each list reorderable in WebGPU settings.
+- WebGPU reader: a switch to turn off double tap gestures, so a tap acts the moment it lifts.
+- A setting under Advanced to keep credentials out of logged request headers (on by default).
+
+### Improved
+- Library updates start with the sources that hold the most entries.
+
+### Fixed
+- Removing an entry from the library reloaded its cover everywhere it was shown.
+- Set as cover on the second page of a double page spread set the first page.
+- With the feed tab hidden, opening extensions from a notification opened Migrate.
+- Rotate wide pages to fit did nothing unless dual page split was also on.
+- Toggling dual page split in double page mode skipped every second page.
+- Leaving a source's listing while a page loaded could show it as failed.
+- Clearing search tags deleted the saved titles instead.
+- The next chapter to read for a merged entry was looked up in the merge entry itself, which has none.
+- Backups could hold an entry twice.
+- The tracking sheet closed on an outside tap or back while on its search screen.
+- Sources with a metadata panel showed an empty description above it.
+- Grouping the library by tracking status left Kavita and Suwayomi entries ungrouped.
+
 ## [v1.15.0] - 2026-10-19
 ### Added
 - Game controller support in the reader: the bumpers turn pages, X/Y, the triggers and the right stick zoom, the
