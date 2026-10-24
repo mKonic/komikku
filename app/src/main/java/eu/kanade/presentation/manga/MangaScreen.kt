@@ -696,6 +696,7 @@ private fun MangaScreenSmallImpl(
                             searchMetadataChips = remember(state.meta, state.source.id, state.manga.genre) {
                                 SearchMetadataChips(state.meta, state.source.id, state.manga.genre)
                             },
+                            hideEmptyDescription = metadataDescription != null,
                             // SY <--
                         )
                     }
@@ -1131,6 +1132,7 @@ private fun MangaScreenLargeImpl(
                             searchMetadataChips = remember(state.meta, state.source.id, state.manga.genre) {
                                 SearchMetadataChips(state.meta, state.source.id, state.manga.genre)
                             },
+                            hideEmptyDescription = metadataDescription != null,
                             // SY <--
                         )
                         // SY -->
