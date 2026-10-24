@@ -194,7 +194,11 @@ class PagerPageHolder(
                     } else {
                         null
                     }.use { source2 ->
-                        val itemSource = if (viewer.config.dualPageSplit) {
+                        // A single page can still need rotating when it's wide
+                        val itemSource = if (
+                            viewer.config.dualPageSplit ||
+                            (viewer.config.dualPageRotateToFit && source2 == null)
+                        ) {
                             process(item.first, Buffer().readFrom(source))
                         } else {
                             mergePages(Buffer().readFrom(source), source2?.let { Buffer().readFrom(it) })
