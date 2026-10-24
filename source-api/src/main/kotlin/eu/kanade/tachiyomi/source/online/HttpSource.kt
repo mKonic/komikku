@@ -43,7 +43,7 @@ abstract class HttpSource : CatalogueSource {
             override val client: OkHttpClient
                 get() = delegate?.networkHttpClient ?: network.client
                     .newBuilder()
-                    .maybeInjectEHLogger()
+                    .maybeInjectEHLogger(network.redactHeaders)
                     .build()
 
             @Deprecated("The regular client handles Cloudflare by default")

@@ -13,6 +13,7 @@ import eu.kanade.tachiyomi.network.interceptor.CloudflareInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UncaughtExceptionInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UserAgentInterceptor
 import exh.log.EHLogLevel
+import exh.log.redactSensitiveHeaders
 import exh.pref.DelegateSourcePreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -42,6 +43,12 @@ import kotlin.random.Random
     val delegateSourcePreferences: DelegateSourcePreferences,
     // KMK <--
 ) {
+
+    // KMK -->
+    /** Whether logged requests hide credentials, see [redactSensitiveHeaders]. */
+    val redactHeaders: Boolean
+        get() = preferences.redactSensitiveHeaders().get()
+    // KMK <--
 
     /* SY --> */ open /* SY <-- */val cookieJar = AndroidCookieJar()
 
@@ -172,6 +179,7 @@ import kotlin.random.Random
             // KMK <--
             val httpLoggingInterceptor = HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.HEADERS
+                if (redactHeaders) redactSensitiveHeaders()
             }
             builder.addNetworkInterceptor(httpLoggingInterceptor)
         }

@@ -1,6 +1,7 @@
 package exh.uconfig
 
 import android.content.Context
+import eu.kanade.tachiyomi.network.NetworkPreferences
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.source.online.all.EHentai
 import eu.kanade.tachiyomi.util.asJsoup
@@ -21,9 +22,10 @@ import java.util.Locale
 class EHConfigurator(val context: Context) {
     private val exhPreferences: ExhPreferences by injectLazy()
     private val sourceManager: SourceManager by injectLazy()
+    private val networkPreferences: NetworkPreferences by injectLazy()
 
     private val configuratorClient = OkHttpClient.Builder()
-        .maybeInjectEHLogger()
+        .maybeInjectEHLogger(networkPreferences.redactSensitiveHeaders().get())
         .build()
 
     private fun EHentai.requestWithCreds(sp: Int = 1) =
