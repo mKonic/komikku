@@ -10,6 +10,25 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+## [Unreleased]
+### Improved
+- WebGPU reader: very large pages finish loading sooner (mipmap uploads no longer wait out a frame per chunk), and
+  strip flings are timed from the finger lift.
+- The browse feed refreshes once each time the browse tab is opened, not on every navigation back to it.
+- Downloaded CBZ archives store their pages in reading order.
+
+### Fixed
+- WebGPU reader: a tap could turn the page after a cancelled press, and double tap zoom in the long strip could pass
+  its limit.
+- Read downloads of entries in no category were deleted even with the Default category excluded from deletion.
+- A failed extension update could leave the extension uninstalled.
+- Tab badges disappeared when the tab label was too long.
+- Kavita tracking failed to match series with a fractional rating.
+- An exclusion search in the library (`-word`) hid every local source entry.
+
+### Other
+- webgpuviewer 4.0.0.
+
 ## [v1.16.0] - 2026-10-24
 ### Added
 - WebGPU reader: user shaders (WGSL, in mpv's user shader format) as image filters, run once per image, or tile
