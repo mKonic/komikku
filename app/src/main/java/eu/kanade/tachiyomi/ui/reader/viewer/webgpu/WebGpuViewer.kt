@@ -17,9 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.core.net.toUri
 import androidx.webgpu.GPUTexture
-import ca.mpreg.imagedecoder.FrameDecoder
 import ca.mpreg.imagedecoder.ImageDecoder
-import ca.mpreg.imagedecoder.RowDecoder
 import ca.mpreg.webgpuviewer.ImageUtil
 import ca.mpreg.webgpuviewer.ImageView
 import ca.mpreg.webgpuviewer.closeTo
@@ -83,6 +81,7 @@ import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import tachiyomi.core.common.i18n.pluralStringResource
 import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.core.common.util.system.StillSniff
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
@@ -119,6 +118,9 @@ private val decodeWorkers = (Runtime.getRuntime().availableProcessors() / 2).coe
 // up: a strip is about a quarter of a megabyte, and every update is an upload the renderer does.
 private const val ROW_STRIP_BYTES = 256 * 1024
 private const val ROW_UPDATE_NS = 50_000_000L
+
+// KMK --> read ahead of a page decode, and enough to sniff whether it can decode top first.
+private const val STREAM_BUFFER_BYTES = StillSniff.STILL_SNIFF_BYTES
 
 /** A gamepad zoom step's factor, as the standard viewers'. */
 private const val ZOOM_STEP = 1.25f
@@ -1896,9 +1898,11 @@ open class WebGpuViewer(
             // KMK --> a still page decodes top first, its first rows on screen before the rest
             // are done (see decodeRows); anything else opens whole, as it always did.
             if (bytes == null && rowsAllowed()) {
-                when (val opened = ImageDecoder.open(source)) {
-                    is ImageDecoder.Opened.Rows -> opened.use { decodeRows(page, it.decoder, fromDownload = false) }
-                    is ImageDecoder.Opened.Whole -> decodeWholeAndClose(page, opened.decoder)
+                val buffered = source.buffered(STREAM_BUFFER_BYTES)
+                if (StillSniff.isTopDownStill(buffered, progressive = false)) {
+                    decodeStreaming(page, buffered, fromDownload = false)
+                } else {
+                    decodeWholeAndClose(page, ImageDecoder.open(buffered))
                 }
                 return
             }
@@ -1906,8 +1910,7 @@ open class WebGpuViewer(
 
             // KMK --> closed here rather than by the finalizer: the decoder keeps the encoded page in
             // native memory the collector cannot see, and a reader decodes page after page.
-            // The decoded pixels are Java direct buffers, so they outlive it.
-            decodeWholeAndClose(page, ImageDecoder.new(source))
+            decodeWholeAndClose(page, ImageDecoder.open(source))
             // KMK <--
         }
     }
@@ -1937,105 +1940,98 @@ open class WebGpuViewer(
         // KMK <--
         // KMK --> started once the page is installed, which hands it [dec]
         var animation: (ImagePage.ImageSingle.() -> Unit)? = null
+        var frameToClose: ImageDecoder.Frame? = null
         // KMK <--
+        try {
+            val imagePage: ImagePage = run {
+                val pageCount = dec.pages
 
-        val imagePage: ImagePage = run {
-            val pageCount = dec.pages
+                if (pageCount == 0) throw Exception("No frames decoded")
 
-            if (pageCount == 0) throw Exception("No frames decoded")
+                val backgroundColor = if (config.automaticBackground) null else readerBackgroundColor()
 
-            val backgroundColor = if (config.automaticBackground) null else readerBackgroundColor()
+                val gainmap = if (dec.hdrKind == ImageDecoder.HdrKind.GAINMAP) dec.getGainmap().toInput() else null
+                val firstFrame = dec.decodeNext()
+                // Its pixels are native until closed, once the page and its levels are built.
+                frameToClose = firstFrame
 
-            val firstFrame = dec.decodeNext()
-
-            if (pageCount == 1) {
-                buildSingle(
-                    page,
-                    firstFrame.image,
-                    firstFrame.width,
-                    firstFrame.height,
-                    firstFrame.isHdr,
-                    firstFrame.hdrHeadroom,
-                    firstFrame.gainmapInput(),
-                    backgroundColor,
-                ).also { deferredMips = it.second }.first
-            } else {
-                val firstImage = Image(
-                    firstFrame.image,
-                    firstFrame.width,
-                    firstFrame.height,
-                    createMipMaps = false,
-                    backgroundColor = backgroundColor,
-                    hdr = firstFrame.isHdr,
-                    hdrHeadroom = firstFrame.hdrHeadroom,
-                    gainmap = firstFrame.gainmapInput(),
-                )
-                // KMK --> the page shows frame 0 and plays the rest through one more image,
-                // each decoded as it comes due, so an animation costs two frames of GPU memory
-                // however long it is.
-                animation = { animate(firstFrame.duration, release = dec::close, next = frameSource(dec, firstImage)) }
-                // KMK <--
-                ImagePage.ImageSingle(firstImage)
+                if (pageCount == 1) {
+                    buildSingle(
+                        page,
+                        firstFrame.image,
+                        firstFrame.width,
+                        firstFrame.height,
+                        dec.isHdr,
+                        dec.hdrHeadroom,
+                        gainmap,
+                        backgroundColor,
+                    ).also { deferredMips = it.second }.first
+                } else {
+                    val firstImage = Image(
+                        firstFrame.image,
+                        firstFrame.width,
+                        firstFrame.height,
+                        createMipMaps = false,
+                        backgroundColor = backgroundColor,
+                        hdr = dec.isHdr,
+                        hdrHeadroom = dec.hdrHeadroom,
+                        gainmap = gainmap,
+                    )
+                    // KMK --> the page shows frame 0 and plays the rest through one more image,
+                    // each decoded as it comes due, so an animation costs two frames of GPU memory
+                    // however long it is.
+                    animation = { animate(firstFrame.duration, release = dec::close, next = frameSource(dec, firstImage)) }
+                    // KMK <--
+                    ImagePage.ImageSingle(firstImage)
+                }
             }
-        }
 
-        if (!installImage(page, imagePage)) return false
+            if (!installImage(page, imagePage)) return false
 
-        // KMK --> the page is now the decoder's owner; a page cleaned up meanwhile releases it
-        // straight away.
-        animation?.let { start ->
-            (imagePage as ImagePage.ImageSingle).start()
-            return true
-        }
-        // KMK <--
-
-        // KMK --> an eviction can clean the image up meanwhile, which createMipMaps reports by
-        // throwing; the page is gone then and needs no levels.
-        deferredMips?.let { (image, pixels) ->
-            try {
-                image.createMipMaps(pixels)
-            } catch (e: IllegalStateException) {
-                logcat(LogPriority.DEBUG) { "mipmaps skipped: ${e.message}" }
+            // KMK --> the page is now the decoder's owner; a page cleaned up meanwhile releases it
+            // straight away.
+            animation?.let { start ->
+                (imagePage as ImagePage.ImageSingle).start()
+                return true
             }
+            // KMK <--
+
+            // KMK --> an eviction can clean the image up meanwhile, which createMipMaps reports by
+            // throwing; the page is gone then and needs no levels.
+            deferredMips?.let { (image, pixels) ->
+                try {
+                    image.createMipMaps(pixels)
+                } catch (e: IllegalStateException) {
+                    logcat(LogPriority.DEBUG) { "mipmaps skipped: ${e.message}" }
+                }
+            }
+            // KMK <--
+            return false
+        } finally {
+            frameToClose?.close()
         }
-        // KMK <--
-        return false
     }
 
     // KMK -->
     /**
      * Frames 1, 2, ... of [dec]'s animation for [ImagePage.ImageSingle.animate], looping, at
-     * [first]'s size. An 8-bit animation plays through [FrameDecoder], which decodes each frame
-     * once; anything else (HDR, rotated) through [ImageDecoder.decodeNext], which composes each
-     * frame from the first. Null stops the animation on the frame shown.
+     * [first]'s size. Each frame is decoded once, as it comes due, and freed once uploaded. Null
+     * stops the animation on the frame shown.
      */
-    private fun frameSource(dec: ImageDecoder, first: Image): suspend () -> AnimationFrame? {
-        var frames: FrameDecoder? = null
-        var framesTried = false
-        return {
-            withContext(decodeDispatcher) {
-                try {
-                    if (!framesTried) {
-                        framesTried = true
-                        // Starts at frame 0, which the page already shows.
-                        frames = dec.frames()?.also { it.next() }
-                    }
-                    frames?.let { played ->
-                        val index = played.next()
-                        if (played.width != first.width || played.height != first.height) return@withContext null
-                        // One reused buffer, valid until the next call: animate uploads it first.
-                        return@withContext AnimationFrame(played.image, played.durations[index])
-                    }
-                    val frame = dec.decodeNext()
-                    // A frame of another size would not fit the page's images.
-                    if (frame.width != first.width || frame.height != first.height || frame.gainmap != null) {
-                        return@withContext null
-                    }
-                    AnimationFrame(frame.image, frame.duration)
-                } catch (e: ImageDecoder.DecodeException) {
-                    logcat(LogPriority.WARN, e) { "animation frame failed" }
+    private fun frameSource(dec: ImageDecoder, first: Image): suspend () -> AnimationFrame? = {
+        withContext(decodeDispatcher) {
+            try {
+                val frame = dec.decodeNext()
+                // A frame of another size would not fit the page's images.
+                if (frame.width != first.width || frame.height != first.height) {
+                    frame.close()
                     null
+                } else {
+                    AnimationFrame(frame.image, frame.duration, onClose = frame::close)
                 }
+            } catch (e: ImageDecoder.DecodeException) {
+                logcat(LogPriority.WARN, e) { "animation frame failed" }
+                null
             }
         }
     }
@@ -2085,6 +2081,25 @@ open class WebGpuViewer(
             !(config.imageCropBorders && !isDualPageMode())
 
     /**
+     * Decodes a still page from [input] as it is read: top first when its rows come that way, else (HDR, a gain
+     * map) whole once all of it is in - which a download leaves to the decode queued when it is Ready.
+     */
+    private suspend fun decodeStreaming(page: ViewerReaderPage, input: java.io.InputStream, fromDownload: Boolean) {
+        val rows = StreamingRows.open(input)
+        var kept = false
+        try {
+            if (rows.isRowOrdered) {
+                decodeRows(page, rows, fromDownload)
+            } else if (!fromDownload) {
+                rows.readAll()
+                kept = decodeWhole(page, rows.decoder)
+            }
+        } finally {
+            if (!kept) rows.close()
+        }
+    }
+
+    /**
      * Decodes [rows] top first, the page on screen from its first strip and filled in as the rest
      * decode. [fromDownload] means the rows wait on a download: then a failure hands the page back
      * to its placeholder for the finished file to decode, where one from a file on disk is the
@@ -2093,7 +2108,7 @@ open class WebGpuViewer(
      * The page draws without the tile cache until complete, which a strip landing would otherwise
      * re-cut every time; the background probe and smaller levels wait for the last row.
      */
-    private suspend fun decodeRows(page: ViewerReaderPage, rows: RowDecoder, fromDownload: Boolean) {
+    private suspend fun decodeRows(page: ViewerReaderPage, rows: StreamingRows, fromDownload: Boolean) {
         val width = rows.width
         val height = rows.height
         val strip = (ROW_STRIP_BYTES / (width * 4)).coerceAtLeast(16)
@@ -2122,21 +2137,21 @@ open class WebGpuViewer(
             validRows = rows.rowsDecoded,
         )
         applySplitTrim(page, image)
+        rows.clearDirty()
         val single = ImagePage.ImageSingle(image).apply { highQuality = false }
         if (!installImage(page, single)) return
 
         fun stillShown() = synchronized(lock) { pageInCache(page) && page.imagePage === single && !single.destroyed }
 
         try {
-            var uploaded = rows.rowsDecoded
             var lastUpdate = System.nanoTime()
             while (!rows.isComplete) {
                 if (!stillShown()) return
                 rows.decodeRows(strip)
                 val now = System.nanoTime()
-                if (rows.isComplete || now - lastUpdate >= ROW_UPDATE_NS) {
-                    if (!image.update(rows.image, Rect(0, uploaded, width, rows.rowsDecoded))) return
-                    uploaded = rows.rowsDecoded
+                if (rows.dirtyTop < rows.rowsDecoded && (rows.isComplete || now - lastUpdate >= ROW_UPDATE_NS)) {
+                    if (!image.update(rows.image, Rect(0, rows.dirtyTop, width, rows.rowsDecoded))) return
+                    rows.clearDirty()
                     lastUpdate = now
                     pager.state.invalidate()
                 }
@@ -2189,12 +2204,9 @@ open class WebGpuViewer(
         scope.launch(decodeDispatcher) {
             val unwanted = { destroyed || synchronized(lock) { !pageInCache(page) } }
             try {
-                bytes.open(unwanted).use { input ->
-                    when (val opened = ImageDecoder.open(input)) {
-                        is ImageDecoder.Opened.Rows -> opened.use { decodeRows(page, it.decoder, fromDownload = true) }
-                        // Needs the whole file anyway: the decode queued once it is Ready does it.
-                        is ImageDecoder.Opened.Whole -> opened.close()
-                    }
+                bytes.open(unwanted).buffered(STREAM_BUFFER_BYTES).use { input ->
+                    // Anything else needs the whole file anyway: the decode queued once it is Ready does it.
+                    if (StillSniff.isTopDownStill(input)) decodeStreaming(page, input, fromDownload = true)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -2306,7 +2318,7 @@ open class WebGpuViewer(
 
     // The decoder hands the map over unapplied - see ImageDecoder.Gainmap - because how
     // much of it to use depends on the display, so the viewer applies it.
-    private fun ImageDecoder.DecodeResult.gainmapInput(): GainmapInput? = gainmap?.let {
+    private fun ImageDecoder.Gainmap?.toInput(): GainmapInput? = this?.let {
         GainmapInput(
             pixels = it.pixels,
             width = it.width,
