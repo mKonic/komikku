@@ -11,7 +11,13 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Changed
+- Pages and covers decode with the same image decoder Mihon uses, which makes the app about 12 MB smaller.
+
 ### Improved
+- AVIF pages decode faster (HDR AVIF in about half the time), and a progressive JPEG shows the whole page,
+  blurry, while it downloads.
+- Standard reader: very tall pages scale down smoothly instead of with jagged edges.
 - WebGPU reader: very large pages finish loading sooner (mipmap uploads no longer wait out a frame per chunk), and
   strip flings are timed from the finger lift.
 - The browse feed refreshes once each time the browse tab is opened, not on every navigation back to it.
@@ -25,9 +31,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Tab badges disappeared when the tab label was too long.
 - Kavita tracking failed to match series with a fractional rating.
 - An exclusion search in the library (`-word`) hid every local source entry.
+- Standard reader: HDR pages (PQ/HLG AVIF) showed as stripes.
 
 ### Other
-- webgpuviewer 4.0.1.
+- webgpuviewer 4.0.1, imagedecoder 18.
 
 ## [v1.16.0] - 2026-10-24
 ### Added
