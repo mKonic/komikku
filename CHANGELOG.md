@@ -27,7 +27,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - An exclusion search in the library (`-word`) hid every local source entry.
 
 ### Other
-- webgpuviewer 4.0.0.
+- webgpuviewer 4.0.1.
 
 ## [v1.16.0] - 2026-10-24
 ### Added
