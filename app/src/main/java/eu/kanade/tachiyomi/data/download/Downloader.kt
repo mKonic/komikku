@@ -13,6 +13,7 @@ import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.source.UnmeteredSource
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
+import eu.kanade.tachiyomi.util.lang.compareToCaseInsensitiveNaturalOrder
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.DiskUtil.NOMEDIA_FILE
 import eu.kanade.tachiyomi.util.storage.saveTo
@@ -749,9 +750,14 @@ class Downloader internal constructor(
         val zip = mangaDir.createFile("$dirname.cbz$TMP_DIR_SUFFIX")
         if (zip?.isFile != true) throw Exception("Failed to create CBZ file for downloaded chapter")
         ZipWriter(context, zip, /* SY --> */ encrypt /* SY <-- */).use { writer ->
-            tmpDir.listFiles()?.forEach { file ->
-                writer.write(file)
-            }
+            // Archive entries in reader order, so page data can be read sequentially.
+            tmpDir.listFiles()
+                ?.sortedWith { first, second ->
+                    first.name.orEmpty().compareToCaseInsensitiveNaturalOrder(second.name.orEmpty())
+                }
+                ?.forEach { file ->
+                    writer.write(file)
+                }
         }
         zip.renameToOrCopy("$dirname.cbz")
         tmpDir.delete()
