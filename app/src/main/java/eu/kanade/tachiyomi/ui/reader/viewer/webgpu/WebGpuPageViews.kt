@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.PointF
 import android.graphics.RectF
-import android.view.LayoutInflater
 import android.view.View
 import android.view.View.MeasureSpec
 import android.view.ViewGroup
@@ -25,7 +24,6 @@ import com.google.android.material.button.MaterialButton
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.theme.TachiyomiTheme
 import eu.kanade.tachiyomi.data.download.DownloadManager
-import eu.kanade.tachiyomi.databinding.ReaderErrorBinding
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.reader.model.ChapterTransition
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
@@ -168,7 +166,7 @@ class WebGpuPageViews(
         return capture(layout, width, clicks, spinner)
     }
 
-    /** A page that failed, as `reader_error.xml` shows it in the standard viewers. */
+    /** A page that failed, laid out as the standard viewers' error page. */
     suspend fun error(
         message: String,
         width: Int,
@@ -176,17 +174,37 @@ class WebGpuPageViews(
         onOpenInWebView: (() -> Unit)?,
         showOpenInWebView: Boolean,
     ): PageSnapshot {
-        val binding = ReaderErrorBinding.inflate(LayoutInflater.from(themedContext))
-        binding.errorMessage.text = message
+        val context = themedContext
+        val layout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER
+        }
+        val margin = LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
+            setMargins(8.dpToPx, 8.dpToPx, 8.dpToPx, 8.dpToPx)
+        }
+        layout.addView(
+            AppCompatTextView(context).apply {
+                text = message
+                gravity = android.view.Gravity.CENTER
+                setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
+            },
+            margin,
+        )
         val clicks = mutableMapOf<View, () -> Unit>()
+        if (onRetry != null) {
+            val retry = ReaderButton(context).apply { text = context.stringResource(MR.strings.action_retry) }
+            layout.addView(retry, LinearLayout.LayoutParams(margin))
+            clicks[retry] = onRetry
+        }
+        if (showOpenInWebView) {
+            val webView = ReaderButton(context).apply {
+                text = context.stringResource(MR.strings.action_open_in_web_view)
+            }
+            layout.addView(webView, LinearLayout.LayoutParams(margin))
+            onOpenInWebView?.let { clicks[webView] = it }
+        }
 
-        binding.actionRetry.isVisible = onRetry != null
-        onRetry?.let { clicks[binding.actionRetry] = it }
-
-        binding.actionOpenInWebView.isVisible = showOpenInWebView
-        onOpenInWebView?.let { clicks[binding.actionOpenInWebView] = it }
-
-        return capture(binding.root, width, clicks, spinner = null)
+        return capture(layout, width, clicks, spinner = null)
     }
 
     /**

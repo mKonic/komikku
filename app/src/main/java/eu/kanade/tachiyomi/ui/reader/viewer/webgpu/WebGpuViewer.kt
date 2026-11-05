@@ -923,7 +923,7 @@ open class WebGpuViewer(
         }
     }
 
-    /** A page that failed to load or decode, as `reader_error.xml` shows it in the standard viewers. */
+    /** A page that failed to load or decode, as the standard viewers show it. */
     inner class ErrorPage internal constructor(
         message: String,
         private val spreadPosition: SpreadPosition = SpreadPosition.SINGLE,
