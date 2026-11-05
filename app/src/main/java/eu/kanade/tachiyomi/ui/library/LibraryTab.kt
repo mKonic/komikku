@@ -408,6 +408,7 @@ data object LibraryTab : Tab {
             }
             is LibraryScreenModel.Dialog.RecommendationSearchSheet -> {
                 RecommendationSearchBottomSheetDialog(
+                    selectedCount = dialog.manga.size,
                     onDismissRequest = onDismissRequest,
                     onSearchRequest = {
                         onDismissRequest()
