@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import logcat.LogPriority
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.source.model.StubSource
@@ -175,6 +176,23 @@ class ExtensionManager(
 
         isInitialized.value = true
     }
+
+    // KMK -->
+    /**
+     * Re-scan packages after visibility permission is granted. Publishing the maps also
+     * refreshes AndroidSourceManager and the installed/untrusted extension lists.
+     */
+    suspend fun reloadInstalledExtensions() = withIOContext {
+        iconMap.clear()
+        initExtensions()
+        val available = availableExtensionMapFlow.value.values.toList()
+        if (available.isNotEmpty()) {
+            updatedInstalledExtensionsStatuses(available)
+        } else {
+            updatePendingUpdatesCount()
+        }
+    }
+    // KMK <--
 
     // EXH -->
     private fun <T : Extension> Map<String, T>.filterNotBlacklisted(): Map<String, T> {
