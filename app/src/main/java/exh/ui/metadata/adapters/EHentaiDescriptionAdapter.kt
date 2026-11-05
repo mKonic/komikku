@@ -7,12 +7,12 @@ import androidx.compose.ui.platform.LocalContext
 import eu.kanade.tachiyomi.ui.manga.MangaScreenModel.State
 import exh.metadata.MetadataUtil
 import exh.metadata.metadata.EHentaiSearchMetadata
+import exh.util.SourceTagsUtil
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Bookmark
 import mihon.icons.materialsymbols.rounded.SdCard
 import mihon.icons.materialsymbols.rounded.Translate
 import mihon.icons.materialsymbols.roundedfilled.MenuBook
-import exh.util.SourceTagsUtil
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.pluralStringResource
