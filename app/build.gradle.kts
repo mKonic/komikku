@@ -368,7 +368,6 @@ dependencies {
     implementation(sylibs.xlog)
 
     // RatingBar (SY)
-    implementation(sylibs.ratingbar)
     implementation(sylibs.composeRatingbar) {
         // Ships the kotlinc Compose plugin as a runtime dependency; R8 only has to see it to
         // start reporting missing classes from it.
