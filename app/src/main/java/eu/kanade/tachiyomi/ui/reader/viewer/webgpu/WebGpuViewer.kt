@@ -26,6 +26,8 @@ import ca.mpreg.webgpuviewer.filter.FilterLut3d
 import ca.mpreg.webgpuviewer.filter.Lut3d
 import ca.mpreg.webgpuviewer.renderer.GainmapInput
 import ca.mpreg.webgpuviewer.renderer.Image
+import ca.mpreg.webgpuviewer.renderer.ImageFilterWgsl
+import ca.mpreg.webgpuviewer.renderer.Sampler
 import ca.mpreg.webgpuviewer.renderer.WebGpuRenderer
 import ca.mpreg.webgpuviewer.transition.TransitionBasic
 import ca.mpreg.webgpuviewer.transition.TransitionCube
@@ -117,6 +119,9 @@ private val decodeWorkers = (Runtime.getRuntime().availableProcessors() / 2).coe
 // KMK --> rows decoded per call when a page fills from the top, and how often the rows so far go
 // up: a strip is about a quarter of a megabyte, and every update is an upload the renderer does.
 private const val ROW_STRIP_BYTES = 256 * 1024
+
+/** Settling time for a shader value before it is applied: a slider sends one per step. */
+private const val RETUNE_DELAY_MS = 150L
 private const val ROW_UPDATE_NS = 50_000_000L
 
 // KMK --> read ahead of a page decode, and enough to sniff whether it can decode top first.
@@ -963,6 +968,11 @@ open class WebGpuViewer(
 
     /** A page still loading: the standard viewers' progress indicator, on the reader background. */
     inner class ProgressPage : ReaderRenderPage() {
+        // Stands in for the page still downloading - see ImageViewerState.holdUntilFinal.
+        init {
+            isPlaceholder = true
+        }
+
         override val width: Int
             get() = viewportPageWidth(isDualPageMode())
         override val height: Int
@@ -1360,17 +1370,73 @@ open class WebGpuViewer(
 
     private var colorLutJob: Job? = null
 
-    private var imageFiltersJob: Job? = null
-    private var tileFiltersJob: Job? = null
+    private val imageFilters = FilterSlot { pager.state.imageFilters = it }
+    private val tileFilters = FilterSlot { pager.state.tileFilters = it }
+    private val upscaler = SamplerSlot(Sampler::catmullRom) { pager.state.upscaler = it }
+    private val downscaler = SamplerSlot(Sampler::box) { pager.state.downscaler = it }
 
-    /** Fresh instances: one belongs to one viewer and one chain. Skips any that fail to load. */
-    private suspend fun loadFilters(shaders: List<WebGpuShader>) = withContext(Dispatchers.IO) {
-        shaders.mapNotNull { shader ->
-            try {
-                WebGpuShaders.load(activity, shader)
-            } catch (e: Exception) {
-                logcat(LogPriority.ERROR, e) { "filter ${shader.name}" }
-                null
+    /** Main thread only. */
+    private inner class FilterSlot(private val assign: (List<ImageFilterWgsl>) -> Unit) {
+        private var job: Job? = null
+        private var retune: Job? = null
+        private var loaded: List<Pair<WebGpuShader, ImageFilterWgsl>> = emptyList()
+
+        fun update(shaders: List<WebGpuShader>) {
+            retune?.cancel()
+            if (job?.isActive != true && loaded.map { it.first.file } == shaders.map { it.file }) {
+                // Only values moved. Each rebuilds pipelines on the render thread, and a slider sends
+                // one per step.
+                retune = scope.launch {
+                    delay(RETUNE_DELAY_MS.milliseconds)
+                    loaded = loaded.zip(shaders) { (_, filter), shader ->
+                        WebGpuShaders.applyValues(filter, shader)
+                        shader to filter
+                    }
+                }
+                return
+            }
+            // Else an older, slower load could land last.
+            job?.cancel()
+            job = scope.launch {
+                val fresh = load(shaders)
+                loaded = fresh
+                assign(fresh.map { it.second })
+            }
+        }
+
+        /** Fresh instances: one belongs to one viewer and one chain. Skips any that fail to load. */
+        private suspend fun load(shaders: List<WebGpuShader>) = withContext(Dispatchers.IO) {
+            shaders.mapNotNull { shader ->
+                try {
+                    shader to WebGpuShaders.load(activity, shader)
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR, e) { "filter ${shader.name}" }
+                    null
+                }
+            }
+        }
+    }
+
+    /** Main thread only. */
+    private inner class SamplerSlot(private val default: () -> Sampler, private val assign: (Sampler) -> Unit) {
+        private var job: Job? = null
+
+        fun update(shader: WebGpuShader?) {
+            // Else an older, slower load could land last.
+            job?.cancel()
+            job = scope.launch {
+                // default() reads a resource.
+                val sampler = withContext(Dispatchers.IO) {
+                    shader?.let {
+                        try {
+                            WebGpuShaders.loadSampler(activity, it)
+                        } catch (e: Exception) {
+                            logcat(LogPriority.ERROR, e) { "sampler ${it.name}" }
+                            null
+                        }
+                    } ?: default()
+                }
+                assign(sampler)
             }
         }
     }
@@ -1532,19 +1598,18 @@ open class WebGpuViewer(
 
         config.gesturesChangedListener = { pager.state.doubleTapGesturesEnabled = config.doubleTapGestures }
 
-        // Each load replaces the last, or an older, slower one could land after it.
-        val applyImageFilters = {
-            imageFiltersJob?.cancel()
-            val shaders = config.imageFilters
-            imageFiltersJob = scope.launch { pager.state.imageFilters = loadFilters(shaders) }
+        config.imageFiltersChangedListener = { imageFilters.update(config.imageFilters) }
+        config.tileFiltersChangedListener = { tileFilters.update(config.tileFilters) }
+        config.samplersChangedListener = {
+            upscaler.update(config.upscaler)
+            downscaler.update(config.downscaler)
         }
-        val applyTileFilters = {
-            tileFiltersJob?.cancel()
-            val shaders = config.tileFilters
-            tileFiltersJob = scope.launch { pager.state.tileFilters = loadFilters(shaders) }
+        val applyRendering = {
+            pager.state.enableTiles = !config.fastRenderingOnly
+            pager.state.holdUntilFinal = config.holdUntilFinal
         }
-        config.imageFiltersChangedListener = applyImageFilters
-        config.tileFiltersChangedListener = applyTileFilters
+        applyRendering()
+        config.renderingChangedListener = applyRendering
 
         // blank space in the long strip clears to the reader background rather than black
         (pager.state as? ImageViewerContinuousState)?.backgroundColor = readerBackgroundColor()
@@ -2138,7 +2203,11 @@ open class WebGpuViewer(
         )
         applySplitTrim(page, image)
         rows.clearDirty()
-        val single = ImagePage.ImageSingle(image).apply { highQuality = false }
+        val single = ImagePage.ImageSingle(image).apply {
+            highQuality = false
+            // Still filling in row by row.
+            isPlaceholder = true
+        }
         if (!installImage(page, single)) return
 
         fun stillShown() = synchronized(lock) { pageInCache(page) && page.imagePage === single && !single.destroyed }
@@ -2159,6 +2228,7 @@ open class WebGpuViewer(
 
             if (config.automaticBackground) image.measure(rows.image)
             image.createMipMaps(rows.image)
+            single.isPlaceholder = false
             single.highQuality = true
             pager.state.invalidate()
         } catch (e: CancellationException) {
@@ -2312,6 +2382,8 @@ open class WebGpuViewer(
         // The renderer already draws only an image's trim rect, so the two halves are
         // a crop each rather than two smaller decodes.
         applySplitTrim(page, firstImage)
+        // Paged only, and not a split half, whose trim is the half rather than the content.
+        firstImage.crop = trimColors != null && !isContinuous && config.cropInsteadOfZoom && page.half == null
 
         return ImagePage.ImageSingle(firstImage) to if (deferMips) firstImage to pixels else null
     }

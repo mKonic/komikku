@@ -233,6 +233,15 @@ class ReaderPreferences(
 
     fun continuousGap() = preferenceStore.getInt("webgpu_continuous_gap", 10)
 
+    /** No tiles or filters: pages draw through the fast path alone. */
+    fun fastRenderingOnly() = preferenceStore.getBoolean("webgpu_fast_rendering_only", false)
+
+    /** A page shows only once its tiles are done, instead of the fast render first. */
+    fun holdUntilFinal() = preferenceStore.getBoolean("webgpu_hold_until_final", false)
+
+    /** Paged: a trimmed page is cut to its content and refitted, rather than zoomed past its borders. */
+    fun cropInsteadOfZoom() = preferenceStore.getBoolean("webgpu_crop_instead_of_zoom", false)
+
     /** Off, a tap fires on lift instead of waiting out the double tap window. */
     fun disableDoubleTapGestures() = preferenceStore.getBoolean("webgpu_disable_double_tap_gestures", false)
 
@@ -247,6 +256,22 @@ class ReaderPreferences(
     /** User shaders run per high quality tile, in run order. */
     fun tileFilters() = preferenceStore.getObjectFromString(
         "webgpu_tile_filters",
+        emptyList(),
+        WebGpuShaders::serialize,
+        WebGpuShaders::deserialize,
+    )
+
+    /** At most one; none for the library's Catmull-Rom. */
+    fun upscaler() = preferenceStore.getObjectFromString(
+        "webgpu_upscaler",
+        emptyList(),
+        WebGpuShaders::serialize,
+        WebGpuShaders::deserialize,
+    )
+
+    /** At most one; none for the library's box filter. */
+    fun downscaler() = preferenceStore.getObjectFromString(
+        "webgpu_downscaler",
         emptyList(),
         WebGpuShaders::serialize,
         WebGpuShaders::deserialize,

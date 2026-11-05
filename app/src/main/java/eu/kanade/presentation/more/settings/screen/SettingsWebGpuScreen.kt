@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,13 +28,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.net.toUri
+import ca.mpreg.webgpuviewer.renderer.ImageFilterWgsl
+import ca.mpreg.webgpuviewer.renderer.Sampler
 import ca.mpreg.webgpuviewer.renderer.WebGpuRenderer
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.base.BasePreferences
@@ -49,10 +55,14 @@ import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Add
 import mihon.icons.materialsymbols.rounded.Delete
 import mihon.icons.materialsymbols.rounded.DragHandle
+import mihon.icons.materialsymbols.rounded.KeyboardArrowDown
+import mihon.icons.materialsymbols.rounded.KeyboardArrowUp
+import mihon.icons.materialsymbols.rounded.Refresh
 import sh.calvin.reorderable.ReorderableColumn
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.BaseSliderItem
 import tachiyomi.presentation.core.components.HeadingItem
 import tachiyomi.presentation.core.components.SettingsItemsPaddings
 import tachiyomi.presentation.core.components.material.padding
@@ -61,6 +71,7 @@ import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.text.NumberFormat
+import kotlin.math.roundToInt
 import tachiyomi.core.common.preference.Preference as TachiyomiPreference
 
 /**
@@ -108,6 +119,16 @@ object SettingsWebGpuScreen : SearchableSettings {
                 preference = readerPreferences.disableDoubleTapGestures(),
                 title = stringResource(MR.strings.pref_disable_double_tap_gestures),
                 subtitle = stringResource(MR.strings.pref_disable_double_tap_gestures_summary),
+                enabled = active,
+            ),
+            Preference.PreferenceItem.SwitchPreference(
+                preference = readerPreferences.fastRenderingOnly(),
+                title = stringResource(MR.strings.pref_fast_rendering_only),
+                enabled = active,
+            ),
+            Preference.PreferenceItem.SwitchPreference(
+                preference = readerPreferences.holdUntilFinal(),
+                title = stringResource(MR.strings.pref_hold_until_final),
                 enabled = active,
             ),
             colorLutGroup(readerPreferences, active),
@@ -217,7 +238,15 @@ object SettingsWebGpuScreen : SearchableSettings {
     private fun filtersGroup(readerPreferences: ReaderPreferences, active: Boolean): Preference {
         val context = LocalContext.current
         LaunchedEffect(Unit) {
-            WebGpuShaders.prune(context, listOf(readerPreferences.imageFilters(), readerPreferences.tileFilters()))
+            WebGpuShaders.prune(
+                context,
+                listOf(
+                    readerPreferences.imageFilters(),
+                    readerPreferences.tileFilters(),
+                    readerPreferences.upscaler(),
+                    readerPreferences.downscaler(),
+                ),
+            )
         }
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.pref_shaders),
@@ -229,22 +258,28 @@ object SettingsWebGpuScreen : SearchableSettings {
                 Preference.PreferenceItem.CustomPreference(stringResource(MR.strings.pref_tile_filters)) {
                     ShaderList(MR.strings.pref_tile_filters, readerPreferences.tileFilters())
                 },
+                Preference.PreferenceItem.CustomPreference(stringResource(MR.strings.pref_upscaler)) {
+                    SamplerItem(MR.strings.pref_upscaler, Sampler.CATMULL_ROM_FILE, readerPreferences.upscaler())
+                },
+                Preference.PreferenceItem.CustomPreference(stringResource(MR.strings.pref_downscaler)) {
+                    SamplerItem(MR.strings.pref_downscaler, Sampler.BOX_FILE, readerPreferences.downscaler())
+                },
             ),
         )
     }
 
+    /** Imports into [pref] - see [WebGpuShaders.import]. Shows its own errors. */
     @Composable
-    private fun ShaderList(labelRes: StringResource, pref: TachiyomiPreference<List<WebGpuShader>>) {
+    private fun rememberShaderPicker(pref: TachiyomiPreference<List<WebGpuShader>>, sampler: Boolean): () -> Unit {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
-        val filters by pref.collectAsState()
         var error by remember { mutableStateOf<String?>(null) }
 
         val pickShader = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri == null) return@rememberLauncherForActivityResult
             scope.launch {
                 try {
-                    WebGpuShaders.import(context, uri, pref)
+                    WebGpuShaders.import(context, uri, pref, sampler)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -275,6 +310,58 @@ object SettingsWebGpuScreen : SearchableSettings {
             )
         }
 
+        return {
+            // WGSL has no MIME type of its own, so the picker offers everything and validation rejects the rest.
+            try {
+                pickShader.launch(arrayOf("*/*"))
+            } catch (e: ActivityNotFoundException) {
+                error = e.message ?: e.toString()
+            }
+        }
+    }
+
+    /** One replaceable shader, the library's own [defaultName] while none is picked. */
+    @Composable
+    private fun SamplerItem(labelRes: StringResource, defaultName: String, pref: TachiyomiPreference<List<WebGpuShader>>) {
+        val context = LocalContext.current
+        val shader = pref.collectAsState().value.firstOrNull()
+        val pick = rememberShaderPicker(pref, sampler = true)
+
+        Column {
+            HeadingItem(labelRes)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = SettingsItemsPaddings.Horizontal, end = MaterialTheme.padding.small),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = shader?.name ?: defaultName,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                TextButton(onClick = pick) {
+                    Text(stringResource(MR.strings.action_choose_shader))
+                }
+                shader?.let {
+                    IconButton(onClick = { WebGpuShaders.remove(context, pref, it) }) {
+                        Icon(
+                            imageVector = MaterialSymbols.Rounded.Delete,
+                            contentDescription = stringResource(MR.strings.action_remove),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun ShaderList(labelRes: StringResource, pref: TachiyomiPreference<List<WebGpuShader>>) {
+        val context = LocalContext.current
+        val filters by pref.collectAsState()
+        val pick = rememberShaderPicker(pref, sampler = false)
+
         Column {
             HeadingItem(labelRes)
             ReorderableColumn(
@@ -290,45 +377,57 @@ object SettingsWebGpuScreen : SearchableSettings {
                 },
             ) { _, shader, _ ->
                 key(shader.file) {
+                    val params by produceState(emptyList<ImageFilterWgsl.Param>(), shader.file) {
+                        value = WebGpuShaders.params(context, shader)
+                    }
+                    var expanded by rememberSaveable { mutableStateOf(false) }
                     ReorderableItem {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = SettingsItemsPaddings.Horizontal, end = MaterialTheme.padding.small),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                imageVector = MaterialSymbols.Rounded.DragHandle,
-                                contentDescription = null,
-                                modifier = Modifier.draggableHandle(),
-                            )
-                            Text(
-                                text = shader.name,
+                        Column {
+                            Row(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = MaterialTheme.padding.medium),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            IconButton(onClick = { WebGpuShaders.remove(context, pref, shader) }) {
+                                    .fillMaxWidth()
+                                    .padding(start = SettingsItemsPaddings.Horizontal, end = MaterialTheme.padding.small),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
                                 Icon(
-                                    imageVector = MaterialSymbols.Rounded.Delete,
-                                    contentDescription = stringResource(MR.strings.action_delete),
+                                    imageVector = MaterialSymbols.Rounded.DragHandle,
+                                    contentDescription = null,
+                                    modifier = Modifier.draggableHandle(),
                                 )
+                                Text(
+                                    text = shader.name,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(horizontal = MaterialTheme.padding.medium),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                if (params.isNotEmpty()) {
+                                    IconButton(onClick = { expanded = !expanded }) {
+                                        Icon(
+                                            imageVector = if (expanded) {
+                                                MaterialSymbols.Rounded.KeyboardArrowUp
+                                            } else {
+                                                MaterialSymbols.Rounded.KeyboardArrowDown
+                                            },
+                                            contentDescription = stringResource(MR.strings.shader_parameters),
+                                        )
+                                    }
+                                }
+                                IconButton(onClick = { WebGpuShaders.remove(context, pref, shader) }) {
+                                    Icon(
+                                        imageVector = MaterialSymbols.Rounded.Delete,
+                                        contentDescription = stringResource(MR.strings.action_delete),
+                                    )
+                                }
                             }
+                            if (expanded) ShaderParams(pref, shader, params)
                         }
                     }
                 }
             }
             TextButton(
-                onClick = {
-                    // WGSL has no MIME type of its own, so the picker offers everything and validation rejects the rest.
-                    try {
-                        pickShader.launch(arrayOf("*/*"))
-                    } catch (e: ActivityNotFoundException) {
-                        error = e.message ?: e.toString()
-                    }
-                },
+                onClick = pick,
                 modifier = Modifier.padding(horizontal = SettingsItemsPaddings.Horizontal - MaterialTheme.padding.small),
             ) {
                 Icon(imageVector = MaterialSymbols.Rounded.Add, contentDescription = null)
@@ -336,6 +435,95 @@ object SettingsWebGpuScreen : SearchableSettings {
                     text = stringResource(MR.strings.action_add_shader),
                     modifier = Modifier.padding(start = MaterialTheme.padding.small),
                 )
+            }
+        }
+    }
+
+    private const val SLIDER_POSITIONS = 100
+
+    /** A shader's `//!PARAM`s: a slider where the file gives a range, a number field where not. */
+    @Composable
+    private fun ShaderParams(
+        pref: TachiyomiPreference<List<WebGpuShader>>,
+        shader: WebGpuShader,
+        params: List<ImageFilterWgsl.Param>,
+    ) {
+        val format = remember { NumberFormat.getNumberInstance().apply { maximumFractionDigits = 3 } }
+        params.forEach { param ->
+            key(param.name) {
+                val value = shader.values[param.name] ?: param.default
+                val integer = param.type != ImageFilterWgsl.ParamType.Float
+
+                // The default is stored as no value, so a later default in the file takes over.
+                fun set(new: Float?) =
+                    WebGpuShaders.setValue(pref, shader, param.name, new?.takeIf { it != param.default })
+
+                val min = param.minimum
+                val max = param.maximum
+                val title = "${param.name} (${param.type.name.lowercase()})"
+                val meta = if (min != null && max != null) {
+                    stringResource(
+                        MR.strings.shader_param_range,
+                        format.format(min),
+                        format.format(max),
+                        format.format(param.default),
+                    )
+                } else {
+                    stringResource(MR.strings.shader_param_default, format.format(param.default))
+                }
+                val subtitle = listOf(param.description, meta).filter { it.isNotEmpty() }.joinToString("\n")
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val itemModifier = Modifier
+                        .weight(1f)
+                        .padding(start = SettingsItemsPaddings.Horizontal, top = SettingsItemsPaddings.Vertical)
+                    if (min != null && max != null && max > min) {
+                        val span = max - min
+                        val positions = if (integer && span <= SLIDER_POSITIONS) span.toInt() else SLIDER_POSITIONS
+                        val position = ((value - min) / span * positions).roundToInt().coerceIn(0, positions)
+                        BaseSliderItem(
+                            value = position,
+                            valueRange = 0..positions,
+                            title = title,
+                            subtitle = subtitle,
+                            valueString = format.format(value),
+                            onChange = {
+                                val new = min + span * it / positions
+                                set(if (integer) new.roundToInt().toFloat() else new)
+                            },
+                            titleStyle = MaterialTheme.typography.bodyMedium,
+                            pillColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            modifier = itemModifier,
+                        )
+                    } else {
+                        var text by remember(value) { mutableStateOf(format.format(value)) }
+                        OutlinedTextField(
+                            value = text,
+                            onValueChange = { new ->
+                                text = new
+                                val parsed = runCatching { format.parse(new)?.toFloat() }.getOrNull()
+                                if (parsed != null && parsed.isFinite()) {
+                                    set(if (integer) parsed.roundToInt().toFloat() else parsed)
+                                }
+                            },
+                            label = { Text(title) },
+                            supportingText = { Text(subtitle) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = itemModifier,
+                        )
+                    }
+                    IconButton(
+                        onClick = { set(null) },
+                        enabled = param.name in shader.values,
+                        modifier = Modifier.padding(end = MaterialTheme.padding.small),
+                    ) {
+                        Icon(
+                            imageVector = MaterialSymbols.Rounded.Refresh,
+                            contentDescription = stringResource(MR.strings.action_reset),
+                        )
+                    }
+                }
             }
         }
     }
@@ -366,6 +554,11 @@ object SettingsWebGpuScreen : SearchableSettings {
                         .associateWith { stringResource(it.titleRes) }
                         .toImmutableMap(),
                     title = stringResource(MR.strings.pref_cutout_mode),
+                ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = readerPreferences.cropInsteadOfZoom(),
+                    title = stringResource(MR.strings.pref_crop_instead_of_zoom),
+                    subtitle = stringResource(MR.strings.pref_crop_instead_of_zoom_summary),
                 ),
             ),
         )

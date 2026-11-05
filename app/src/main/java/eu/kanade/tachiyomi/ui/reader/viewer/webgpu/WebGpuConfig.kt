@@ -121,10 +121,27 @@ class WebGpuConfig(
     var tileFilters = emptyList<WebGpuShader>()
         private set
 
+    var upscaler: WebGpuShader? = null
+        private set
+
+    var downscaler: WebGpuShader? = null
+        private set
+
+    var fastRenderingOnly = false
+        private set
+
+    var holdUntilFinal = false
+        private set
+
+    var cropInsteadOfZoom = false
+        private set
+
     /** Applied to the viewer state directly: none of these change what a page decodes to. */
     var gesturesChangedListener: (() -> Unit)? = null
     var imageFiltersChangedListener: (() -> Unit)? = null
     var tileFiltersChangedListener: (() -> Unit)? = null
+    var samplersChangedListener: (() -> Unit)? = null
+    var renderingChangedListener: (() -> Unit)? = null
 
     /**
      * As [register], for a value the decoded pages are built from. [imagePropertyChangedListener]
@@ -302,6 +319,22 @@ class WebGpuConfig(
 
         readerPreferences.tileFilters()
             .register({ tileFilters = it }, { tileFiltersChangedListener?.invoke() })
+
+        readerPreferences.upscaler()
+            .register({ upscaler = it.firstOrNull() }, { samplersChangedListener?.invoke() })
+
+        readerPreferences.downscaler()
+            .register({ downscaler = it.firstOrNull() }, { samplersChangedListener?.invoke() })
+
+        readerPreferences.fastRenderingOnly()
+            .register({ fastRenderingOnly = it }, { renderingChangedListener?.invoke() })
+
+        readerPreferences.holdUntilFinal()
+            .register({ holdUntilFinal = it }, { renderingChangedListener?.invoke() })
+
+        // Changes a page's size, so its pages are built again.
+        readerPreferences.cropInsteadOfZoom()
+            .registerImage({ cropInsteadOfZoom = it })
     }
 
     private fun zoomTypeFromPreference(value: Int) {

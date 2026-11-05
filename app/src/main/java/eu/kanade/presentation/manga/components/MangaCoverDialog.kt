@@ -210,7 +210,6 @@ fun MangaCoverDialog(
             if (useHighQualityRenderer) {
                 HighQualityCover(
                     manga = manga,
-                    contentPadding = contentPadding,
                     onDismissRequest = onDismissRequest,
                 )
                 return@Scaffold
@@ -284,18 +283,16 @@ private fun ActionsPill(content: @Composable () -> Unit) {
 @Composable
 private fun HighQualityCover(
     manga: Manga,
-    contentPadding: PaddingValues,
     onDismissRequest: () -> Unit,
 ) {
     val context = LocalContext.current
-    val density = LocalDensity.current
     val state = remember { ImageViewerState() }
     var page by remember { mutableStateOf<ImagePage?>(null) }
 
-    val cutoutTopPx = with(density) { contentPadding.calculateTopPadding().toPx() }
     SideEffect {
         state.dpi = context.resources.displayMetrics.densityDpi / 100f
-        state.cutoutTopPx = cutoutTopPx
+        // Below the status bar: the viewer measures the cutout itself.
+        state.avoidCutout = true
         state.onTap = { onDismissRequest() }
     }
 

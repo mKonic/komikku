@@ -1076,6 +1076,16 @@
     <string name="pref_disable_double_tap_gestures_summary">Taps act on lift instead of waiting to see if a second one follows</string>
     <string name="action_add_shader">Add shader</string>
     <string name="image_filter_invalid">Couldn\'t add shader</string>
+    <string name="pref_crop_instead_of_zoom">Crop instead of zoom</string>
+    <string name="pref_crop_instead_of_zoom_summary">With crop borders on, pages are cut to their content and fitted again</string>
+    <string name="shader_parameters">Parameters</string>
+    <string name="shader_param_range">%1$s to %2$s, default %3$s</string>
+    <string name="shader_param_default">Default %1$s</string>
+    <string name="pref_fast_rendering_only">Disable tiles</string>
+    <string name="pref_hold_until_final">Show all tiles together</string>
+    <string name="pref_upscaler">Upscaler</string>
+    <string name="pref_downscaler">Downscaler</string>
+    <string name="action_choose_shader">Choose shader</string>
     <string name="pref_disable_page_swipe">Disable swiping between pages</string>
     <string name="pref_history_resume_last_page">Open history entries at the last page read</string>
     <string name="pref_transition_animation">Transition animation</string>
