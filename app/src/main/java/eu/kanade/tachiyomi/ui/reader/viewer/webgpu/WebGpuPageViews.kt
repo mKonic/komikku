@@ -91,7 +91,7 @@ class WebGpuPageViews(
 
     private fun attachHost() {
         if (host.parent == null) {
-            activity.binding.viewerContainer.addView(host, 0, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+            activity.viewerContainer.addView(host, 0, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         }
     }
 

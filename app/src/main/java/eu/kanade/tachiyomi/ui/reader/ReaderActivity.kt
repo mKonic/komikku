@@ -21,16 +21,24 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.View.LAYER_TYPE_HARDWARE
 import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -39,20 +47,22 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.getSystemService
-import androidx.core.graphics.Insets
 import androidx.core.net.toUri
 import androidx.core.transition.doOnEnd
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
@@ -70,6 +80,8 @@ import eu.kanade.presentation.reader.ChapterListDialog
 import eu.kanade.presentation.reader.DisplayRefreshHost
 import eu.kanade.presentation.reader.OrientationSelectDialog
 import eu.kanade.presentation.reader.ReaderContentOverlay
+import eu.kanade.presentation.reader.ReaderNavigationOverlay
+import eu.kanade.presentation.reader.ReaderNavigationOverlayState
 import eu.kanade.presentation.reader.ReaderPageActionsDialog
 import eu.kanade.presentation.reader.ReaderPageIndicator
 import eu.kanade.presentation.reader.ReadingModeSelectDialog
@@ -82,7 +94,6 @@ import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
 import eu.kanade.tachiyomi.data.connections.discord.ReaderData
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
-import eu.kanade.tachiyomi.databinding.ReaderActivityBinding
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
@@ -99,7 +110,6 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsScreenModel
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import eu.kanade.tachiyomi.ui.reader.soak.ReaderSoakTest
-import eu.kanade.tachiyomi.ui.reader.viewer.ReaderProgressIndicator
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.VerticalPagerViewer
@@ -142,6 +152,7 @@ import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
+import tachiyomi.presentation.core.components.CombinedCircularProgressIndicator
 import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -176,7 +187,19 @@ class ReaderActivity : BaseActivity() {
     private val connectionsPreferences: ConnectionsPreferences = Injekt.get()
     // <-- AM (CONNECTIONS)
 
-    lateinit var binding: ReaderActivityBinding
+    // KMK -->
+    /**
+     * Holds the current viewer's view. The Compose root shows it through an AndroidView, insets applied as padding,
+     * and the grayscale and inverted colours as its layer paint.
+     */
+    val viewerContainer: FrameLayout by lazy { ViewerContainer(this) }
+
+    /** The tap zones shown over the pages; viewers set them as their navigation changes. */
+    val navigationOverlayState = ReaderNavigationOverlayState()
+
+    private var readerBackgroundColor by mutableIntStateOf(Color.BLACK)
+    private var isLoadingViewer by mutableStateOf(false)
+    // KMK <--
 
     val viewModel by viewModels<ReaderViewModel>()
     private var assistUrl: String? = null
@@ -195,8 +218,6 @@ class ReaderActivity : BaseActivity() {
     private val displayRefreshHost = DisplayRefreshHost()
 
     private val windowInsetsController by lazy { WindowInsetsControllerCompat(window, window.decorView) }
-
-    private var loadingIndicator: ReaderProgressIndicator? = null
 
     var isScrollingThroughPages = false
         private set
@@ -225,9 +246,9 @@ class ReaderActivity : BaseActivity() {
 
         super.onCreate(savedInstanceState)
 
-        binding = ReaderActivityBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        binding.setComposeOverlay()
+        // KMK -->
+        setReaderContent()
+        // KMK <--
 
         // KMK -->
         // The view model reads the launch arguments itself and starts loading in its own scope.
@@ -320,7 +341,7 @@ class ReaderActivity : BaseActivity() {
             .launchIn(lifecycleScope)
     }
 
-    private fun ReaderActivityBinding.setComposeOverlay(): Unit = composeOverlay.setComposeContent {
+    private fun setReaderContent(): Unit = setComposeContent {
         // KMK -->
         TachiyomiTheme(
             seedColor = seedColorState().takeIf { themeCoverBased },
@@ -343,7 +364,31 @@ class ReaderActivity : BaseActivity() {
                 )
             }
 
-            Box(modifier = Modifier.fillMaxSize()) {
+            // KMK -->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(ComposeColor(readerBackgroundColor))
+                    .pointerInput(Unit) {
+                        // Any touch hides the tap zones, without taking the touch from the viewer
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                            navigationOverlayState.hide()
+                        }
+                    },
+            ) {
+                ReaderViewer()
+
+                if (isLoadingViewer) {
+                    CombinedCircularProgressIndicator(
+                        progress = { 0f },
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                }
+
+                ReaderNavigationOverlay(state = navigationOverlayState)
+                // KMK <--
+
                 if (!state.menuVisible && showPageNumber) {
                     ReaderPageIndicator(
                         // SY -->
@@ -649,6 +694,25 @@ class ReaderActivity : BaseActivity() {
         val handled = viewModel.state.value.viewer?.handleGenericMotionEvent(event) ?: false
         return handled || super.dispatchGenericMotionEvent(event)
     }
+
+    // KMK -->
+    @Composable
+    private fun ReaderViewer() {
+        val fullscreen by readerPreferences.fullscreen().collectAsState()
+        val drawUnderCutout by readerPreferences.drawUnderCutout().collectAsState()
+        val insets = when {
+            !fullscreen -> WindowInsets.systemBars
+            !drawUnderCutout -> WindowInsets.displayCutout
+            else -> WindowInsets(0)
+        }
+        AndroidView(
+            factory = { viewerContainer },
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(insets),
+        )
+    }
+    // KMK <--
 
     @Composable
     private fun ContentOverlay(state: ReaderViewModel.State) {
@@ -1048,11 +1112,10 @@ class ReaderActivity : BaseActivity() {
         // Destroy previous viewer if there was one
         if (prevViewer != null) {
             prevViewer.destroy()
-            binding.viewerContainer.removeAllViews()
+            viewerContainer.removeAllViews()
         }
         viewModel.onViewerLoaded(newViewer)
-        updateViewerInset(readerPreferences.fullscreen().get(), readerPreferences.drawUnderCutout().get())
-        binding.viewerContainer.addView(newViewer.getView())
+        viewerContainer.addView(newViewer.getView())
 
         // SY -->
         if (newViewer is PagerViewer) {
@@ -1079,13 +1142,9 @@ class ReaderActivity : BaseActivity() {
             showReadingModeToast(viewModel.getMangaReadingMode())
         }
 
-        loadingIndicator = ReaderProgressIndicator(
-            context = this,
-            // KMK -->
-            seedColor = seedColorStatic()?.toArgb(),
-            // KMK <--
-        )
-        binding.readerContainer.addView(loadingIndicator)
+        // KMK -->
+        isLoadingViewer = true
+        // KMK <--
 
         startPostponedEnterTransition()
     }
@@ -1140,7 +1199,9 @@ class ReaderActivity : BaseActivity() {
      */
     @SuppressLint("RestrictedApi")
     private fun setChapters(viewerChapters: ViewerChapters) {
-        binding.readerContainer.removeView(loadingIndicator)
+        // KMK -->
+        isLoadingViewer = false
+        // KMK <--
         // SY -->
         val state = viewModel.state.value
         if (state.indexChapterToShift != null && state.indexPageToShift != null) {
@@ -1375,35 +1436,6 @@ class ReaderActivity : BaseActivity() {
     }
 
     /**
-     * Updates viewer inset depending on fullscreen reader preferences.
-     */
-    private fun updateViewerInset(fullscreen: Boolean, drawUnderCutout: Boolean) {
-        if (!::binding.isInitialized) return
-        val view = binding.viewerContainer
-
-        view.applyInsetsPadding(ViewCompat.getRootWindowInsets(view), fullscreen, drawUnderCutout)
-        ViewCompat.setOnApplyWindowInsetsListener(view) { view, windowInsets ->
-            view.applyInsetsPadding(windowInsets, fullscreen, drawUnderCutout)
-            windowInsets
-        }
-    }
-
-    private fun View.applyInsetsPadding(
-        windowInsets: WindowInsetsCompat?,
-        fullscreen: Boolean,
-        drawUnderCutout: Boolean,
-    ) {
-        val insets = when {
-            !fullscreen -> windowInsets?.getInsets(WindowInsetsCompat.Type.systemBars())
-            !drawUnderCutout -> windowInsets?.getInsets(WindowInsetsCompat.Type.displayCutout())
-            else -> null
-        }
-            ?: Insets.NONE
-
-        setPadding(insets.left, insets.top, insets.right, insets.bottom)
-    }
-
-    /**
      * Class that handles the user preferences of the reader.
      */
     private inner class ReaderConfig {
@@ -1440,14 +1472,12 @@ class ReaderActivity : BaseActivity() {
         init {
             readerPreferences.readerTheme().changes()
                 .onEach { theme ->
-                    binding.readerContainer.setBackgroundColor(
-                        when (theme) {
-                            0 -> Color.WHITE
-                            2 -> grayBackgroundColor
-                            3 -> automaticBackgroundColor()
-                            else -> Color.BLACK
-                        },
-                    )
+                    readerBackgroundColor = when (theme) {
+                        0 -> Color.WHITE
+                        2 -> grayBackgroundColor
+                        3 -> automaticBackgroundColor()
+                        else -> Color.BLACK
+                    }
                 }
                 .launchIn(lifecycleScope)
 
@@ -1469,15 +1499,6 @@ class ReaderActivity : BaseActivity() {
             ) { grayscale, invertedColors -> grayscale to invertedColors }
                 .onEach { (grayscale, invertedColors) ->
                     setLayerPaint(grayscale, invertedColors)
-                }
-                .launchIn(lifecycleScope)
-
-            combine(
-                readerPreferences.fullscreen().changes(),
-                readerPreferences.drawUnderCutout().changes(),
-            ) { fullscreen, drawUnderCutout -> fullscreen to drawUnderCutout }
-                .onEach { (fullscreen, drawUnderCutout) ->
-                    updateViewerInset(fullscreen, drawUnderCutout)
                 }
                 .launchIn(lifecycleScope)
 
@@ -1593,7 +1614,7 @@ class ReaderActivity : BaseActivity() {
         }
         private fun setLayerPaint(grayscale: Boolean, invertedColors: Boolean) {
             val paint = if (grayscale || invertedColors) getCombinedPaint(grayscale, invertedColors) else null
-            binding.viewerContainer.setLayerType(LAYER_TYPE_HARDWARE, paint)
+            viewerContainer.setLayerType(LAYER_TYPE_HARDWARE, paint)
         }
     }
 
@@ -1641,3 +1662,18 @@ class ReaderActivity : BaseActivity() {
     }
     // KMK <--
 }
+
+// KMK -->
+/**
+ * The viewer's parent. Keeps [requestDisallowInterceptTouchEvent] from reaching Compose: its interop filter cancels
+ * the gesture when a child re-allows intercepting mid-drag, which stops a zoomed page from handing the drag to the
+ * pager at its edge (Mihon #4191). Nothing above it intercepts, so the request has nowhere useful to go.
+ */
+private class ViewerContainer(context: Context) : FrameLayout(context) {
+    init {
+        descendantFocusability = FOCUS_BLOCK_DESCENDANTS
+    }
+
+    override fun requestDisallowInterceptTouchEvent(disallowIntercept: Boolean) = Unit
+}
+// KMK <--
