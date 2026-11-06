@@ -25,6 +25,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   changed or reset there.
 
 ### Fixed
+- Reader: the status and navigation bar icons were white over a white page background in dark mode.
 - Reset info on a local source entry didn't clear its author, artist, description or status.
 - The library update could stay at 0% forever when it couldn't start as a foreground job (seen on Android 8).
 - Applying source filters after clearing the search field searched the previous query again.
@@ -34,7 +35,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - A cover that the device's image decoder failed on could crash the app while reading its colours.
 
 ### Other
-- The remaining XML screens, except the reader's outer layout, moved to Jetpack Compose; the FlexibleAdapter and rating bar libraries are gone.
+- The remaining XML screens, the reader included, moved to Jetpack Compose; the FlexibleAdapter and rating bar
+  libraries are gone.
 
 ## [v1.17.0] - 2026-10-31
 ### Changed
