@@ -45,6 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -53,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -387,6 +389,18 @@ class ReaderActivity : BaseActivity() {
                 }
 
                 ReaderNavigationOverlay(state = navigationOverlayState)
+
+                // System bar icons contrast with what is under them: the menu's bars, or else the page background
+                val lightAppBars = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+                LaunchedEffect(state.menuVisible, readerBackgroundColor, lightAppBars) {
+                    val lightBehindBars = if (state.menuVisible) {
+                        lightAppBars
+                    } else {
+                        ComposeColor(readerBackgroundColor).luminance() > 0.5f
+                    }
+                    windowInsetsController.isAppearanceLightStatusBars = lightBehindBars
+                    windowInsetsController.isAppearanceLightNavigationBars = lightBehindBars
+                }
                 // KMK <--
 
                 if (!state.menuVisible && showPageNumber) {
