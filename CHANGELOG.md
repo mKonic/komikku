@@ -16,6 +16,11 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   downloaded, read or not.
 - Extensions are found on ROMs that hide the list of installed apps behind an extra permission (such as Honor's
   MagicOS): the app asks for it.
+- WebGPU reader: a choice of upscaler and downscaler, either of which can be a user shader, and settings for a
+  shader's parameters.
+- WebGPU reader: "Crop instead of zoom", which cuts pages to their content and fits them again when crop borders are
+  on.
+- WebGPU reader: "Disable tiles", and "Show all tiles together" to swap a page's high quality tiles in at once.
 
 ### Changed
 - Edit info, merge settings, the recommendation search sheet, the download queue, the source details panels
@@ -23,6 +28,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   rest of the app.
 - Merge settings explain what each duplicate-chapter mode does, and edit info shows the entry's cover, which can be
   changed or reset there.
+
+### Improved
+- WebGPU reader: high quality tiles start sooner and are reused while they redraw instead of blanking, and resizing
+  runs on the GPU sampler.
 
 ### Fixed
 - Reader: the status and navigation bar icons were white over a white page background in dark mode.
@@ -37,6 +46,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 ### Other
 - The remaining XML screens, the reader included, moved to Jetpack Compose; the FlexibleAdapter and rating bar
   libraries are gone.
+- webgpuviewer 5.0.0.
 
 ## [v1.17.0] - 2026-10-31
 ### Changed
