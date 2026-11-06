@@ -15,13 +15,24 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Extensions are found on ROMs that hide the list of installed apps behind an extra permission (such as Honor's
   MagicOS): the app asks for it.
 
+### Changed
+- Edit info, merge settings, the recommendation search sheet, the download queue, the source details panels
+  (E-Hentai, MangaDex, nhentai and others) and the reader's failed-page view are redrawn in Material 3, matching the
+  rest of the app.
+- Merge settings explain what each duplicate-chapter mode does, and edit info shows the entry's cover, which can be
+  changed or reset there.
+
 ### Fixed
+- Reset info on a local source entry didn't clear its author, artist, description or status.
 - The library update could stay at 0% forever when it couldn't start as a foreground job (seen on Android 8).
 - Applying source filters after clearing the search field searched the previous query again.
 - A store refresh could replace a saved store with a different store, listing its extensions under the wrong store,
   and re-enabled a disabled store whose address had moved.
 - An extension update signed by a different key now stops with a message instead of failing to install.
 - A cover that the device's image decoder failed on could crash the app while reading its colours.
+
+### Other
+- The remaining XML screens, except the reader's outer layout, moved to Jetpack Compose; the FlexibleAdapter and rating bar libraries are gone.
 
 ## [v1.17.0] - 2026-10-31
 ### Changed
